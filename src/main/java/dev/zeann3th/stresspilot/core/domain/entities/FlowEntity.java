@@ -36,10 +36,4 @@ public class FlowEntity extends BaseEntity {
     @JsonIgnoreProperties("flow")
     @ToString.Exclude
     private List<FlowStepEntity> steps = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "flow", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("flow")
-    @ToString.Exclude
-    private List<RunEntity> runs = new ArrayList<>();
 }

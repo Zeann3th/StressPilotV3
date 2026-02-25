@@ -25,11 +25,5 @@ public class EnvironmentEntity extends BaseEntity{
     @OneToMany(mappedBy = "environment", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("environment")
     @ToString.Exclude
-    private List<ProjectEntity> projects = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "environment", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("environment")
-    @ToString.Exclude
     private List<EnvironmentVariableEntity> variables = new ArrayList<>();
 }

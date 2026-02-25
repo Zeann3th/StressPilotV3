@@ -45,10 +45,4 @@ public class RunEntity {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
-
-    @Builder.Default
-    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("run")
-    @ToString.Exclude
-    private List<RequestLogEntity> requestLogs = new ArrayList<>();
 }

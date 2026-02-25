@@ -8,17 +8,21 @@ import lombok.experimental.SuperBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "endpoints")
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@ToString(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 public class EndpointEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
+    @ToString.Include
+    @EqualsAndHashCode.Include
     private Long id;
 
     // Metadata
@@ -63,18 +67,6 @@ public class EndpointEntity extends BaseEntity {
 
     @Column(name = "grpc_stub_path", columnDefinition = "TEXT")
     private String grpcStubPath;
-
-    @Builder.Default
-    @OneToMany(mappedBy = "endpoint", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("endpoint")
-    @ToString.Exclude
-    private List<FlowStepEntity> flowSteps = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "endpoint", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("endpoint")
-    @ToString.Exclude
-    private List<RequestLogEntity> requestLogs = new ArrayList<>();
 
     @Override
     public String toString() {
