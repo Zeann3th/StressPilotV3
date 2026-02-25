@@ -1,0 +1,15 @@
+package dev.zeann3th.stresspilot.core.domain.enums;
+
+public enum ConfigKey {
+    HTTP_CONNECT_TIMEOUT,
+    HTTP_READ_TIMEOUT,
+    HTTP_WRITE_TIMEOUT,
+    HTTP_MAX_POOL_SIZE,
+    HTTP_KEEP_ALIVE_DURATION,
+    GRPC_PROTOC_PLUGIN_PATH,
+    FLOW_ALLOW_INFINITE,
+    HTTP_PROXY_HOST,
+    HTTP_PROXY_PORT,
+    HTTP_PROXY_USERNAME,
+    HTTP_PROXY_PASSWORD
+}

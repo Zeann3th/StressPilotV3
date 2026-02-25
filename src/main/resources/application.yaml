@@ -1,0 +1,37 @@
+server:
+  address: 127.0.0.1
+  port: 9760
+  servlet:
+    session:
+      timeout: 30m
+
+spring:
+  profiles:
+    active: dev
+  application:
+    name: stresspilot
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 10MB
+
+  jackson:
+    default-property-inclusion: non_null
+
+application:
+  mode: server
+  cors:
+    allowed-origins:
+      - "localhost:3000"
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,shutdown"
+  endpoint:
+    shutdown:
+      access: unrestricted
+    health:
+      show-details: always
