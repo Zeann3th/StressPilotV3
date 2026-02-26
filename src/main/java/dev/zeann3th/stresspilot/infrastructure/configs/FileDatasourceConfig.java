@@ -2,7 +2,7 @@ package dev.zeann3th.stresspilot.infrastructure.configs;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -66,8 +66,8 @@ public class FileDatasourceConfig {
 
         } catch (Exception e) {
             log.error("Failed to configure file datasource", e);
-            throw BusinessExceptionBuilder.exception(
-                    ErrorCode.DATASOURCE_CONNECTION_ERROR,
+            throw CommandExceptionBuilder.exception(
+                    ErrorCode.SP0015,
                     Map.of(Constants.REASON, e.getMessage())
             );
         }

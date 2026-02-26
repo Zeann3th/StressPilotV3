@@ -1,8 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.executors;
 
-import dev.zeann3th.stresspilot.core.domain.commands.endpoint.EndpointResponse;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
-import okhttp3.CookieJar;
+import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import org.pf4j.ExtensionPoint;
 
 import java.util.Map;
@@ -10,5 +10,9 @@ import java.util.Map;
 public interface EndpointExecutorService extends ExtensionPoint {
     String getType();
 
-    EndpointResponse execute(EndpointEntity endpointEntity, Map<String, Object> environment, CookieJar cookieJar);
+    ExecuteEndpointResponse execute(
+            EndpointEntity endpoint,
+            Map<String, Object> environment,
+            ExecutionContext context
+    );
 }

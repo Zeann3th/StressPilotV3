@@ -1,7 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.parsers;
 
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import lombok.RequiredArgsConstructor;
 import org.pf4j.spring.SpringPluginManager;
 import org.springframework.stereotype.Component;
@@ -28,6 +28,6 @@ public class ParserServiceFactory {
         return extensions.stream()
                 .filter(parser -> parser.getType().equalsIgnoreCase(type))
                 .findFirst()
-                .orElseThrow(() -> BusinessExceptionBuilder.exception(ErrorCode.ENDPOINT_PARSE_ERROR));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0006));
     }
 }

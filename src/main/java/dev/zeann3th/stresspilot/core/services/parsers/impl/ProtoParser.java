@@ -7,7 +7,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +27,7 @@ import java.util.UUID;
 @Slf4j(topic = "GRPC_PARSER")
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("java:S112")
 public class ProtoParser implements ParserService {
 
     private static final String PROTOC = "protoc";
@@ -51,12 +52,12 @@ public class ProtoParser implements ParserService {
 
             return extractEndpointsFromDescriptor(descriptorFile, versionFolder);
 
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-            throw BusinessExceptionBuilder.exception(ErrorCode.ENDPOINT_PARSE_ERROR, Map.of(Constants.REASON, "Interrupted"));
+            throw CommandExceptionBuilder.exception(ErrorCode.SP0006, Map.of(Constants.REASON, "Interrupted"));
         } catch (Exception e) {
             log.error("Failed to parse gRPC proto", e);
-            throw BusinessExceptionBuilder.exception(ErrorCode.ENDPOINT_PARSE_ERROR, Map.of(Constants.REASON, e.getMessage()));
+            throw CommandExceptionBuilder.exception(ErrorCode.SP0006, Map.of(Constants.REASON, e.getMessage()));
         }
     }
 

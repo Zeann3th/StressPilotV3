@@ -1,30 +1,30 @@
 package dev.zeann3th.stresspilot.core.domain.commands.endpoint;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder(toBuilder = true)
-@EqualsAndHashCode
-public class ExecuteEndpointCommand {
+public abstract class BaseEndpoint {
+    private String name;
+    private String description;
+    private String type;
     private String url;
-    @Builder.Default
-    private Map<String, Object> variables = new HashMap<>();
     private Object body;
     private String successCondition;
-
+    // HTTP
     private String httpMethod;
-    @Builder.Default
-    private Map<String, String> httpHeaders = new HashMap<>();
-    @Builder.Default
-    private Map<String, String> httpParameters = new HashMap<>();
-
+    private Map<String, Object> httpHeaders;
+    private Map<String, Object> httpParameters;
+    // gRPC
     private String grpcServiceName;
     private String grpcMethodName;
     private String grpcStubPath;
+    private Long projectId;
 }

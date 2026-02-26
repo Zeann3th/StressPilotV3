@@ -1,12 +1,39 @@
 package dev.zeann3th.stresspilot.core.services;
 
+import dev.zeann3th.stresspilot.core.domain.entities.ConfigEntity;
+import dev.zeann3th.stresspilot.core.ports.store.ConfigStore;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+
 import java.util.Map;
 import java.util.Optional;
 
-public interface ConfigService {
-    Map<String, String> getAllConfigs();
+@Service
+@RequiredArgsConstructor
+public class ConfigService {
+    private final ConfigStore configStore;
 
-    Optional<String> getValue(String key);
+    public Map<String, String> getAllConfigs() {
+        return configStore.findAll().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ConfigEntity::getKey,
+                        ConfigEntity::getValue
+                ));
+    }
 
-    void setValue(String key, String value);
+    public Optional<String> getValue(String key) {
+        return configStore.findByKey(key)
+                .map(ConfigEntity::getValue)
+                .filter(StringUtils::isNotBlank);
+    }
+
+    public void setValue(String key, String value) {
+        ConfigEntity configEntity = configStore.findByKey(key)
+                .orElseGet(() -> ConfigEntity.builder().key(key).build());
+
+        configEntity.setValue(value);
+        configStore.save(configEntity);
+    }
 }
+

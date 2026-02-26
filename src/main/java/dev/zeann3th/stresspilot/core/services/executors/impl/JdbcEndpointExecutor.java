@@ -2,20 +2,23 @@ package dev.zeann3th.stresspilot.core.services.executors.impl;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
-import dev.zeann3th.stresspilot.core.domain.commands.endpoint.EndpointResponse;
+import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.CookieJar;
 import org.springframework.stereotype.Component;
 
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -31,14 +34,14 @@ public class JdbcEndpointExecutor implements EndpointExecutorService {
     }
 
     @Override
-    public EndpointResponse execute(EndpointEntity endpointEntity, Map<String, Object> environment, CookieJar cookieJar) {
+    public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
         long startTime = System.currentTimeMillis();
 
-        String url = parseString(endpointEntity.getUrl(), environment);
+        String url = parseString(endpoint.getUrl(), environment);
         String user = (String) environment.get("db_user");
         String password = (String) environment.get("db_password");
 
-        String query = parseString(endpointEntity.getBody(), environment);
+        String query = parseString(endpoint.getBody(), environment);
 
         try {
             HikariDataSource dataSource = getDataSource(url, user, password);
@@ -57,7 +60,7 @@ public class JdbcEndpointExecutor implements EndpointExecutorService {
                     resultData = Map.of("rowsAffected", statement.getUpdateCount());
                 }
 
-                return EndpointResponse.builder()
+                return ExecuteEndpointResponse.builder()
                         .statusCode(200)
                         .success(true)
                         .message("Query executed successfully")
@@ -68,8 +71,8 @@ public class JdbcEndpointExecutor implements EndpointExecutorService {
             }
 
         } catch (SQLException e) {
-            log.error("SQL Error executing JDBC request for endpoint: {}", endpointEntity.getName(), e);
-            return EndpointResponse.builder()
+            log.error("SQL Error executing JDBC request for endpoint: {}", endpoint.getName(), e);
+            return ExecuteEndpointResponse.builder()
                     .statusCode(500)
                     .success(false)
                     .message("SQL Error: " + e.getMessage())
@@ -79,7 +82,7 @@ public class JdbcEndpointExecutor implements EndpointExecutorService {
                     .build();
         } catch (Exception e) {
             log.error("Unexpected error executing JDBC request", e);
-            return EndpointResponse.builder()
+            return ExecuteEndpointResponse.builder()
                     .statusCode(500)
                     .success(false)
                     .message("Error: " + e.getMessage())
@@ -130,7 +133,7 @@ public class JdbcEndpointExecutor implements EndpointExecutorService {
         while (resultSet.next()) {
             totalRows++;
             if (totalRows <= maxPreview) {
-                Map<String, Object> row = new HashMap<>(columnCount);
+                Map<String, Object> row = HashMap.newHashMap(columnCount);
                 for (int i = 1; i <= columnCount; i++) {
                     row.put(metaData.getColumnName(i), resultSet.getObject(i));
                 }

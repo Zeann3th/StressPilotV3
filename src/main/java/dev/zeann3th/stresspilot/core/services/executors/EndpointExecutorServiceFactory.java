@@ -1,7 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.executors;
 
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import lombok.RequiredArgsConstructor;
 import org.pf4j.PluginManager;
 import org.springframework.stereotype.Component;
@@ -28,6 +28,6 @@ public class EndpointExecutorServiceFactory {
         return extensions.stream()
                 .filter(executor -> executor.getType().equalsIgnoreCase(type))
                 .findFirst()
-                .orElseThrow(() -> BusinessExceptionBuilder.exception(ErrorCode.EXECUTOR_UNSUPPORTED_TYPE));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0009));
     }
 }

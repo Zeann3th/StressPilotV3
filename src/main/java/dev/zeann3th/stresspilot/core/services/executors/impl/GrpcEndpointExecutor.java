@@ -5,15 +5,15 @@ import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.util.JsonFormat;
-import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
-import dev.zeann3th.stresspilot.core.domain.commands.endpoint.EndpointResponse;
+import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import io.grpc.*;
@@ -55,7 +55,7 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
     @PostConstruct
     public void init() {
-      proxyDetector = new ProxyDetector() {
+        proxyDetector = new ProxyDetector() {
             @Nullable
             @Override
             public io.grpc.ProxiedSocketAddress proxyFor(SocketAddress targetAddress) {
@@ -87,20 +87,13 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
         return EndpointType.GRPC.name();
     }
 
-    @PreDestroy
-    public void cleanup() {
-        channelCache.values().forEach(ManagedChannel::shutdownNow);
-    }
-
     @Override
-    public EndpointResponse execute(EndpointEntity endpointEntity,
-                                       Map<String, Object> environment,
-                                       okhttp3.CookieJar cookieJar) {
+    public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
         try {
-            String target = parseTarget(endpointEntity.getUrl(), environment);
-            String bodyJson = parseBody(endpointEntity.getBody(), environment);
+            String target = parseTarget(endpoint.getUrl(), environment);
+            String bodyJson = parseBody(endpoint.getBody(), environment);
 
-            Descriptors.MethodDescriptor methodProto = getDescriptor(endpointEntity);
+            Descriptors.MethodDescriptor methodProto = getDescriptor(endpoint);
 
             DynamicMessage requestMessage = buildRequestMessage(methodProto, bodyJson);
 
@@ -108,7 +101,7 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
             long startTime = System.currentTimeMillis();
 
-            MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethod = buildGrpcMethod(methodProto, endpointEntity);
+            MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethod = buildGrpcMethod(methodProto, endpoint);
 
             String responseString = executeCall(channel, grpcMethod, requestMessage);
 
@@ -116,7 +109,7 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
             Object dataObject = objectMapper.readValue(responseString, Object.class);
 
-            return EndpointResponse.builder()
+            return ExecuteEndpointResponse.builder()
                     .success(true)
                     .statusCode(HttpStatus.OK.value())
                     .message("OK")
@@ -127,13 +120,18 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
         } catch (Exception e) {
             log.error("gRPC Error", e);
-            return EndpointResponse.builder()
+            return ExecuteEndpointResponse.builder()
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                     .success(false)
                     .message(e.getMessage())
                     .data(e.toString())
                     .build();
         }
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        channelCache.values().forEach(ManagedChannel::shutdownNow);
     }
 
     private String parseTarget(String rawUrl, Map<String, Object> environment) {
@@ -149,13 +147,11 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
     private String parseBody(String rawBody, Map<String, Object> environment) {
         String body = rawBody;
-        if (body != null) {
-            if (body.contains("{{")) {
-                body = DataUtils.replaceVariables(body, environment);
-            }
-            if (body.contains("@{")) {
-                body = MockDataUtils.interpolate(body);
-            }
+        if (body.contains("{{")) {
+            body = DataUtils.replaceVariables(body, environment);
+        }
+        if (body.contains("@{")) {
+            body = MockDataUtils.interpolate(body);
         }
         return body;
     }
@@ -176,15 +172,15 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
     private ManagedChannel getChannel(String target) {
         return channelCache.computeIfAbsent(target, t ->
                 ManagedChannelBuilder.forTarget(t)
-                .usePlaintext()
-                .proxyDetector(proxyDetector)
-                .build()
+                        .usePlaintext()
+                        .proxyDetector(proxyDetector)
+                        .build()
         );
     }
 
     private DynamicMessage buildRequestMessage(Descriptors.MethodDescriptor methodDesc, String jsonBody) throws IOException {
         DynamicMessage.Builder requestBuilder = DynamicMessage.newBuilder(methodDesc.getInputType());
-        JsonFormat.parser().ignoringUnknownFields().merge(jsonBody != null ? jsonBody : "{}", requestBuilder);
+        JsonFormat.parser().ignoringUnknownFields().merge(jsonBody, requestBuilder);
         return requestBuilder.build();
     }
 
@@ -243,7 +239,7 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
                 }
             }
         }
-        throw BusinessExceptionBuilder.exception(ErrorCode.ENDPOINT_GRPC_METHOD_NOT_FOUND);
+        throw CommandExceptionBuilder.exception(ErrorCode.SP0008);
     }
 
     private boolean namesMatch(String protoName, String dbName) {

@@ -2,15 +2,16 @@ package dev.zeann3th.stresspilot.core.services.executors.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.exception.BusinessExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
-import dev.zeann3th.stresspilot.core.domain.commands.endpoint.EndpointResponse;
+import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import jakarta.annotation.PostConstruct;
@@ -55,7 +56,6 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
         String proxyUser = configService.getValue(ConfigKey.HTTP_PROXY_USERNAME.name()).orElse(null);
         String proxyPass = configService.getValue(ConfigKey.HTTP_PROXY_PASSWORD.name()).orElse(null);
 
-        
         var clientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(readTimeout, TimeUnit.SECONDS)
@@ -63,18 +63,19 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
                 .connectionPool(new ConnectionPool(maxConnections, keepAliveDuration, TimeUnit.MINUTES))
                 .followRedirects(true);
 
-        if (proxyHost != null && proxyPort != null) {
-          Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
-          clientBuilder.proxy(proxy);
+        Proxy proxy;
+        if (proxyHost != null) {
+            proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+            clientBuilder.proxy(proxy);
 
-          if (proxyUser != null && proxyPass != null) {
-            clientBuilder.proxyAuthenticator((route, response) -> {
-              String credential = Credentials.basic(proxyUser, proxyPass);
-              return response.request().newBuilder()
-                .header("Proxy-Authorization", credential)
-                .build();
-            });
-          }
+            if (proxyUser != null) {
+                clientBuilder.proxyAuthenticator((route, response) -> {
+                    String credential = Credentials.basic(proxyUser, proxyPass);
+                    return response.request().newBuilder()
+                            .header("Proxy-Authorization", credential)
+                            .build();
+                });
+            }
         }
 
         baseClient = clientBuilder.build();
@@ -89,15 +90,15 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
     }
 
     @Override
-    public EndpointResponse execute(EndpointEntity endpointEntity,
-                                       Map<String, Object> environment,
-                                       CookieJar cookieJar) {
+    public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
         try {
-            OkHttpClient client = cookieJar != null
-                    ? baseClient.newBuilder().cookieJar(cookieJar).build()
+            OkHttpClient client = context != null
+                    ? baseClient.newBuilder().cookieJar((CookieJar) context).build()
                     : baseClient;
 
-            Request request = buildRequest(endpointEntity, environment);
+            Request request = buildRequest(endpoint, environment);
+
+            log.info(request.toString());
 
             long startTime = System.currentTimeMillis();
             try (Response response = client.newCall(request).execute()) {
@@ -105,7 +106,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
 
                 String rawResponse = response.body() != null ? response.body().string() : "";
 
-                return EndpointResponse.builder()
+                return ExecuteEndpointResponse.builder()
                         .statusCode(response.code())
                         .success(response.isSuccessful())
                         .message(response.message())
@@ -116,14 +117,14 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
             }
 
         } catch (IOException e) {
-            log.error("Failed to execute HTTP request for endpoint: {}", endpointEntity.getName(), e);
-            return EndpointResponse.builder()
+            log.error("Failed to execute HTTP request for endpoint: {}", endpoint.getName(), e);
+            return ExecuteEndpointResponse.builder()
                     .success(false)
                     .message("IO Error: " + e.getMessage())
                     .build();
         } catch (Exception e) {
             log.error("Unexpected error executing HTTP request", e);
-            return EndpointResponse.builder()
+            return ExecuteEndpointResponse.builder()
                     .success(false)
                     .message("Unexpected error: " + e.getMessage())
                     .build();
@@ -145,14 +146,29 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
 
         String method = endpoint.getHttpMethod().toUpperCase();
         switch (method) {
-            case "GET" -> builder.get();
-            case "POST" -> builder.post(requestBody != null ? requestBody : RequestBody.create("", null));
-            case "PUT" -> builder.put(requestBody != null ? requestBody : RequestBody.create("", null));
-            case "DELETE" -> builder.delete(requestBody);
-            case "PATCH" -> builder.patch(requestBody != null ? requestBody : RequestBody.create("", null));
-            case "HEAD" -> builder.head();
-            case "OPTIONS" -> builder.method("OPTIONS", null);
-            default -> builder.method(method, requestBody);
+            case "GET":
+                builder.get();
+                break;
+            case "POST":
+                builder.post(requestBody != null ? requestBody : RequestBody.create("", null));
+                break;
+            case "PUT":
+                builder.put(requestBody != null ? requestBody : RequestBody.create("", null));
+                break;
+            case "DELETE":
+                builder.delete(requestBody);
+                break;
+            case "PATCH":
+                builder.patch(requestBody != null ? requestBody : RequestBody.create("", null));
+                break;
+            case "HEAD":
+                builder.head();
+                break;
+            case "OPTIONS":
+                builder.method("OPTIONS", null);
+                break;
+            default:
+                builder.method(method, requestBody);
         }
 
         return builder.build();
@@ -205,6 +221,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
         if (processedBody.contains("@{")) {
             processedBody = MockDataUtils.interpolate(processedBody);
         }
+        log.debug("Request body after processing: {}", processedBody);
 
         String contentType = headers.entrySet().stream()
                 .filter(e -> "content-type".equalsIgnoreCase(e.getKey()))
@@ -229,7 +246,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
             String key = mr.group(1);
             Object value = env.get(key);
             if (value == null) {
-                throw BusinessExceptionBuilder.exception(ErrorCode.BAD_REQUEST,
+                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
                         Map.of(Constants.REASON, "Missing path variable: " + key));
             }
             return value.toString();
