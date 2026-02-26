@@ -54,7 +54,7 @@ public class FileDatasourceConfig {
                         stmt.execute("PRAGMA journal_mode = WAL;");
                     }
 
-                    ScriptUtils.executeSqlScript(conn, new ClassPathResource("V1__init.sql"));
+                    ScriptUtils.executeSqlScript(conn, new ClassPathResource("db/migrations/V1__init.sql"));
 
                     log.info("Database initialized successfully using V1__init.sql");
                 }
@@ -76,8 +76,7 @@ public class FileDatasourceConfig {
 
     @Bean
     public HibernatePropertiesCustomizer sqliteHibernateCustomizer() {
-        return hibernateProperties -> {
+        return hibernateProperties ->
             hibernateProperties.put("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect");
-        };
     }
 }
