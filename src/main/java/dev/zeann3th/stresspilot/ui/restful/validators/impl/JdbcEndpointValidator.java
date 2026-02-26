@@ -1,0 +1,35 @@
+package dev.zeann3th.stresspilot.ui.restful.validators.impl;
+
+import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
+import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.CreateEndpointRequestDTO;
+import dev.zeann3th.stresspilot.ui.restful.validators.EndpointTypeValidator;
+import jakarta.validation.ConstraintValidatorContext;
+import org.springframework.stereotype.Component;
+
+@Component
+public class JdbcEndpointValidator implements EndpointTypeValidator {
+
+    @Override
+    public boolean supports(String endpointType) {
+        return EndpointType.JDBC.name().equalsIgnoreCase(endpointType);
+    }
+
+    @Override
+    public boolean isValid(CreateEndpointRequestDTO request, ConstraintValidatorContext context) {
+        boolean valid = true;
+        if (request.getUrl() == null || !request.getUrl().startsWith("jdbc:")) {
+            valid = false;
+        }
+        if (request.getBody() == null || request.getBody().toString().trim().isEmpty()) {
+            valid = false;
+        }
+
+        if (!valid) {
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(
+                    "Missing required field for JDBC request (valid jdbc url, body/query)")
+                    .addConstraintViolation();
+        }
+        return valid;
+    }
+}

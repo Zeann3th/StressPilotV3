@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -23,12 +24,17 @@ public class RunStoreAdapter implements RunStore {
     }
 
     @Override
-    public java.util.List<RunEntity> findAllByFlowId(Long flowId) {
+    public List<RunEntity> findAllByFlowId(Long flowId) {
         return runJpaRepository.findByFlowIdOrderByStartedAtDesc(flowId);
     }
 
     @Override
-    public java.util.List<RunEntity> findAll() {
+    public Optional<RunEntity> findLastRunByFlowId(Long flowId) {
+        return runJpaRepository.findTopByFlowIdOrderByStartedAtDesc(flowId);
+    }
+
+    @Override
+    public List<RunEntity> findAll() {
         return runJpaRepository.findAllOrderByStartedAtDesc();
     }
 

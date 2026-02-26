@@ -9,9 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 
 public interface EndpointService {
-    Page<EndpointEntity> getListEndpoint(Long projectId, String name, Pageable pageable);
+    Page<EndpointEntity> getAllEndpoints(Long projectId, String name, Pageable pageable);
 
-    EndpointEntity getEndpointDetail(Long endpointId);
+    EndpointEntity getEndpointById(Long endpointId);
 
     EndpointEntity createEndpoint(CreateEndpointCommand endpointDTO);
 

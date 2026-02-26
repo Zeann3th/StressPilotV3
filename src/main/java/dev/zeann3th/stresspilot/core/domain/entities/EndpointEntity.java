@@ -1,12 +1,8 @@
 package dev.zeann3th.stresspilot.core.domain.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Setter
@@ -15,7 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@ToString(onlyExplicitlyIncluded = true)
 @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
 public class EndpointEntity extends BaseEntity {
     @Id

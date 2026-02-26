@@ -1,10 +1,10 @@
 package dev.zeann3th.stresspilot.core.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.ObjectMapper;
 
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,12 +67,7 @@ public class DataUtils {
     }
 
     public static String parseObjToJson(Object object) {
-        try {
-            return objectMapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
-            log.warn("Failed to serialize DTO field to JSON", e);
-            return "{}";
-        }
+        return objectMapper.writeValueAsString(object);
     }
 
     public static String parseObjToString(Object obj) {
@@ -80,5 +75,23 @@ public class DataUtils {
             return objStr;
         }
         return parseObjToJson(obj);
+    }
+
+    public static void flattenObject(Object obj, String path, List<Map.Entry<String, Object>> out) {
+        switch (obj) {
+            case Map<?, ?> map -> {
+                for (Map.Entry<?, ?> e : map.entrySet()) {
+                    String newPath = path.isEmpty() ? String.valueOf(e.getKey()) : path + "." + e.getKey();
+                    flattenObject(e.getValue(), newPath, out);
+                }
+            }
+            case List<?> list -> {
+                for (int i = 0; i < list.size(); i++) {
+                    String newPath = path.isEmpty() ? String.valueOf(i) : path + "." + i;
+                    flattenObject(list.get(i), newPath, out);
+                }
+            }
+            default -> out.add(new AbstractMap.SimpleEntry<>(path, obj));
+        }
     }
 }

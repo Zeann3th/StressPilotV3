@@ -12,6 +12,8 @@ public interface RunStore {
 
     List<RunEntity> findAllByFlowId(Long flowId);
 
+    Optional<RunEntity> findLastRunByFlowId(Long flowId);
+
     List<RunEntity> findAll();
 
     void deleteById(Long id);

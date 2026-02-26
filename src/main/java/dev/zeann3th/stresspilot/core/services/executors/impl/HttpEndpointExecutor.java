@@ -1,7 +1,5 @@
 package dev.zeann3th.stresspilot.core.services.executors.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
@@ -19,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,7 +38,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
     private static final Pattern PATH_VAR_PATTERN = Pattern.compile("(?<=/):(\\w+)");
 
     private final ConfigService configService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     private OkHttpClient baseClient;
 
@@ -64,11 +64,11 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
                 .followRedirects(true);
 
         Proxy proxy;
-        if (proxyHost != null) {
+        if (proxyHost != null && proxyPort != null) {
             proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
             clientBuilder.proxy(proxy);
 
-            if (proxyUser != null) {
+            if (proxyUser != null && proxyPass != null) {
                 clientBuilder.proxyAuthenticator((route, response) -> {
                     String credential = Credentials.basic(proxyUser, proxyPass);
                     return response.request().newBuilder()
@@ -92,8 +92,8 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
     @Override
     public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
         try {
-            OkHttpClient client = context != null
-                    ? baseClient.newBuilder().cookieJar((CookieJar) context).build()
+            OkHttpClient client = (context instanceof CookieJar cookieJar)
+                    ? baseClient.newBuilder().cookieJar(cookieJar).build()
                     : baseClient;
 
             Request request = buildRequest(endpoint, environment);
@@ -192,7 +192,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
             return new HashMap<>();
         }
         try {
-            Map<String, String> rawHeaders = objectMapper.readValue(headersJson, new TypeReference<>() {});
+            Map<String, String> rawHeaders = jsonMapper.readValue(headersJson, new TypeReference<>() {});
             Map<String, String> processedHeaders = new HashMap<>();
 
             rawHeaders.forEach((key, value) -> {
@@ -259,9 +259,17 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
         }
         try {
             if (rawResponse.trim().startsWith("{")) {
-                return objectMapper.readValue(rawResponse, new TypeReference<Map<String, Object>>() {});
+                return jsonMapper.readValue(
+                        rawResponse,
+                        new tools.jackson.core.type.TypeReference<Map<String, Object>>() {
+                        }
+                );
             } else if (rawResponse.trim().startsWith("[")) {
-                return objectMapper.readValue(rawResponse, new TypeReference<List<Object>>() {});
+                return jsonMapper.readValue(
+                        rawResponse,
+                        new tools.jackson.core.type.TypeReference<List<Object>>() {
+                        }
+                );
             } else {
                 return rawResponse;
             }

@@ -1,6 +1,5 @@
 package dev.zeann3th.stresspilot.core.services.executors.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
@@ -25,61 +24,56 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
-import javax.annotation.Nullable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Slf4j(topic = "GrpcEndpointExecutor")
+@Slf4j(topic = "[GrpcExecutor]")
 @Component
 @RequiredArgsConstructor
 @SuppressWarnings("java:S112")
 public class GrpcEndpointExecutor implements EndpointExecutorService {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
+    private final ConfigService configService;
 
     private final Map<String, Descriptors.MethodDescriptor> descriptorCache = new ConcurrentHashMap<>();
-
     private final Map<String, ManagedChannel> channelCache = new ConcurrentHashMap<>();
-
-    private final ConfigService configService;
 
     private ProxyDetector proxyDetector;
 
     @PostConstruct
     public void init() {
-        proxyDetector = new ProxyDetector() {
-            @Nullable
-            @Override
-            public io.grpc.ProxiedSocketAddress proxyFor(SocketAddress targetAddress) {
-                String proxyHost = configService.getValue(ConfigKey.HTTP_PROXY_HOST.name()).orElse(null);
-                Integer proxyPort = configService.getValue(ConfigKey.HTTP_PROXY_PORT.name()).map(Integer::parseInt).orElse(null);
-                String proxyUser = configService.getValue(ConfigKey.HTTP_PROXY_USERNAME.name()).orElse(null);
-                String proxyPass = configService.getValue(ConfigKey.HTTP_PROXY_PASSWORD.name()).orElse(null);
+        proxyDetector = targetAddress -> {
+            String proxyHost = configService.getValue(ConfigKey.HTTP_PROXY_HOST.name()).orElse(null);
+            Integer proxyPort = configService.getValue(ConfigKey.HTTP_PROXY_PORT.name())
+                    .map(Integer::parseInt).orElse(null);
+            String proxyUser = configService.getValue(ConfigKey.HTTP_PROXY_USERNAME.name()).orElse(null);
+            String proxyPass = configService.getValue(ConfigKey.HTTP_PROXY_PASSWORD.name()).orElse(null);
 
-                if (proxyHost == null || proxyPort == null) {
-                    return null;
-                }
+            if (proxyHost == null || proxyPort == null)
+                return null;
 
-                log.debug("Routing gRPC traffic to {} through proxy {}:{}", targetAddress, proxyHost, proxyPort);
-                var builder = HttpConnectProxiedSocketAddress.newBuilder()
-                        .setProxyAddress(new InetSocketAddress(proxyHost, proxyPort))
-                        .setTargetAddress((InetSocketAddress) targetAddress);
-
-                if (proxyUser != null && proxyPass != null) {
-                    builder.setUsername(proxyUser).setPassword(proxyPass);
-                }
-
-                return builder.build();
-            }
+            log.debug("Routing gRPC through proxy {}:{}", proxyHost, proxyPort);
+            var builder = HttpConnectProxiedSocketAddress.newBuilder()
+                    .setProxyAddress(new InetSocketAddress(proxyHost, proxyPort))
+                    .setTargetAddress((InetSocketAddress) targetAddress);
+            if (proxyUser != null && proxyPass != null)
+                builder.setUsername(proxyUser).setPassword(proxyPass);
+            return builder.build();
         };
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        channelCache.values().forEach(ManagedChannel::shutdownNow);
     }
 
     @Override
@@ -88,153 +82,129 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
     }
 
     @Override
-    public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
+    public ExecuteEndpointResponse execute(EndpointEntity endpoint,
+            Map<String, Object> environment,
+            ExecutionContext context) {
         try {
-            String target = parseTarget(endpoint.getUrl(), environment);
-            String bodyJson = parseBody(endpoint.getBody(), environment);
+            String target = interpolate(endpoint.getUrl(), environment);
+            String bodyJson = interpolate(endpoint.getBody(), environment);
 
             Descriptors.MethodDescriptor methodProto = getDescriptor(endpoint);
-
-            DynamicMessage requestMessage = buildRequestMessage(methodProto, bodyJson);
-
+            DynamicMessage requestMsg = buildRequest(methodProto, bodyJson);
             ManagedChannel channel = getChannel(target);
 
-            long startTime = System.currentTimeMillis();
-
+            long start = System.currentTimeMillis();
             MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethod = buildGrpcMethod(methodProto, endpoint);
+            String responseJson = executeCall(channel, grpcMethod, requestMsg);
+            long elapsed = System.currentTimeMillis() - start;
 
-            String responseString = executeCall(channel, grpcMethod, requestMessage);
-
-            long responseTimeMs = System.currentTimeMillis() - startTime;
-
-            Object dataObject = objectMapper.readValue(responseString, Object.class);
-
+            Object data = jsonMapper.readValue(responseJson, Object.class);
             return ExecuteEndpointResponse.builder()
                     .success(true)
                     .statusCode(HttpStatus.OK.value())
                     .message("OK")
-                    .responseTimeMs(responseTimeMs)
-                    .data(dataObject)
-                    .rawResponse(responseString)
+                    .responseTimeMs(elapsed)
+                    .data(data)
+                    .rawResponse(responseJson)
                     .build();
 
         } catch (Exception e) {
-            log.error("gRPC Error", e);
+            log.error("gRPC execution error", e);
             return ExecuteEndpointResponse.builder()
-                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                     .success(false)
+                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                     .message(e.getMessage())
-                    .data(e.toString())
+                    .responseTimeMs(0)
+                    .data(Map.of("error", String.valueOf(e.getMessage())))
+                    .rawResponse(e.toString())
                     .build();
         }
     }
 
-    @PreDestroy
-    public void cleanup() {
-        channelCache.values().forEach(ManagedChannel::shutdownNow);
+    private String interpolate(String raw, Map<String, Object> env) {
+        if (raw == null)
+            return "";
+        String out = raw;
+        if (out.contains("{{"))
+            out = DataUtils.replaceVariables(out, env);
+        if (out.contains("@{"))
+            out = MockDataUtils.interpolate(out);
+        return out;
     }
 
-    private String parseTarget(String rawUrl, Map<String, Object> environment) {
-        String target = rawUrl;
-        if (target.contains("{{")) {
-            target = DataUtils.replaceVariables(target, environment);
-        }
-        if (target.contains("@{")) {
-            target = MockDataUtils.interpolate(target);
-        }
-        return target;
-    }
-
-    private String parseBody(String rawBody, Map<String, Object> environment) {
-        String body = rawBody;
-        if (body.contains("{{")) {
-            body = DataUtils.replaceVariables(body, environment);
-        }
-        if (body.contains("@{")) {
-            body = MockDataUtils.interpolate(body);
-        }
-        return body;
-    }
-
-    private Descriptors.MethodDescriptor getDescriptor(EndpointEntity entity) {
-        String key = entity.getGrpcStubPath() + "|" + entity.getGrpcServiceName() + "|" + entity.getGrpcMethodName();
-
+    private Descriptors.MethodDescriptor getDescriptor(EndpointEntity e) {
+        String key = e.getGrpcStubPath() + "|" + e.getGrpcServiceName() + "|" + e.getGrpcMethodName();
         return descriptorCache.computeIfAbsent(key, _ -> {
             try {
-                Path descriptorPath = Paths.get(entity.getGrpcStubPath(), "service.pb");
-                return resolveMethodDescriptor(descriptorPath, entity.getGrpcServiceName(), entity.getGrpcMethodName());
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to load gRPC descriptor: " + e.getMessage(), e);
+                Path pbPath = Paths.get(e.getGrpcStubPath(), "service.pb");
+                return resolveMethodDescriptor(pbPath, e.getGrpcServiceName(), e.getGrpcMethodName());
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to load gRPC descriptor: " + ex.getMessage(), ex);
             }
         });
     }
 
     private ManagedChannel getChannel(String target) {
-        return channelCache.computeIfAbsent(target, t ->
-                ManagedChannelBuilder.forTarget(t)
-                        .usePlaintext()
-                        .proxyDetector(proxyDetector)
-                        .build()
-        );
+        return channelCache.computeIfAbsent(target, t -> ManagedChannelBuilder.forTarget(t)
+                .usePlaintext()
+                .proxyDetector(proxyDetector)
+                .build());
     }
 
-    private DynamicMessage buildRequestMessage(Descriptors.MethodDescriptor methodDesc, String jsonBody) throws IOException {
-        DynamicMessage.Builder requestBuilder = DynamicMessage.newBuilder(methodDesc.getInputType());
-        JsonFormat.parser().ignoringUnknownFields().merge(jsonBody, requestBuilder);
-        return requestBuilder.build();
+    private DynamicMessage buildRequest(Descriptors.MethodDescriptor method, String json) throws IOException {
+        DynamicMessage.Builder b = DynamicMessage.newBuilder(method.getInputType());
+        JsonFormat.parser().ignoringUnknownFields().merge(json, b);
+        return b.build();
     }
 
-    private MethodDescriptor<DynamicMessage, DynamicMessage> buildGrpcMethod(Descriptors.MethodDescriptor methodProto, EndpointEntity entity) {
-        MethodDescriptor.MethodType type = getMethodType(methodProto);
-
+    private MethodDescriptor<DynamicMessage, DynamicMessage> buildGrpcMethod(
+            Descriptors.MethodDescriptor proto, EndpointEntity e) {
         return MethodDescriptor.<DynamicMessage, DynamicMessage>newBuilder()
-                .setType(type)
+                .setType(methodType(proto))
                 .setFullMethodName(MethodDescriptor.generateFullMethodName(
-                        entity.getGrpcServiceName(),
-                        entity.getGrpcMethodName()))
-                .setRequestMarshaller(ProtoUtils.marshaller(DynamicMessage.getDefaultInstance(methodProto.getInputType())))
-                .setResponseMarshaller(ProtoUtils.marshaller(DynamicMessage.getDefaultInstance(methodProto.getOutputType())))
+                        e.getGrpcServiceName(), e.getGrpcMethodName()))
+                .setRequestMarshaller(ProtoUtils.marshaller(
+                        DynamicMessage.getDefaultInstance(proto.getInputType())))
+                .setResponseMarshaller(ProtoUtils.marshaller(
+                        DynamicMessage.getDefaultInstance(proto.getOutputType())))
                 .build();
     }
 
     private String executeCall(ManagedChannel channel,
-                               MethodDescriptor<DynamicMessage, DynamicMessage> methodDesc,
-                               DynamicMessage request) throws IOException {
-
-        MethodDescriptor.MethodType type = methodDesc.getType();
-
-        if (type == MethodDescriptor.MethodType.UNARY) {
-            DynamicMessage response = ClientCalls.blockingUnaryCall(channel, methodDesc, CallOptions.DEFAULT, request);
-            return JsonFormat.printer().print(response);
-
-        } else if (type == MethodDescriptor.MethodType.SERVER_STREAMING) {
-            Iterator<DynamicMessage> responses = ClientCalls.blockingServerStreamingCall(channel, methodDesc, CallOptions.DEFAULT, request);
-            StringBuilder sb = new StringBuilder("[");
-            while (responses.hasNext()) {
-                sb.append(JsonFormat.printer().print(responses.next()));
-                if (responses.hasNext()) sb.append(",");
+            MethodDescriptor<DynamicMessage, DynamicMessage> method,
+            DynamicMessage request) throws IOException {
+        if (method.getType() == MethodDescriptor.MethodType.UNARY) {
+            DynamicMessage resp = ClientCalls.blockingUnaryCall(channel, method, CallOptions.DEFAULT, request);
+            return JsonFormat.printer().print(resp);
+        }
+        if (method.getType() == MethodDescriptor.MethodType.SERVER_STREAMING) {
+            Iterator<DynamicMessage> it = ClientCalls.blockingServerStreamingCall(
+                    channel, method, CallOptions.DEFAULT, request);
+            var sb = new StringBuilder("[");
+            while (it.hasNext()) {
+                sb.append(JsonFormat.printer().print(it.next()));
+                if (it.hasNext())
+                    sb.append(",");
             }
             sb.append("]");
             return sb.toString();
         }
-
-        throw new UnsupportedOperationException("Client Streaming/Bidi Streaming not supported yet.");
+        throw new UnsupportedOperationException("Client/Bidi streaming not yet supported.");
     }
 
-    private Descriptors.MethodDescriptor resolveMethodDescriptor(Path pbPath, String serviceName, String methodName) throws Exception {
-        log.debug("Loading .pb file from disk: {}", pbPath);
+    private Descriptors.MethodDescriptor resolveMethodDescriptor(
+            Path pbPath, String svcName, String methodName) throws Exception {
+        log.debug("Loading .pb descriptor: {}", pbPath);
         try (FileInputStream fis = new FileInputStream(pbPath.toFile())) {
-            DescriptorProtos.FileDescriptorSet set = DescriptorProtos.FileDescriptorSet.parseFrom(fis);
-
-            for (DescriptorProtos.FileDescriptorProto fileProto : set.getFileList()) {
-                Descriptors.FileDescriptor fd = Descriptors.FileDescriptor.buildFrom(fileProto, new Descriptors.FileDescriptor[]{});
-
+            DescriptorProtos.FileDescriptorSet fds = DescriptorProtos.FileDescriptorSet.parseFrom(fis);
+            for (DescriptorProtos.FileDescriptorProto fp : fds.getFileList()) {
+                Descriptors.FileDescriptor fd = Descriptors.FileDescriptor.buildFrom(
+                        fp, new Descriptors.FileDescriptor[] {});
                 for (Descriptors.ServiceDescriptor svc : fd.getServices()) {
-                    if (namesMatch(svc.getFullName(), serviceName)) {
-                        Descriptors.MethodDescriptor method = svc.findMethodByName(methodName);
-                        if (method != null) {
-                            return method;
-                        }
+                    if (namesMatch(svc.getFullName(), svcName)) {
+                        Descriptors.MethodDescriptor m = svc.findMethodByName(methodName);
+                        if (m != null)
+                            return m;
                     }
                 }
             }
@@ -242,19 +212,19 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
         throw CommandExceptionBuilder.exception(ErrorCode.SP0008);
     }
 
-    private boolean namesMatch(String protoName, String dbName) {
-        String p = protoName.startsWith(".") ? protoName.substring(1) : protoName;
-        String d = dbName.startsWith(".") ? dbName.substring(1) : dbName;
+    private boolean namesMatch(String proto, String db) {
+        String p = proto.startsWith(".") ? proto.substring(1) : proto;
+        String d = db.startsWith(".") ? db.substring(1) : db;
         return p.equals(d);
     }
 
-    private MethodDescriptor.MethodType getMethodType(Descriptors.MethodDescriptor method) {
-        boolean clientStreaming = method.isClientStreaming();
-        boolean serverStreaming = method.isServerStreaming();
-
-        if (!clientStreaming && !serverStreaming) return MethodDescriptor.MethodType.UNARY;
-        if (!clientStreaming) return MethodDescriptor.MethodType.SERVER_STREAMING;
-        if (!serverStreaming) return MethodDescriptor.MethodType.CLIENT_STREAMING;
+    private MethodDescriptor.MethodType methodType(Descriptors.MethodDescriptor m) {
+        if (!m.isClientStreaming() && !m.isServerStreaming())
+            return MethodDescriptor.MethodType.UNARY;
+        if (!m.isClientStreaming())
+            return MethodDescriptor.MethodType.SERVER_STREAMING;
+        if (!m.isServerStreaming())
+            return MethodDescriptor.MethodType.CLIENT_STREAMING;
         return MethodDescriptor.MethodType.BIDI_STREAMING;
     }
 }

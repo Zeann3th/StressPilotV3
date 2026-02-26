@@ -1,0 +1,30 @@
+package dev.zeann3th.stresspilot.ui.restful.mappers;
+
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.*;
+import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
+import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.*;
+import org.mapstruct.*;
+
+/**
+ * Bi-directional mapper for the Endpoint domain:
+ * <ul>
+ * <li>Request → Command (inbound: UI body → core domain)</li>
+ * <li>Entity → Response DTO (outbound: core domain → HTTP response)</li>
+ * </ul>
+ */
+@Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
+public interface EndpointMapper {
+
+    // ─── Entity → DTO ────────────────────────────────────────────────────────
+
+    @Mapping(source = "project.id", target = "projectId")
+    EndpointResponseDTO toResponse(EndpointEntity entity);
+
+    // ─── Request → Command ───────────────────────────────────────────────────
+
+    CreateEndpointCommand toCreateCommand(CreateEndpointRequestDTO request);
+
+    ExecuteEndpointCommand toExecuteCommand(ExecuteEndpointRequestDTO request);
+
+    ExecuteAdhocEndpointCommand toAdhocCommand(ExecuteAdhocEndpointRequestDTO request);
+}
