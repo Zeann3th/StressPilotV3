@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -71,5 +72,12 @@ public class FileDatasourceConfig {
                     Map.of(Constants.REASON, e.getMessage())
             );
         }
+    }
+
+    @Bean
+    public HibernatePropertiesCustomizer sqliteHibernateCustomizer() {
+        return hibernateProperties -> {
+            hibernateProperties.put("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect");
+        };
     }
 }
