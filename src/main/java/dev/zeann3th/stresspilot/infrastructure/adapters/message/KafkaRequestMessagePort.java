@@ -10,13 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * Stub Kafka writer. Activate by setting {@code stresspilot.message.kafka.enabled=true}
- * in {@code application.yml} and providing a real Kafka producer implementation.
- *
- * <p>Replace the {@code log.debug} calls below with actual
- * {@code KafkaTemplate.send()} calls once Kafka is available.</p>
- */
 @Slf4j(topic = "[Kafka-LogWriter]")
 @Component
 @ConditionalOnProperty(prefix = "stresspilot.message.kafka", name = "enabled", havingValue = "true")

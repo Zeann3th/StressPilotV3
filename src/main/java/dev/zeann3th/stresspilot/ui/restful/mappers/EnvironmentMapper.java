@@ -5,9 +5,6 @@ import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.ui.restful.dtos.environment.*;
 import org.mapstruct.*;
 
-/**
- * Bi-directional mapper for the Environment domain.
- */
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface EnvironmentMapper {
 

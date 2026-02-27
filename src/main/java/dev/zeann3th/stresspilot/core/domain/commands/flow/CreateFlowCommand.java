@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Command to create a new flow under a project. */
 @Data
 @Builder
 @NoArgsConstructor

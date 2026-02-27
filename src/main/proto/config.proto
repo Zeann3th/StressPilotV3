@@ -14,8 +14,6 @@ service ConfigService {
   rpc SetConfigValue (SetConfigValueRequest) returns (google.protobuf.Empty);
 }
 
-// ─── Requests ────────────────────────────────────────────────────────────────
-
 message GetConfigValueRequest {
   string key = 1;
 }
@@ -24,8 +22,6 @@ message SetConfigValueRequest {
   string key   = 1;
   string value = 2;
 }
-
-// ─── Responses ───────────────────────────────────────────────────────────────
 
 message GetAllConfigsResponse {
   map<string, string> configs = 1;

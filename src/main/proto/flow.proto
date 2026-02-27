@@ -18,8 +18,6 @@ service FlowService {
   rpc RunFlow       (RunFlowRequest)       returns (google.protobuf.Empty);
 }
 
-// ─── Shared sub-messages ─────────────────────────────────────────────────────
-
 message FlowStepMessage {
   string id             = 1;
   string type           = 2;
@@ -31,12 +29,9 @@ message FlowStepMessage {
   string condition      = 8;
 }
 
-// Each map row of per-thread credentials: key → value
 message CredentialEntry {
   map<string, string> entries = 1;
 }
-
-// ─── Requests ────────────────────────────────────────────────────────────────
 
 message ListFlowsRequest {
   int64  project_id = 1;
@@ -76,13 +71,9 @@ message RunFlowRequest {
   int32  threads        = 2;
   int32  total_duration = 3;
   int32  ramp_up_duration = 4;
-  // Extra variables injected into every thread's env
   map<string, string>      variables   = 5;
-  // Per-thread credentials — thread i picks credentials[i % size]
   repeated CredentialEntry credentials = 6;
 }
-
-// ─── Responses ───────────────────────────────────────────────────────────────
 
 message FlowResponse {
   int64                    id          = 1;

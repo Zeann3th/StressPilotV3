@@ -11,8 +11,6 @@ import java.util.List;
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig.class)
 public interface RunProtoMapper {
 
-    // ─── Entity → Proto ───────────────────────────────────────────────────────
-
     @Mapping(source = "flow.id", target = "flowId")
     @Mapping(expression = "java(entity.getStartedAt()   != null ? entity.getStartedAt().toString()   : \"\")", target = "startedAt")
     @Mapping(expression = "java(entity.getCompletedAt() != null ? entity.getCompletedAt().toString() : \"\")", target = "completedAt")

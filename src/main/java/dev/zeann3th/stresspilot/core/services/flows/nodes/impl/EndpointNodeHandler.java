@@ -4,9 +4,11 @@ import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointRes
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
+import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
+import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
@@ -22,20 +24,33 @@ import org.springframework.util.CollectionUtils;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j(topic = "[EndpointNodeHandler]")
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("java:S3776")
 public class EndpointNodeHandler implements FlowNodeHandler {
 
+    private boolean strictLinear;
     private static final Random RANDOM = new Random();
     private static final SpelExpressionParser SPEL = new SpelExpressionParser();
 
     private final EndpointExecutorServiceFactory executorFactory;
     private final RequestLogService requestLogService;
     private final JsonMapper jsonMapper;
+    private final ConfigService configService;
+
+    @PostConstruct
+    public void init() {
+        this.strictLinear = Boolean.parseBoolean(
+                configService.getValue(ConfigKey.FLOW_ENDPOINT_STRICT_LINEAR.name()
+                ).orElse("false")
+        );
+        log.info("Endpoint strict linear routing initialized as: {}", this.strictLinear);
+    }
 
     @Override
     public FlowStepType getSupportedType() {
@@ -95,10 +110,14 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     result.getData(), "post-processor", context.getThreadId());
         }
 
-        if (result.isSuccess() && step.getNextIfTrue() != null) {
+        if (strictLinear) {
             return step.getNextIfTrue();
+        } else {
+            if (result.isSuccess() && step.getNextIfTrue() != null) {
+                return step.getNextIfTrue();
+            }
+            return step.getNextIfFalse();
         }
-        return step.getNextIfFalse();
     }
 
     private void evaluateSuccessCondition(EndpointEntity endpoint, ExecuteEndpointResponse response) {
@@ -194,7 +213,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     try {
                         int idx = Integer.parseInt(part);
                         current = (idx >= 0 && idx < list.size()) ? list.get(idx) : null;
-                    } catch (NumberFormatException e) {
+                    } catch (NumberFormatException _) {
                         return null;
                     }
                 }

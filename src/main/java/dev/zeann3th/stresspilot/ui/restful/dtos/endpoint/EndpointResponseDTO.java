@@ -2,7 +2,6 @@ package dev.zeann3th.stresspilot.ui.restful.dtos.endpoint;
 
 import lombok.Data;
 
-/** Response DTO returned to the UI layer for endpoint operations. */
 @Data
 public class EndpointResponseDTO {
     private Long id;

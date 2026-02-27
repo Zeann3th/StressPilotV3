@@ -1,6 +1,5 @@
-package dev.zeann3th.stresspilot.infrastructure.report;
+package dev.zeann3th.stresspilot.core.utils;
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.zeann3th.stresspilot.core.domain.commands.run.EndpointStats;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;

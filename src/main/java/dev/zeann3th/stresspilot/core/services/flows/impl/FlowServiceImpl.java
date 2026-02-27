@@ -123,6 +123,7 @@ public class FlowServiceImpl implements FlowService {
     @Override
     @Async
     @Transactional
+    @SuppressWarnings("java:S3776")
     public void runFlow(Long flowId, RunFlowCommand runFlowCommand) {
         FlowEntity flow = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
@@ -151,8 +152,11 @@ public class FlowServiceImpl implements FlowService {
         Map<String, Object> baseEnv = envVarStore
                 .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
                 .stream()
-                .collect(Collectors.toMap(EnvironmentVariableEntity::getKey,
-                        EnvironmentVariableEntity::getValue, (_, v2) -> v2, HashMap::new));
+                .collect(Collectors.toMap(
+                        EnvironmentVariableEntity::getKey,
+                        EnvironmentVariableEntity::getValue,
+                        (_, v2) -> v2, HashMap::new)
+                );
         if (runFlowCommand.getVariables() != null)
             baseEnv.putAll(runFlowCommand.getVariables());
 
@@ -180,11 +184,6 @@ public class FlowServiceImpl implements FlowService {
                     try {
                         Thread.sleep(rampDelay);
                     } catch (InterruptedException _) {
-                        // Do NOT re-interrupt the coordinator thread here.
-                        // Re-interrupting would cause every subsequent f.get() to throw
-                        // InterruptedException immediately, hitting the finally block and
-                        // firing pool.shutdownNow() — which would kill all worker threads mid-run.
-                        // Instead, just skip the remaining ramp delay and submit immediately.
                         log.warn("Ramp-up sleep interrupted at thread {}; submitting remaining workers without delay",
                                 i);
                     }
@@ -213,9 +212,9 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void runWorker(int threadId, RunEntity run,
-            Map<String, FlowStepEntity> stepMap,
-            Map<String, Object> environment,
-            long totalMs, AtomicBoolean stop) {
+                           Map<String, FlowStepEntity> stepMap,
+                           Map<String, Object> environment,
+                           long totalMs, AtomicBoolean stop) {
         FlowExecutionContext ctx = new FlowExecutionContext();
         ctx.setThreadId(threadId);
         ctx.setRunId(run.getId());
@@ -242,8 +241,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void executeIteration(FlowStepEntity startStep,
-            Map<String, FlowStepEntity> stepMap,
-            FlowExecutionContext ctx) {
+                                  Map<String, FlowStepEntity> stepMap,
+                                  FlowExecutionContext ctx) {
         FlowStepEntity current = startStep;
         Set<String> visited = new LinkedHashSet<>();
 
@@ -257,7 +256,7 @@ public class FlowServiceImpl implements FlowService {
             FlowStepType type;
             try {
                 type = FlowStepType.valueOf(current.getType().toUpperCase());
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException _) {
                 log.error("Unknown step type: {}", current.getType());
                 break;
             }
@@ -267,11 +266,6 @@ public class FlowServiceImpl implements FlowService {
 
             current = nextId != null ? stepMap.get(nextId) : null;
         }
-    }
-
-    @Override
-    public RunEntity getLastRun(Long flowId) {
-        return runStore.findLastRunByFlowId(flowId).orElse(null);
     }
 
     private List<FlowStepEntity> stepsFromCommands(FlowEntity flow, List<FlowStepCommand> cmds) {
@@ -342,8 +336,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-            Set<String> terminals, Set<String> visiting,
-            Map<String, Boolean> memo) {
+                                            Set<String> terminals, Set<String> visiting,
+                                            Map<String, Boolean> memo) {
         if (memo.containsKey(node))
             return memo.get(node);
         if (terminals.contains(node)) {

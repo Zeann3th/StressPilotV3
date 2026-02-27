@@ -9,7 +9,7 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
-import dev.zeann3th.stresspilot.infrastructure.report.ExcelGenerator;
+import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +28,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("java:S3776")
 public class RunServiceImpl implements RunService {
 
     private final RunStore runStore;
@@ -185,6 +186,7 @@ public class RunServiceImpl implements RunService {
                 if (run.getRampUpDuration() != null)
                     builder.rampUpTime(run.getRampUpDuration());
             } catch (Exception _) {
+                // no-op
             }
         }
 

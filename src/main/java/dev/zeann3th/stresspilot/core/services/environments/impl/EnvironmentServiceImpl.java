@@ -44,14 +44,14 @@ public class EnvironmentServiceImpl implements EnvironmentService {
                 .map(EnvironmentVariableEntity::getKey)
                 .collect(Collectors.toCollection(HashSet::new));
 
-        handleRemove(environmentId, currentKeys, byId, cmd);
+        handleRemove(currentKeys, byId, cmd);
         handleUpdate(currentKeys, byId, cmd);
         handleAdd(env, currentKeys, cmd);
     }
 
-    private void handleRemove(Long environmentId, Set<String> currentKeys,
-                               Map<Long, EnvironmentVariableEntity> byId,
-                               UpdateEnvironmentVariablesCommand cmd) {
+    private void handleRemove(Set<String> currentKeys,
+                              Map<Long, EnvironmentVariableEntity> byId,
+                              UpdateEnvironmentVariablesCommand cmd) {
         if (cmd.getRemoved() == null || cmd.getRemoved().isEmpty()) return;
         for (Long id : cmd.getRemoved()) {
             if (!byId.containsKey(id))

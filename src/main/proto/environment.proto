@@ -13,14 +13,10 @@ service EnvironmentService {
   rpc UpdateEnvironmentVariables (UpdateEnvironmentVariablesRequest) returns (google.protobuf.Empty);
 }
 
-// ─── Shared sub-messages ─────────────────────────────────────────────────────
-
 message EnvironmentVariableEntry {
   string key   = 1;
   string value = 2;
 }
-
-// ─── Requests ────────────────────────────────────────────────────────────────
 
 message GetEnvironmentVariablesRequest {
   int64 environment_id = 1;
@@ -30,8 +26,6 @@ message UpdateEnvironmentVariablesRequest {
   int64                            environment_id = 1;
   repeated EnvironmentVariableEntry variables      = 2;
 }
-
-// ─── Responses ───────────────────────────────────────────────────────────────
 
 message EnvironmentVariableResponse {
   int64  id     = 1;

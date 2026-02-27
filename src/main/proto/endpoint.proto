@@ -18,8 +18,6 @@ service EndpointService {
   rpc ExecuteAdhocEndpoint (ExecuteAdhocEndpointRequest) returns (ExecuteEndpointResponse);
 }
 
-// ─── Requests ────────────────────────────────────────────────────────────────
-
 message ListEndpointsRequest {
   int64  project_id = 1;
   string name       = 2;
@@ -86,8 +84,6 @@ message ExecuteAdhocEndpointRequest {
   string grpc_stub_path    = 10;
   map<string,string> variables = 11;
 }
-
-// ─── Responses ───────────────────────────────────────────────────────────────
 
 message EndpointResponse {
   int64  id                = 1;

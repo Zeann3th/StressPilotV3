@@ -5,10 +5,6 @@ import lombok.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Serialized form of a full project snapshot for import/export.
- * Used as both the payload class (import) and the output value object (export).
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,8 +17,6 @@ public class ProjectImportExportCommand {
     private List<EnvVarData> environmentVariables;
     private List<EndpointData> endpoints;
     private List<FlowData> flows;
-
-    // ─── Nested types ─────────────────────────────────────────────────────────
 
     @Data
     @NoArgsConstructor
@@ -39,7 +33,6 @@ public class ProjectImportExportCommand {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class EndpointData {
-        /** Original DB id — used for remapping during import so flow steps can reference them. */
         private Long oldId;
         private String name;
         private String description;

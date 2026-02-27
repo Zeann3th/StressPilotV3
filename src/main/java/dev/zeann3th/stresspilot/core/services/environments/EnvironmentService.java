@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface EnvironmentService {
     List<EnvironmentVariableEntity> getEnvironmentVariables(Long environmentId);
+
     void updateEnvironmentVariables(Long environmentId, UpdateEnvironmentVariablesCommand cmd);
 }

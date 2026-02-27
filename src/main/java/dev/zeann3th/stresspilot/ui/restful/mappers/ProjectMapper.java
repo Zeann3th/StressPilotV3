@@ -8,9 +8,6 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.project.ProjectResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.UpdateProjectRequestDTO;
 import org.mapstruct.*;
 
-/**
- * Bi-directional mapper for the Project domain.
- */
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface ProjectMapper {
 

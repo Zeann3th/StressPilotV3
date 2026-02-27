@@ -49,7 +49,7 @@ public class PostmanParser implements ParserService {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "java:S3776"})
     private EndpointEntity createEndpoint(JsonNode item) {
         JsonNode request = item.path("request");
 

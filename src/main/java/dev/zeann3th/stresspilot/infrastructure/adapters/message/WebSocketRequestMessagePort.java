@@ -17,13 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Periodically pushes flushed request logs to a WebSocket topic.
- *
- * <p>Reads from the shared {@link DatabaseRequestMessagePort#wsBuffer}
- * so there is no double-read from the queue. Enabled by default via
- * {@code stresspilot.message.websocket.enabled=true}.</p>
- */
 @Slf4j(topic = "[WS-LogWriter]")
 @Component
 @ConditionalOnProperty(prefix = "stresspilot.message.websocket", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -46,21 +39,15 @@ public class WebSocketRequestMessagePort implements RequestMessagePort {
                 properties.getWebsocket().getTopic(), interval);
     }
 
-    // ─── RequestLogWriter ────────────────────────────────────────────────────
 
-    /** No-op: WS writer reads from the shared wsBuffer filled by DatabaseRequestLogWriter. */
     @Override
     public void write(RequestLogEntity log) { /* delegated via wsBuffer */ }
 
-    /** No-op: same reason as above. */
     @Override
     public void writeAll(List<RequestLogEntity> logs) { /* delegated via wsBuffer */ }
 
-    /** No-op: WS delivery is best-effort; no need to block. */
     @Override
     public void flush() { /* best-effort, no blocking */ }
-
-    // ─── Internal ────────────────────────────────────────────────────────────
 
     private void push() {
         if (dbWriter.wsBuffer.isEmpty()) return;
