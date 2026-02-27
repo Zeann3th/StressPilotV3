@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class RequestLog {
     private Long id;
     private Long endpointId;
+    private String endpointName;
     private Integer statusCode;
     private Boolean success;
     private Long responseTime;

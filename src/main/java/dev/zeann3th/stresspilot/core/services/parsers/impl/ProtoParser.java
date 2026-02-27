@@ -54,10 +54,10 @@ public class ProtoParser implements ParserService {
 
         } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0006, Map.of(Constants.REASON, "Interrupted"));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0006, Map.of(Constants.REASON, "Interrupted"));
         } catch (Exception e) {
             log.error("Failed to parse gRPC proto", e);
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0006, Map.of(Constants.REASON, e.getMessage()));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0006, Map.of(Constants.REASON, e.getMessage()));
         }
     }
 

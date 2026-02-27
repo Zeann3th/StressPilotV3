@@ -1,10 +1,11 @@
 package dev.zeann3th.stresspilot.core.services.endpoints.impl;
 
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.CreateEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteAdhocEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
-import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
@@ -56,13 +57,13 @@ public class EndpointServiceImpl implements EndpointService {
     @Override
     public EndpointEntity getEndpointById(Long endpointId) {
         return endpointStore.findById(endpointId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0005));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005));
     }
 
     @Override
     public EndpointEntity createEndpoint(CreateEndpointCommand cmd) {
         ProjectEntity project = projectStore.findById(cmd.getProjectId())
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         EndpointEntity entity = buildFromCommand(project, cmd);
 
@@ -72,7 +73,7 @@ public class EndpointServiceImpl implements EndpointService {
     @Override
     public EndpointEntity updateEndpoint(Long endpointId, Map<String, Object> patch) {
         EndpointEntity entity = endpointStore.findById(endpointId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0005));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005));
 
         Map<String, Object> safe = patch.entrySet().stream()
                 .filter(e -> !Set.of("id", "projectId", "project").contains(e.getKey()))
@@ -83,26 +84,26 @@ public class EndpointServiceImpl implements EndpointService {
             return endpointStore.save(entity);
 
         } catch (Exception e) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                    Map.of(Constants.REASON, "Invalid patch data: " + e.getMessage()));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0019,
+                    Map.of(Constants.REASON, e.getMessage()));
         }
     }
 
     @Override
     public void deleteEndpoint(Long endpointId) {
         if (endpointStore.findById(endpointId).isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0005);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0005);
         endpointStore.deleteById(endpointId);
     }
 
     @Override
     public void uploadEndpoints(MultipartFile file, Long projectId) {
         if (file == null || file.isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0014,
                     Map.of(Constants.REASON, "File is empty or null"));
 
         ProjectEntity project = projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         String filename = Objects.requireNonNull(file.getOriginalFilename(), "filename");
         String parserType;
@@ -111,8 +112,8 @@ public class EndpointServiceImpl implements EndpointService {
         } else if (filename.endsWith(".proto") || filename.endsWith(".pb")) {
             parserType = ParserType.PROTO.name();
         } else {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                    Map.of(Constants.REASON, "Unsupported file type"));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0007,
+                    Map.of(Constants.REASON, "Unsupported file type: " + filename));
         }
 
         try {
@@ -125,15 +126,15 @@ public class EndpointServiceImpl implements EndpointService {
             }
             endpointStore.saveAll(entities);
         } catch (Exception e) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                    Map.of(Constants.REASON, "Failed to parse/save: " + e.getMessage()));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0006,
+                    Map.of(Constants.REASON, e.getMessage()));
         }
     }
 
     @Override
     public ExecuteEndpointResponse runEndpoint(Long endpointId, ExecuteEndpointCommand cmd) {
         EndpointEntity stored = endpointStore.findById(endpointId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0005));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005));
         ProjectEntity project = stored.getProject();
 
         Map<String, Object> environment = envVarStore
@@ -159,7 +160,7 @@ public class EndpointServiceImpl implements EndpointService {
             return resp;
         } catch (Exception e) {
             log.error("Error executing endpoint {}: {}", endpointId, e.getMessage(), e);
-            Map<String, Object> errData = Map.of("error", e.getMessage());
+            Map<String, Object> errData = Map.of(Constants.ERROR, e.getMessage());
             return ExecuteEndpointResponse.builder()
                     .responseTimeMs(System.currentTimeMillis() - start)
                     .success(false)
@@ -173,7 +174,7 @@ public class EndpointServiceImpl implements EndpointService {
     @Override
     public ExecuteEndpointResponse runAdhocEndpoint(Long projectId, ExecuteAdhocEndpointCommand cmd) {
         ProjectEntity project = projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         Map<String, Object> environment = envVarStore
                 .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
@@ -192,7 +193,7 @@ public class EndpointServiceImpl implements EndpointService {
             return resp;
         } catch (Exception e) {
             log.error("Ad-hoc endpoint error: {}", e.getMessage(), e);
-            Map<String, Object> errData = Map.of("error", e.getMessage());
+            Map<String, Object> errData = Map.of(Constants.ERROR, e.getMessage());
             return ExecuteEndpointResponse.builder()
                     .responseTimeMs(System.currentTimeMillis() - start)
                     .success(false)

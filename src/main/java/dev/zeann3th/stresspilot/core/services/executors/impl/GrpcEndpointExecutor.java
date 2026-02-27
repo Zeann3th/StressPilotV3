@@ -209,7 +209,7 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
                 }
             }
         }
-        throw CommandExceptionBuilder.exception(ErrorCode.SP0008);
+        throw CommandExceptionBuilder.exception(ErrorCode.ER0008);
     }
 
     private boolean namesMatch(String proto, String db) {

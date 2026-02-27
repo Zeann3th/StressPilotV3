@@ -105,7 +105,7 @@ public class FlowController {
             return objectMapper.readValue(file.getInputStream(), new TypeReference<>() {
             });
         } catch (IOException _) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0014);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0014);
         }
     }
 }

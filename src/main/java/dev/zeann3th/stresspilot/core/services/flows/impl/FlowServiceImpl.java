@@ -1,9 +1,10 @@
 package dev.zeann3th.stresspilot.core.services.flows.impl;
 
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
-import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+
 import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
@@ -57,14 +58,14 @@ public class FlowServiceImpl implements FlowService {
     @Override
     public FlowEntity getFlowDetail(Long flowId) {
         return flowStore.findById(flowId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0003));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
     }
 
     @Override
     @Transactional
     public FlowEntity createFlow(CreateFlowCommand createFlowCommand) {
         ProjectEntity project = projectStore.findById(createFlowCommand.getProjectId())
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         FlowEntity entity = FlowEntity.builder()
                 .project(project)
@@ -79,7 +80,7 @@ public class FlowServiceImpl implements FlowService {
     @Transactional
     public FlowEntity updateFlow(Long flowId, Map<String, Object> patch) {
         FlowEntity entity = flowStore.findById(flowId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0003));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
         Map<String, Object> safe = patch.entrySet().stream()
                 .filter(e -> !Set.of("id", "projectId", "project", "steps").contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -87,8 +88,8 @@ public class FlowServiceImpl implements FlowService {
             jsonMapper.updateValue(entity, safe);
             return flowStore.save(entity);
         } catch (Exception ex) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                    Map.of(Constants.REASON, "Invalid patch: " + ex.getMessage()));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0019,
+                    Map.of(Constants.REASON, ex.getMessage()));
         }
     }
 
@@ -96,7 +97,7 @@ public class FlowServiceImpl implements FlowService {
     @Transactional
     public void deleteFlow(Long flowId) {
         if (flowStore.findById(flowId).isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0003);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0003);
         flowStepStore.deleteAllByFlowId(flowId);
         flowStore.deleteById(flowId);
     }
@@ -105,7 +106,7 @@ public class FlowServiceImpl implements FlowService {
     @Transactional
     public FlowEntity configureFlow(Long flowId, List<FlowStepCommand> stepCmds) {
         FlowEntity flow = flowStore.findById(flowId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0003));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
 
         List<FlowStepEntity> preview = stepsFromCommands(flow, stepCmds);
         validateStartStep(preview);
@@ -124,11 +125,11 @@ public class FlowServiceImpl implements FlowService {
     @Transactional
     public void runFlow(Long flowId, RunFlowCommand runFlowCommand) {
         FlowEntity flow = flowStore.findById(flowId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0003));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
 
         List<FlowStepEntity> steps = flowStepStore.findAllByFlowId(flowId);
         if (steps.isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0004,
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
                     Map.of(Constants.REASON, "Flow has no configured steps"));
 
         sortSteps(steps);
@@ -179,7 +180,12 @@ public class FlowServiceImpl implements FlowService {
                     try {
                         Thread.sleep(rampDelay);
                     } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                        // Do NOT re-interrupt the coordinator thread here.
+                        // Re-interrupting would cause every subsequent f.get() to throw
+                        // InterruptedException immediately, hitting the finally block and
+                        // firing pool.shutdownNow() — which would kill all worker threads mid-run.
+                        // Instead, just skip the remaining ramp delay and submit immediately.
+                        log.warn("Ramp-up sleep interrupted at thread {}; submitting remaining workers without delay", i);
                     }
                 }
 
@@ -273,8 +279,8 @@ public class FlowServiceImpl implements FlowService {
             EndpointEntity endpoint = null;
             if (FlowStepType.ENDPOINT.name().equalsIgnoreCase(cmd.getType()) && cmd.getEndpointId() != null) {
                 endpoint = endpointStore.findById(cmd.getEndpointId())
-                        .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0005,
-                                Map.of(Constants.REASON, "Endpoint " + cmd.getEndpointId() + " not found")));
+                        .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005,
+                                Map.of(Constants.ID, cmd.getEndpointId())));
             }
             FlowStepEntity step = FlowStepEntity.builder()
                     .id(cmd.getId() != null ? cmd.getId() : UUID.randomUUID().toString())
@@ -299,10 +305,10 @@ public class FlowServiceImpl implements FlowService {
                 .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
                 .count();
         if (count == 0)
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0020,
                     Map.of(Constants.REASON, "Flow must have exactly one START node (found none)"));
         if (count > 1)
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0020,
                     Map.of(Constants.REASON, "Flow must have exactly one START node (found " + count + ")"));
     }
 
@@ -321,14 +327,14 @@ public class FlowServiceImpl implements FlowService {
         }
 
         if (terminals.isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0004,
-                    Map.of("reason", "No terminal ENDPOINT found — flow would be infinite"));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
+                    Map.of(Constants.REASON, "No terminal ENDPOINT found — flow would be infinite"));
 
         Map<String, Boolean> memo = new HashMap<>();
         for (String node : graph.keySet()) {
             if (!canReachEndpoint(node, graph, terminals, new HashSet<>(), memo))
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0004,
-                        Map.of("reason", "Infinite cycle — node " + node + " cannot reach a terminal"));
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
+                        Map.of(Constants.REASON, "Infinite cycle — node " + node + " cannot reach a terminal"));
         }
     }
 

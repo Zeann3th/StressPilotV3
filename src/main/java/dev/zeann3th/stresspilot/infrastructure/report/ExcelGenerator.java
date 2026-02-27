@@ -137,7 +137,7 @@ public class ExcelGenerator<T> {
         endpointsSheet.trackAllColumnsForAutoSizing();
 
         Row head = endpointsSheet.createRow(0);
-        String[] eHeaders = { "Endpoint ID", "Requests", "Avg (ms)", "P90 (ms)", "P95 (ms)" };
+        String[] eHeaders = { "Endpoint ID", "Endpoint Name", "Requests", "Avg (ms)", "P90 (ms)", "P95 (ms)" };
         for (int i = 0; i < eHeaders.length; i++) {
             Cell ch = head.createCell(i);
             ch.setCellValue(eHeaders[i]);
@@ -151,11 +151,12 @@ public class ExcelGenerator<T> {
                 if (stat == null)
                     continue;
                 Row rr = endpointsSheet.createRow(er++);
-                createCell(rr, 0, stat.getEndpointName() != null ? stat.getEndpointName() : "error", wrapStyle);
-                createCell(rr, 1, stat.getRequests(), intStyle);
-                createCell(rr, 2, stat.getAvgMs(), numberStyle);
-                createCell(rr, 3, stat.getP90Ms(), numberStyle);
-                createCell(rr, 4, stat.getP95Ms(), numberStyle);
+                createCell(rr, 0, stat.getEndpointId(), intStyle);
+                createCell(rr, 1, stat.getEndpointName() != null ? stat.getEndpointName() : "Unknown endpoint", wrapStyle);
+                createCell(rr, 2, stat.getRequests(), intStyle);
+                createCell(rr, 3, stat.getAvgMs(), numberStyle);
+                createCell(rr, 4, stat.getP90Ms(), numberStyle);
+                createCell(rr, 5, stat.getP95Ms(), numberStyle);
             }
         } else {
             log.warn("Endpoint stats list is null.");
@@ -167,7 +168,7 @@ public class ExcelGenerator<T> {
         log.debug("Creating Details sheet...");
         SXSSFSheet details = workbook.createSheet("Details");
 
-        String[] headers = { "ID", "Endpoint ID", "Status", "Response Time (ms)", "Request", "Response", "Timestamp" };
+        String[] headers = { "ID", "Endpoint ID", "Endpoint Name", "Status", "Response Time (ms)", "Request", "Response", "Timestamp" };
         Row headerRow = details.createRow(0);
         for (int i = 0; i < headers.length; i++) {
             Cell c = headerRow.createCell(i);
@@ -188,16 +189,17 @@ public class ExcelGenerator<T> {
 
                 createCell(dataRow, 0, logDto.getId(), null);
                 createCell(dataRow, 1, logDto.getEndpointId(), null);
-                createCell(dataRow, 2, logDto.getStatusCode(), null);
-                createCell(dataRow, 3, logDto.getResponseTime(), numberStyle);
-                createCell(dataRow, 4, logDto.getRequest(), wrapStyle);
-                createCell(dataRow, 5, logDto.getResponse(), wrapStyle);
+                createCell(dataRow, 2, logDto.getEndpointName() != null ? logDto.getEndpointName() : "", wrapStyle);
+                createCell(dataRow, 3, logDto.getStatusCode(), null);
+                createCell(dataRow, 4, logDto.getResponseTime(), numberStyle);
+                createCell(dataRow, 5, logDto.getRequest(), wrapStyle);
+                createCell(dataRow, 6, logDto.getResponse(), wrapStyle);
 
                 LocalDateTime ts = logDto.getCreatedAt();
                 if (ts != null) {
-                    createCell(dataRow, 6, ts.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), null);
+                    createCell(dataRow, 7, ts.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), null);
                 } else {
-                    createCell(dataRow, 6, "", null);
+                    createCell(dataRow, 7, "", null);
                 }
 
                 if (rowIdx % WINDOW_SIZE == 0) {
@@ -222,11 +224,12 @@ public class ExcelGenerator<T> {
 
         details.setColumnWidth(0, 15 * 256);
         details.setColumnWidth(1, 15 * 256);
-        details.setColumnWidth(2, 12 * 256);
-        details.setColumnWidth(3, 20 * 256);
-        details.setColumnWidth(4, 80 * 256);
+        details.setColumnWidth(2, 30 * 256);
+        details.setColumnWidth(3, 12 * 256);
+        details.setColumnWidth(4, 20 * 256);
         details.setColumnWidth(5, 80 * 256);
-        details.setColumnWidth(6, 25 * 256);
+        details.setColumnWidth(6, 80 * 256);
+        details.setColumnWidth(7, 25 * 256);
 
         log.info("Excel generation completed in {} ms", System.currentTimeMillis() - startTime);
         return this;

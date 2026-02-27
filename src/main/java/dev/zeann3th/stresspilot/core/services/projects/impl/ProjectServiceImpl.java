@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.core.services.projects.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.project.CreateProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.project.UpdateProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.project.ProjectImportExportCommand;
@@ -46,7 +47,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public ProjectEntity getProjectDetail(Long projectId) {
         return projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
     }
 
     @Override
@@ -65,7 +66,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Transactional
     public ProjectEntity updateProject(Long projectId, UpdateProjectCommand updateProjectCommand) {
         ProjectEntity project = projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
         Optional.ofNullable(updateProjectCommand.getName()).ifPresent(project::setName);
         Optional.ofNullable(updateProjectCommand.getDescription()).ifPresent(project::setDescription);
         return projectStore.save(project);
@@ -75,7 +76,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Transactional
     public void deleteProject(Long projectId) {
         ProjectEntity project = projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
         Long envId = project.getEnvironment().getId();
 
         // Delete children first (flow steps → flows → endpoints), then project, then
@@ -95,7 +96,8 @@ public class ProjectServiceImpl implements ProjectService {
     public ProjectEntity importProject(MultipartFile file) {
         try {
             if (file == null || file.isEmpty())
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001);
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0014,
+                        Map.of(Constants.REASON, "File is empty or null"));
 
             ProjectImportExportCommand payload = objectMapper.readValue(file.getInputStream(),
                     ProjectImportExportCommand.class);
@@ -186,7 +188,7 @@ public class ProjectServiceImpl implements ProjectService {
             return project;
         } catch (Exception e) {
             log.error("Import failed", e);
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0011);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0011);
         }
     }
 
@@ -194,7 +196,7 @@ public class ProjectServiceImpl implements ProjectService {
     public ByteArrayResource exportProject(Long projectId) {
         try {
             ProjectEntity project = projectStore.findById(projectId)
-                    .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0002));
+                    .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
             Long envId = project.getEnvironment().getId();
 
             List<EnvironmentVariableEntity> envVars = envVarStore.findAllByEnvironmentId(envId);
@@ -250,7 +252,7 @@ public class ProjectServiceImpl implements ProjectService {
             return new ByteArrayResource(bytes);
         } catch (Exception e) {
             log.error("Export failed", e);
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0012);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0012);
         }
     }
 

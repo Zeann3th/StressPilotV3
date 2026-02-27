@@ -40,9 +40,9 @@ public class HttpGlobalExceptionHandler {
         log.error("Unhandled exception: ", ex);
 
         ApiResponse<Void> response = new ApiResponse<>(
-                ErrorCode.SP9999.getErrorType().name(),
-                ErrorCode.SP9999.name(),
-                ErrorCode.SP9999.getMessage(),
+                ErrorCode.ER9999.getErrorType().name(),
+                ErrorCode.ER9999.name(),
+                ErrorCode.ER9999.getMessage(),
                 null,
                 getTraceId()
         );

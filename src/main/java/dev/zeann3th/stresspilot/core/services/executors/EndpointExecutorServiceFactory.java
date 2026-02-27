@@ -28,6 +28,6 @@ public class EndpointExecutorServiceFactory {
         return extensions.stream()
                 .filter(executor -> executor.getType().equalsIgnoreCase(type))
                 .findFirst()
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0009));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0009));
     }
 }

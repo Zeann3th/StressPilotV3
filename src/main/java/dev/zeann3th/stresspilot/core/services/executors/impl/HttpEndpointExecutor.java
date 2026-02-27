@@ -246,7 +246,7 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
             String key = mr.group(1);
             Object value = env.get(key);
             if (value == null) {
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0001,
                         Map.of(Constants.REASON, "Missing path variable: " + key));
             }
             return value.toString();

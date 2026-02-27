@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.core.services.flows.nodes;
 
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
@@ -34,8 +35,8 @@ public class FlowNodeHandlerFactory {
     public FlowNodeHandler getHandler(FlowStepType type) {
         FlowNodeHandler handler = handlerMap.get(type);
         if (handler == null) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                    Map.of("reason", "No handler registered for flow step type: " + type));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0021,
+                    Map.of(Constants.TYPE, type));
         }
         return handler;
     }

@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.core.services.runs.impl;
 
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
@@ -8,13 +9,21 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
+import dev.zeann3th.stresspilot.infrastructure.report.ExcelGenerator;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -32,21 +41,55 @@ public class RunServiceImpl implements RunService {
     @Override
     public RunEntity getRunDetail(Long runId) {
         return runStore.findById(runId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0001));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+    }
+
+    @Override
+    public RunEntity getLastRun(Long flowId) {
+        return runStore.findLastRunByFlowId(flowId).orElse(null);
     }
 
     @Override
     public RunReport generateReport(Long runId) {
         RunEntity run = runStore.findById(runId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0001));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
         List<RequestLogEntity> logs = requestLogStore.findAllByRunId(runId);
         return buildReport(runId, run, logs);
+    }
+
+    @Override
+    public void exportRun(Long runId, String type, HttpServletResponse response) {
+        String reportTypeStr = (type == null || type.isEmpty()) ? "DETAILED" : type.toUpperCase();
+
+        if (!"DETAILED".equals(reportTypeStr) && !"SUMMARY".equals(reportTypeStr)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0022, Map.of(Constants.TYPE, reportTypeStr));
+        }
+
+        RunReport report = generateReport(runId);
+
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String rawFileName = "[Stress Pilot] " + reportTypeStr + "_report_of_run_" + runId + "_" + now + ".xlsx";
+            String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
+
+            new ExcelGenerator<>()
+                    .writeRunReport(report)
+                    .export(response);
+
+        } catch (Exception e) {
+            log.error("Failed to export run report for runId={}: {}", runId, e.getMessage(), e);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
+        }
     }
 
     private RunReport buildReport(Long runId, RunEntity run, List<RequestLogEntity> logs) {
         List<Long> responseTimes = logs.stream()
                 .map(RequestLogEntity::getResponseTime)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .map(Number::longValue)
                 .sorted()
                 .toList();
@@ -70,6 +113,14 @@ public class RunServiceImpl implements RunService {
         double durationSeconds = deriveDurationSeconds(run, logs);
         double tps = durationSeconds <= 0 ? 0.0 : totalRequests / durationSeconds;
 
+        // Build a name-lookup map from already-loaded entities (no extra DB calls)
+        java.util.Map<Long, String> endpointNameMap = new java.util.HashMap<>();
+        for (RequestLogEntity r : logs) {
+            if (r.getEndpoint() != null && r.getEndpoint().getId() != null) {
+                endpointNameMap.putIfAbsent(r.getEndpoint().getId(), r.getEndpoint().getName());
+            }
+        }
+
         java.util.Map<Long, java.util.List<Long>> perEndpoint = new java.util.HashMap<>();
         for (RequestLogEntity r : logs) {
             Long endpointId = (r.getEndpoint() == null || r.getEndpoint().getId() == null) ? -1L
@@ -86,8 +137,8 @@ public class RunServiceImpl implements RunService {
             double p90e = percentile(times, 90);
             double p95e = percentile(times, 95);
             endpointStats.add(dev.zeann3th.stresspilot.core.domain.commands.run.EndpointStats.builder()
-                    .endpointName("Endpoint ID " + e.getKey())
                     .endpointId(e.getKey())
+                    .endpointName(endpointNameMap.getOrDefault(e.getKey(), "Unknown endpoint"))
                     .requests(times.size())
                     .avgMs(avg)
                     .p90Ms(p90e)
@@ -97,9 +148,11 @@ public class RunServiceImpl implements RunService {
 
         List<dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog> details = new java.util.ArrayList<>();
         for (RequestLogEntity l : logs) {
+            Long eid = (l.getEndpoint() != null) ? l.getEndpoint().getId() : null;
             details.add(dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog.builder()
                     .id(l.getId())
-                    .endpointId((l.getEndpoint() != null) ? l.getEndpoint().getId() : null)
+                    .endpointId(eid)
+                    .endpointName(eid != null ? endpointNameMap.getOrDefault(eid, "Unknown endpoint") : null)
                     .statusCode(l.getStatusCode())
                     .responseTime(l.getResponseTime())
                     .request(l.getRequest())

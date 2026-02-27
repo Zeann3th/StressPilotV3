@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import org.slf4j.MDC;
 
-import java.util.Optional;
-
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         String errorType,
@@ -21,9 +19,9 @@ public record ApiResponse<T>(
 
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(
-                ErrorCode.SP0000.getErrorType().name(),
-                ErrorCode.SP0000.name(),
-                ErrorCode.SP0000.getMessage(),
+                ErrorCode.ER0000.getErrorType().name(),
+                ErrorCode.ER0000.name(),
+                ErrorCode.ER0000.getMessage(),
                 data,
                 getCurrentTraceId()
         );

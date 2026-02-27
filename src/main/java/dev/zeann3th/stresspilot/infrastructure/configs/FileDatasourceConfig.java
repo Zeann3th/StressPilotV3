@@ -68,7 +68,7 @@ public class FileDatasourceConfig {
         } catch (Exception e) {
             log.error("Failed to configure file datasource", e);
             throw CommandExceptionBuilder.exception(
-                    ErrorCode.SP0015,
+                    ErrorCode.ER0015,
                     Map.of(Constants.REASON, e.getMessage())
             );
         }

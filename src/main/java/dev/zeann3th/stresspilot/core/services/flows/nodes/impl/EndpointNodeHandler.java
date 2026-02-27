@@ -64,7 +64,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
 
         EndpointEntity endpoint = step.getEndpoint();
         if (endpoint == null) {
-            throw CommandExceptionBuilder.exception(ErrorCode.SP0005);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0005);
         }
 
         long start = System.currentTimeMillis();

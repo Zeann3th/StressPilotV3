@@ -1,7 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.environments.impl;
 
-import dev.zeann3th.stresspilot.core.domain.commands.environment.UpdateEnvironmentVariablesCommand;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+import dev.zeann3th.stresspilot.core.domain.commands.environment.UpdateEnvironmentVariablesCommand;
+
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
@@ -33,8 +34,8 @@ public class EnvironmentServiceImpl implements EnvironmentService {
     @Transactional
     public void updateEnvironmentVariables(Long environmentId, UpdateEnvironmentVariablesCommand cmd) {
         EnvironmentEntity env = envStore.findById(environmentId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                        Map.of(Constants.REASON, "Environment " + environmentId + " not found")));
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0016,
+                        Map.of(Constants.ID, environmentId)));
 
         List<EnvironmentVariableEntity> current = envVarStore.findAllByEnvironmentId(environmentId);
         Map<Long, EnvironmentVariableEntity> byId = current.stream()
@@ -54,8 +55,8 @@ public class EnvironmentServiceImpl implements EnvironmentService {
         if (cmd.getRemoved() == null || cmd.getRemoved().isEmpty()) return;
         for (Long id : cmd.getRemoved()) {
             if (!byId.containsKey(id))
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                        Map.of(Constants.REASON, "Variable id " + id + " not in environment " + environmentId));
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0017,
+                        Map.of(Constants.ID, id));
         }
         for (Long id : cmd.getRemoved()) {
             EnvironmentVariableEntity v = byId.remove(id);
@@ -72,13 +73,13 @@ public class EnvironmentServiceImpl implements EnvironmentService {
         for (UpdateEnvironmentVariablesCommand.Update upd : cmd.getUpdated()) {
             EnvironmentVariableEntity entity = byId.get(upd.getId());
             if (entity == null)
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                        Map.of(Constants.REASON, "Variable id " + upd.getId() + " not found"));
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0017,
+                        Map.of(Constants.ID, upd.getId()));
             String oldKey = entity.getKey();
             String newKey = upd.getKey();
             if (!Objects.equals(oldKey, newKey) && currentKeys.contains(newKey))
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                        Map.of(Constants.REASON, "Duplicate key: " + newKey));
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0018,
+                        Map.of(Constants.KEY, newKey));
             entity.setKey(newKey);
             entity.setValue(upd.getValue());
             entity.setActive(upd.isActive());
@@ -95,8 +96,8 @@ public class EnvironmentServiceImpl implements EnvironmentService {
         List<EnvironmentVariableEntity> toSave = new ArrayList<>();
         for (UpdateEnvironmentVariablesCommand.Add add : cmd.getAdded()) {
             if (currentKeys.contains(add.getKey()))
-                throw CommandExceptionBuilder.exception(ErrorCode.SP0001,
-                        Map.of(Constants.REASON, "Duplicate key: " + add.getKey()));
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0018,
+                        Map.of(Constants.KEY, add.getKey()));
             toSave.add(EnvironmentVariableEntity.builder()
                     .environment(env)
                     .key(add.getKey())

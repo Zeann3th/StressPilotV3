@@ -18,19 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Batched, async write-ahead writer that persists request logs to the database.
- *
- * <p>Design:
- * <ul>
- *   <li>A single background {@code request-log-writer} thread drains an in-memory
- *       {@link BlockingQueue}.</li>
- *   <li>DB writes are batched (configurable {@code batchSize} / {@code flushIntervalMs}).</li>
- *   <li>On failure it retries up to 3 times with exponential back-off before dropping.</li>
- *   <li>{@link #flush()} blocks until all queued entries are persisted — called at run end.</li>
- * </ul>
- * </p>
- */
 @Slf4j(topic = "[DB-LogWriter]")
 @Component
 @RequiredArgsConstructor
@@ -49,7 +36,6 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
     private final ReentrantLock lock      = new ReentrantLock();
     private final Condition flushDone     = lock.newCondition();
 
-    // Package-visible so WebSocketRequestLogWriter can read from the same writes
     final ConcurrentLinkedQueue<RequestLogEntity> wsBuffer = new ConcurrentLinkedQueue<>();
 
     @PostConstruct
@@ -60,8 +46,6 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
         log.info("DatabaseRequestLogWriter started (batchSize={}, flushIntervalMs={})",
                 properties.getBatchSize(), properties.getFlushIntervalMs());
     }
-
-    // ─── RequestLogWriter ────────────────────────────────────────────────────
 
     @Override
     public void write(RequestLogEntity entry) {
@@ -83,15 +67,13 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
             while ((!queue.isEmpty() || flushing.get()) && nanos > 0) {
                 nanos = flushDone.awaitNanos(nanos);
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while waiting for log flush");
         } finally {
             lock.unlock();
         }
     }
-
-    // ─── Internal ────────────────────────────────────────────────────────────
 
     private void writerLoop() {
         List<RequestLogEntity> buffer = new ArrayList<>(properties.getBatchSize());
