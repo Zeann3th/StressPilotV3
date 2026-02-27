@@ -179,13 +179,14 @@ public class FlowServiceImpl implements FlowService {
                 if (i > 0 && rampDelay > 0) {
                     try {
                         Thread.sleep(rampDelay);
-                    } catch (InterruptedException e) {
+                    } catch (InterruptedException _) {
                         // Do NOT re-interrupt the coordinator thread here.
                         // Re-interrupting would cause every subsequent f.get() to throw
                         // InterruptedException immediately, hitting the finally block and
                         // firing pool.shutdownNow() — which would kill all worker threads mid-run.
                         // Instead, just skip the remaining ramp delay and submit immediately.
-                        log.warn("Ramp-up sleep interrupted at thread {}; submitting remaining workers without delay", i);
+                        log.warn("Ramp-up sleep interrupted at thread {}; submitting remaining workers without delay",
+                                i);
                     }
                 }
 
@@ -317,10 +318,12 @@ public class FlowServiceImpl implements FlowService {
         Set<String> terminals = new HashSet<>();
 
         for (FlowStepEntity step : steps) {
-            String id   = stepIdMap.get(step.getId());
+            String id = stepIdMap.get(step.getId());
             List<String> nexts = new ArrayList<>();
-            if (step.getNextIfTrue()  != null) nexts.add(stepIdMap.get(step.getNextIfTrue()));
-            if (step.getNextIfFalse() != null) nexts.add(stepIdMap.get(step.getNextIfFalse()));
+            if (step.getNextIfTrue() != null)
+                nexts.add(stepIdMap.get(step.getNextIfTrue()));
+            if (step.getNextIfFalse() != null)
+                nexts.add(stepIdMap.get(step.getNextIfFalse()));
             graph.put(id, nexts);
             if (FlowStepType.ENDPOINT.name().equalsIgnoreCase(step.getType()) && nexts.isEmpty())
                 terminals.add(id);
@@ -339,24 +342,35 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-                                            Set<String> terminals, Set<String> visiting,
-                                            Map<String, Boolean> memo) {
-        if (memo.containsKey(node)) return memo.get(node);
-        if (terminals.contains(node)) { memo.put(node, true); return true; }
-        if (visiting.contains(node))  return false;
+            Set<String> terminals, Set<String> visiting,
+            Map<String, Boolean> memo) {
+        if (memo.containsKey(node))
+            return memo.get(node);
+        if (terminals.contains(node)) {
+            memo.put(node, true);
+            return true;
+        }
+        if (visiting.contains(node))
+            return false;
         visiting.add(node);
         for (String next : graph.getOrDefault(node, List.of())) {
             if (next != null && canReachEndpoint(next, graph, terminals, visiting, memo)) {
-                memo.put(node, true); visiting.remove(node); return true;
+                memo.put(node, true);
+                visiting.remove(node);
+                return true;
             }
         }
-        visiting.remove(node); memo.put(node, false); return false;
+        visiting.remove(node);
+        memo.put(node, false);
+        return false;
     }
 
     public static void sortSteps(List<FlowStepEntity> steps) {
         steps.sort((a, b) -> {
-            if (FlowStepType.START.name().equalsIgnoreCase(a.getType())) return -1;
-            if (FlowStepType.START.name().equalsIgnoreCase(b.getType())) return 1;
+            if (FlowStepType.START.name().equalsIgnoreCase(a.getType()))
+                return -1;
+            if (FlowStepType.START.name().equalsIgnoreCase(b.getType()))
+                return 1;
             return a.getId().compareTo(b.getId());
         });
     }

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "RunProto";
+
+service RunService {
+  rpc ListRuns   (ListRunsRequest)   returns (ListRunsResponse);
+  rpc GetRun     (GetRunRequest)     returns (RunResponse);
+  rpc GetLastRun (GetLastRunRequest) returns (RunResponse);
+}
+
+// ─── Requests ────────────────────────────────────────────────────────────────
+
+message ListRunsRequest {
+  int64 flow_id = 1;
+}
+
+message GetRunRequest {
+  int64 id = 1;
+}
+
+message GetLastRunRequest {
+  int64 flow_id = 1;
+}
+
+// ─── Responses ───────────────────────────────────────────────────────────────
+
+message RunResponse {
+  int64  id               = 1;
+  int64  flow_id          = 2;
+  string status           = 3;
+  int32  threads          = 4;
+  int32  duration         = 5;
+  int32  ramp_up_duration = 6;
+  string started_at       = 7;
+  string completed_at     = 8;
+}
+
+message ListRunsResponse {
+  repeated RunResponse runs = 1;
+}

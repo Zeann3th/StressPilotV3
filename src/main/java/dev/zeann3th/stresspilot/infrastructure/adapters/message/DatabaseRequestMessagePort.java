@@ -31,10 +31,10 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
     private final RequestLogWriterProperties properties;
 
     private final BlockingQueue<RequestLogEntity> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
-    private final AtomicBoolean running   = new AtomicBoolean(true);
-    private final AtomicBoolean flushing  = new AtomicBoolean(false);
-    private final ReentrantLock lock      = new ReentrantLock();
-    private final Condition flushDone     = lock.newCondition();
+    private final AtomicBoolean running = new AtomicBoolean(true);
+    private final AtomicBoolean flushing = new AtomicBoolean(false);
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition flushDone = lock.newCondition();
 
     final ConcurrentLinkedQueue<RequestLogEntity> wsBuffer = new ConcurrentLinkedQueue<>();
 
@@ -81,9 +81,9 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
 
         while (running.get() || !queue.isEmpty() || !buffer.isEmpty()) {
             try {
-                long now             = System.currentTimeMillis();
-                long elapsed         = now - lastFlush;
-                long waitMs          = Math.max(0, properties.getFlushIntervalMs() - elapsed);
+                long now = System.currentTimeMillis();
+                long elapsed = now - lastFlush;
+                long waitMs = Math.max(0, properties.getFlushIntervalMs() - elapsed);
 
                 RequestLogEntity entry = queue.poll(waitMs, TimeUnit.MILLISECONDS);
                 if (entry != null) {
@@ -92,8 +92,8 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 }
 
                 now = System.currentTimeMillis();
-                boolean full     = buffer.size() >= properties.getBatchSize();
-                boolean timeout  = (now - lastFlush) >= properties.getFlushIntervalMs();
+                boolean full = buffer.size() >= properties.getBatchSize();
+                boolean timeout = (now - lastFlush) >= properties.getFlushIntervalMs();
                 boolean shutdown = !running.get() && !buffer.isEmpty();
 
                 if ((full || timeout || shutdown) && !buffer.isEmpty()) {
@@ -107,9 +107,10 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                     signalFlushDone();
                 }
 
-                if (!running.get() && queue.isEmpty() && buffer.isEmpty()) break;
+                if (!running.get() && queue.isEmpty() && buffer.isEmpty())
+                    break;
 
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
@@ -126,7 +127,9 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
             } catch (Exception e) {
                 log.warn("DB flush attempt {}/{} failed: {}", attempt, MAX_RETRIES, e.getMessage());
                 if (attempt < MAX_RETRIES) {
-                    try { Thread.sleep(100L * attempt); } catch (InterruptedException ie) {
+                    try {
+                        Thread.sleep(100L * attempt);
+                    } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         return;
                     }
@@ -138,7 +141,11 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
 
     private void signalFlushDone() {
         lock.lock();
-        try { flushDone.signalAll(); } finally { lock.unlock(); }
+        try {
+            flushDone.signalAll();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @PreDestroy

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "ConfigProto";
+
+import "google/protobuf/empty.proto";
+
+service ConfigService {
+  rpc GetAllConfigs  (google.protobuf.Empty) returns (GetAllConfigsResponse);
+  rpc GetConfigValue (GetConfigValueRequest) returns (GetConfigValueResponse);
+  rpc SetConfigValue (SetConfigValueRequest) returns (google.protobuf.Empty);
+}
+
+// ─── Requests ────────────────────────────────────────────────────────────────
+
+message GetConfigValueRequest {
+  string key = 1;
+}
+
+message SetConfigValueRequest {
+  string key   = 1;
+  string value = 2;
+}
+
+// ─── Responses ───────────────────────────────────────────────────────────────
+
+message GetAllConfigsResponse {
+  map<string, string> configs = 1;
+}
+
+message GetConfigValueResponse {
+  string value = 1;
+}

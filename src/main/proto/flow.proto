@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "FlowProto";
+
+import "google/protobuf/empty.proto";
+
+service FlowService {
+  rpc ListFlows     (ListFlowsRequest)     returns (ListFlowsResponse);
+  rpc GetFlow       (GetFlowRequest)       returns (FlowResponse);
+  rpc CreateFlow    (CreateFlowRequest)    returns (FlowResponse);
+  rpc UpdateFlow    (UpdateFlowRequest)    returns (FlowResponse);
+  rpc DeleteFlow    (DeleteFlowRequest)    returns (google.protobuf.Empty);
+  rpc ConfigureFlow (ConfigureFlowRequest) returns (ConfigureFlowResponse);
+  rpc RunFlow       (RunFlowRequest)       returns (google.protobuf.Empty);
+}
+
+// ─── Shared sub-messages ─────────────────────────────────────────────────────
+
+message FlowStepMessage {
+  string id             = 1;
+  string type           = 2;
+  int64  endpoint_id    = 3;
+  string pre_processor  = 4;
+  string post_processor = 5;
+  string next_if_true   = 6;
+  string next_if_false  = 7;
+  string condition      = 8;
+}
+
+// Each map row of per-thread credentials: key → value
+message CredentialEntry {
+  map<string, string> entries = 1;
+}
+
+// ─── Requests ────────────────────────────────────────────────────────────────
+
+message ListFlowsRequest {
+  int64  project_id = 1;
+  string name       = 2;
+  int32  page       = 3;
+  int32  size       = 4;
+  string sort       = 5;
+}
+
+message GetFlowRequest {
+  int64 id = 1;
+}
+
+message CreateFlowRequest {
+  int64  project_id  = 1;
+  string name        = 2;
+  string description = 3;
+}
+
+message UpdateFlowRequest {
+  int64  id          = 1;
+  string name        = 2;
+  string description = 3;
+}
+
+message DeleteFlowRequest {
+  int64 id = 1;
+}
+
+message ConfigureFlowRequest {
+  int64                    flow_id = 1;
+  repeated FlowStepMessage steps   = 2;
+}
+
+message RunFlowRequest {
+  int64  flow_id        = 1;
+  int32  threads        = 2;
+  int32  total_duration = 3;
+  int32  ramp_up_duration = 4;
+  // Extra variables injected into every thread's env
+  map<string, string>      variables   = 5;
+  // Per-thread credentials — thread i picks credentials[i % size]
+  repeated CredentialEntry credentials = 6;
+}
+
+// ─── Responses ───────────────────────────────────────────────────────────────
+
+message FlowResponse {
+  int64                    id          = 1;
+  string                   name        = 2;
+  string                   description = 3;
+  int64                    project_id  = 4;
+  repeated FlowStepMessage steps       = 5;
+}
+
+message ListFlowsResponse {
+  repeated FlowResponse flows          = 1;
+  int64                 total_elements = 2;
+  int32                 total_pages    = 3;
+  int32                 page           = 4;
+  int32                 size           = 5;
+}
+
+message ConfigureFlowResponse {
+  repeated FlowStepMessage steps = 1;
+}

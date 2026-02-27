@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "EndpointProto";
+
+import "google/protobuf/empty.proto";
+
+service EndpointService {
+  rpc ListEndpoints        (ListEndpointsRequest)        returns (ListEndpointsResponse);
+  rpc GetEndpoint          (GetEndpointRequest)          returns (EndpointResponse);
+  rpc CreateEndpoint       (CreateEndpointRequest)       returns (EndpointResponse);
+  rpc UpdateEndpoint       (UpdateEndpointRequest)       returns (EndpointResponse);
+  rpc DeleteEndpoint       (DeleteEndpointRequest)       returns (google.protobuf.Empty);
+  rpc ExecuteEndpoint      (ExecuteEndpointRequest)      returns (ExecuteEndpointResponse);
+  rpc ExecuteAdhocEndpoint (ExecuteAdhocEndpointRequest) returns (ExecuteEndpointResponse);
+}
+
+// ─── Requests ────────────────────────────────────────────────────────────────
+
+message ListEndpointsRequest {
+  int64  project_id = 1;
+  string name       = 2;
+  int32  page       = 3;
+  int32  size       = 4;
+  string sort       = 5;
+}
+
+message GetEndpointRequest {
+  int64 id = 1;
+}
+
+message CreateEndpointRequest {
+  int64  project_id        = 1;
+  string name              = 2;
+  string description       = 3;
+  string type              = 4;
+  string url               = 5;
+  string body_json         = 6;
+  string success_condition = 7;
+  // HTTP
+  string http_method       = 8;
+  string http_headers_json = 9;
+  string http_params_json  = 10;
+  // gRPC
+  string grpc_service_name = 11;
+  string grpc_method_name  = 12;
+  string grpc_stub_path    = 13;
+}
+
+message UpdateEndpointRequest {
+  int64  id                = 1;
+  string name              = 2;
+  string description       = 3;
+  string url               = 4;
+  string body_json         = 5;
+  string success_condition = 6;
+  string http_method       = 7;
+  string http_headers_json = 8;
+  string http_params_json  = 9;
+  string grpc_service_name = 10;
+  string grpc_method_name  = 11;
+}
+
+message DeleteEndpointRequest {
+  int64 id = 1;
+}
+
+message ExecuteEndpointRequest {
+  int64             endpoint_id = 1;
+  map<string,string> variables  = 2;
+}
+
+message ExecuteAdhocEndpointRequest {
+  int64  project_id        = 1;
+  string type              = 2;
+  string url               = 3;
+  string body_json         = 4;
+  string http_method       = 5;
+  string http_headers_json = 6;
+  string http_params_json  = 7;
+  string grpc_service_name = 8;
+  string grpc_method_name  = 9;
+  string grpc_stub_path    = 10;
+  map<string,string> variables = 11;
+}
+
+// ─── Responses ───────────────────────────────────────────────────────────────
+
+message EndpointResponse {
+  int64  id                = 1;
+  string name              = 2;
+  string description       = 3;
+  string type              = 4;
+  string url               = 5;
+  string body              = 6;
+  string success_condition = 7;
+  string http_method       = 8;
+  string http_headers      = 9;
+  string http_parameters   = 10;
+  string grpc_service_name = 11;
+  string grpc_method_name  = 12;
+  string grpc_stub_path    = 13;
+  int64  project_id        = 14;
+}
+
+message ListEndpointsResponse {
+  repeated EndpointResponse endpoints      = 1;
+  int64                     total_elements = 2;
+  int32                     total_pages    = 3;
+  int32                     page           = 4;
+  int32                     size           = 5;
+}
+
+message ExecuteEndpointResponse {
+  int32  status_code      = 1;
+  bool   success          = 2;
+  string message          = 3;
+  int64  response_time_ms = 4;
+  string data_json        = 5;
+  string raw_response     = 6;
+}

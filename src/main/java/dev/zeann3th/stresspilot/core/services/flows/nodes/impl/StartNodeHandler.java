@@ -8,9 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * Handles the START node: simply forwards execution to {@code nextIfTrue}.
- */
 @Component
 public class StartNodeHandler implements FlowNodeHandler {
 

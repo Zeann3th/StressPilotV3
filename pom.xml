@@ -116,7 +116,7 @@
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
-			<version>4.28.2</version>
+			<version>${protobuf-java.version}</version>
 		</dependency>
 
 		<dependency>
@@ -229,30 +229,30 @@
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
-<!--			<plugin>-->
-<!--				<groupId>io.github.ascopes</groupId>-->
-<!--				<artifactId>protobuf-maven-plugin</artifactId>-->
-<!--				<version>4.0.3</version>-->
-<!--				<configuration>-->
-<!--					<protoc>${protobuf-java.version}</protoc>-->
-<!--					<binaryMavenPlugins>-->
-<!--						<binaryMavenPlugin>-->
-<!--							<groupId>io.grpc</groupId>-->
-<!--							<artifactId>protoc-gen-grpc-java</artifactId>-->
-<!--							<version>${grpc.version}</version>-->
-<!--							<options>@generated=omit</options>-->
-<!--						</binaryMavenPlugin>-->
-<!--					</binaryMavenPlugins>-->
-<!--				</configuration>-->
-<!--				<executions>-->
-<!--					<execution>-->
-<!--						<id>generate</id>-->
-<!--						<goals>-->
-<!--							<goal>generate</goal>-->
-<!--						</goals>-->
-<!--					</execution>-->
-<!--				</executions>-->
-<!--			</plugin>-->
+			 <plugin>
+				<groupId>io.github.ascopes</groupId>
+				<artifactId>protobuf-maven-plugin</artifactId>
+				<version>4.0.3</version>
+				<configuration>
+					<protoc>${protobuf-java.version}</protoc>
+					<binaryMavenPlugins>
+						<binaryMavenPlugin>
+							<groupId>io.grpc</groupId>
+							<artifactId>protoc-gen-grpc-java</artifactId>
+							<version>${grpc.version}</version>
+							<options>@generated=omit</options>
+						</binaryMavenPlugin>
+					</binaryMavenPlugins>
+				</configuration>
+				<executions>
+					<execution>
+						<id>generate</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
