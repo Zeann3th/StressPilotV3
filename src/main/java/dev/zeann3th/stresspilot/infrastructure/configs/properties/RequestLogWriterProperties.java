@@ -6,13 +6,11 @@ import org.springframework.stereotype.Component;
 
 @Data
 @Component
-@ConfigurationProperties(prefix = "stresspilot.message")
+@ConfigurationProperties(prefix = "application.message")
 public class RequestLogWriterProperties {
 
-    /** Number of logs to accumulate before a forced DB flush. */
     private int batchSize = 1000;
 
-    /** Max time (ms) between DB flushes even if batch is not full. */
     private long flushIntervalMs = 1000;
 
     /** WebSocket push config. */
@@ -24,11 +22,8 @@ public class RequestLogWriterProperties {
     @Data
     public static class Websocket {
         private boolean enabled = true;
-        /** Push interval in ms. */
         private long pushIntervalMs = 500;
-        /** Max logs sent per push cycle. */
         private int maxPerPush = 2000;
-        /** Topic to push to. */
         private String topic = "/topic/logs";
     }
 
