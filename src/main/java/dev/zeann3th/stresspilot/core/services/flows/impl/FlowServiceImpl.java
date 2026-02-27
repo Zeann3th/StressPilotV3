@@ -155,8 +155,7 @@ public class FlowServiceImpl implements FlowService {
                 .collect(Collectors.toMap(
                         EnvironmentVariableEntity::getKey,
                         EnvironmentVariableEntity::getValue,
-                        (_, v2) -> v2, HashMap::new)
-                );
+                        (_, v2) -> v2, HashMap::new));
         if (runFlowCommand.getVariables() != null)
             baseEnv.putAll(runFlowCommand.getVariables());
 
@@ -212,9 +211,9 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void runWorker(int threadId, RunEntity run,
-                           Map<String, FlowStepEntity> stepMap,
-                           Map<String, Object> environment,
-                           long totalMs, AtomicBoolean stop) {
+            Map<String, FlowStepEntity> stepMap,
+            Map<String, Object> environment,
+            long totalMs, AtomicBoolean stop) {
         FlowExecutionContext ctx = new FlowExecutionContext();
         ctx.setThreadId(threadId);
         ctx.setRunId(run.getId());
@@ -241,8 +240,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void executeIteration(FlowStepEntity startStep,
-                                  Map<String, FlowStepEntity> stepMap,
-                                  FlowExecutionContext ctx) {
+            Map<String, FlowStepEntity> stepMap,
+            FlowExecutionContext ctx) {
         FlowStepEntity current = startStep;
         Set<String> visited = new LinkedHashSet<>();
 
@@ -336,8 +335,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-                                            Set<String> terminals, Set<String> visiting,
-                                            Map<String, Boolean> memo) {
+            Set<String> terminals, Set<String> visiting,
+            Map<String, Boolean> memo) {
         if (memo.containsKey(node))
             return memo.get(node);
         if (terminals.contains(node)) {
