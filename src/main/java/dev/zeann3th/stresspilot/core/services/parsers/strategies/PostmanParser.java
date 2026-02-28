@@ -1,7 +1,6 @@
 package dev.zeann3th.stresspilot.core.services.parsers.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
-import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,8 +19,30 @@ public class PostmanParser implements ParserService {
     private final JsonMapper jsonMapper;
 
     @Override
-    public String getType() {
-        return ParserType.POSTMAN.name();
+    public boolean supports(String filename, String contentType, String content) {
+        boolean isJson = (filename != null && filename.endsWith(".json")) ||
+                "application/json".equalsIgnoreCase(contentType);
+
+        if (!isJson) {
+            return false;
+        }
+
+        try {
+            JsonNode root = jsonMapper.readTree(content);
+
+            JsonNode info = root.path("info");
+            if (!info.isMissingNode() && info.has("schema")) {
+                String schemaUrl = info.path("schema").asString("").toLowerCase();
+                if (schemaUrl.contains("postman.com/collection")) {
+                    return true;
+                }
+            }
+
+            return root.has("item") && !root.has("openapi") && !root.has("swagger");
+
+        } catch (Exception _) {
+            return false;
+        }
     }
 
     @Override

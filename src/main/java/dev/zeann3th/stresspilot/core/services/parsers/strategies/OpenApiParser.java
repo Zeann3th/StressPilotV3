@@ -3,7 +3,6 @@ package dev.zeann3th.stresspilot.core.services.parsers.strategies;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,10 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -21,8 +23,20 @@ public class OpenApiParser implements ParserService {
     private final JsonMapper jsonMapper;
 
     @Override
-    public String getType() {
-        return ParserType.OPENAPI.name();
+    public boolean supports(String filename, String contentType, String content) {
+        boolean isJson = (filename != null && filename.endsWith(".json")) ||
+                "application/json".equalsIgnoreCase(contentType);
+
+        if (!isJson) {
+            return false;
+        }
+
+        try {
+            JsonNode root = jsonMapper.readTree(content);
+            return root.has("openapi") || root.has("swagger");
+        } catch (Exception _) {
+            return false;
+        }
     }
 
     @Override

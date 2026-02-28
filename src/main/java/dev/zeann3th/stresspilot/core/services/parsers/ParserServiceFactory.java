@@ -17,9 +17,9 @@ public class ParserServiceFactory {
     private final List<ParserService> parsers;
     private final SpringPluginManager pluginManager;
 
-    public ParserService getParser(String type) {
+    public ParserService getParser(String filename, String contentType, String content) {
         var internal = parsers.stream()
-                .filter(parser -> parser.getType().equalsIgnoreCase(type))
+                .filter(parser -> parser.supports(filename, contentType, content))
                 .findFirst();
 
         if (internal.isPresent()) {
@@ -28,9 +28,9 @@ public class ParserServiceFactory {
 
         List<ParserService> extensions = pluginManager.getExtensions(ParserService.class);
         return extensions.stream()
-                .filter(parser -> parser.getType().equalsIgnoreCase(type))
+                .filter(parser -> parser.supports(filename, contentType, content))
                 .findFirst()
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0006,
-                        Map.of(Constants.REASON, "No parser registered for type: " + type)));
+                        Map.of(Constants.REASON, "No parser registered for given input: " + filename)));
     }
 }

@@ -9,7 +9,6 @@ import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.EndpointStore;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
@@ -25,8 +24,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -102,7 +99,7 @@ public class EndpointServiceImpl implements EndpointService {
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         String filename = Objects.requireNonNull(file.getOriginalFilename(), "filename");
-        String parserType;
+        String contentType = file.getContentType();
         String content;
 
         try {
@@ -112,35 +109,21 @@ public class EndpointServiceImpl implements EndpointService {
                     Map.of(Constants.REASON, "Failed to read file content"));
         }
 
-        if ("application/json".equals(file.getContentType()) || filename.endsWith(".json")) {
-            try {
-                JsonNode root = jsonMapper.readTree(content);
-                if (root.has("openapi") || root.has("swagger")) {
-                    parserType = ParserType.OPENAPI.name();
-                } else {
-                    parserType = ParserType.POSTMAN.name();
-                }
-            } catch (Exception _) {
-                parserType = ParserType.POSTMAN.name();
-            }
-        } else if (filename.endsWith(".proto") || filename.endsWith(".pb")) {
-            parserType = ParserType.PROTO.name();
-        } else {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0007,
-                    Map.of(Constants.REASON, "Unsupported file type: " + filename));
+        List<EndpointEntity> parsed = parserServiceFactory
+                .getParser(filename, contentType, content)
+                .parse(content);
+        List<EndpointEntity> entities = new ArrayList<>();
+        for (EndpointEntity e : parsed) {
+            e.setProject(project);
+            entities.add(e);
         }
 
         try {
-            List<EndpointEntity> parsed = parserServiceFactory.getParser(parserType).parse(content);
-            List<EndpointEntity> entities = new ArrayList<>();
-            for (EndpointEntity e : parsed) {
-                e.setProject(project);
-                entities.add(e);
-            }
             endpointStore.saveAll(entities);
         } catch (Exception e) {
+            log.error("Database save failed: {}", e.getMessage(), e);
             throw CommandExceptionBuilder.exception(ErrorCode.ER0006,
-                    Map.of(Constants.REASON, e.getMessage()));
+                    Map.of(Constants.REASON, "Failed to save parsed endpoints: " + e.getMessage()));
         }
     }
 

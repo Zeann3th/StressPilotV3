@@ -6,7 +6,6 @@ import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +32,12 @@ public class ProtoParser implements ParserService {
     private static final String PROTOC = "protoc";
 
     @Override
-    public String getType() {
-        return ParserType.PROTO.name();
+    public boolean supports(String filename, String contentType, String content) {
+        if (filename == null) {
+            return false;
+        }
+
+        return filename.endsWith(".proto") || filename.endsWith(".pb");
     }
 
     @Override
