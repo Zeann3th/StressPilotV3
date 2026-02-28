@@ -208,9 +208,9 @@ public class EndpointServiceImpl implements EndpointService {
                 .body(serializeBody(cmd.getBody()))
                 .httpMethod(cmd.getHttpMethod())
                 .httpHeaders(
-                        cmd.getHttpHeaders() != null ? jsonMapper.writeValueAsString(cmd.getHttpHeaders()) : null)
+                        cmd.getHttpHeaders() != null ? DataUtils.parseObjToJson(cmd.getHttpHeaders()) : null)
                 .httpParameters(
-                        cmd.getHttpParameters() != null ? jsonMapper.writeValueAsString(cmd.getHttpParameters())
+                        cmd.getHttpParameters() != null ? DataUtils.parseObjToJson(cmd.getHttpParameters())
                                 : null)
                 .grpcServiceName(cmd.getGrpcServiceName())
                 .grpcMethodName(cmd.getGrpcMethodName())
@@ -228,9 +228,9 @@ public class EndpointServiceImpl implements EndpointService {
                 .body(serializeBody(cmd.getBody()))
                 .httpMethod(cmd.getHttpMethod())
                 .httpHeaders(
-                        cmd.getHttpHeaders() != null ? jsonMapper.writeValueAsString(cmd.getHttpHeaders()) : null)
+                        cmd.getHttpHeaders() != null ? DataUtils.parseObjToJson(cmd.getHttpHeaders()) : null)
                 .httpParameters(
-                        cmd.getHttpParameters() != null ? jsonMapper.writeValueAsString(cmd.getHttpParameters())
+                        cmd.getHttpParameters() != null ? DataUtils.parseObjToJson(cmd.getHttpParameters())
                                 : null)
                 .grpcServiceName(cmd.getGrpcServiceName())
                 .grpcMethodName(cmd.getGrpcMethodName())
@@ -244,7 +244,7 @@ public class EndpointServiceImpl implements EndpointService {
             return null;
         if (rawBody instanceof String s)
             return s.isBlank() ? "{}" : s;
-        return jsonMapper.writeValueAsString(rawBody);
+        return DataUtils.parseObjToString(rawBody);
     }
 
     private EndpointEntity merge(EndpointEntity stored, ExecuteEndpointCommand cmd) {

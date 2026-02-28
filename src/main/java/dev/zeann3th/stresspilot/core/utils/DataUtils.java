@@ -2,7 +2,7 @@ package dev.zeann3th.stresspilot.core.utils;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 @UtilityClass
 public class DataUtils {
     private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{\\{\\s*(.+?)\\s*\\}\\}");
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final JsonMapper jsonMapper = new JsonMapper();
 
     public static String replaceVariables(String input, Map<String, Object> environment) {
         if (input == null || input.isEmpty() || environment == null || environment.isEmpty()) {
@@ -67,7 +67,13 @@ public class DataUtils {
     }
 
     public static String parseObjToJson(Object object) {
-        return objectMapper.writeValueAsString(object);
+        if (object == null) return null;
+        try {
+            return jsonMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            log.error("Failed to serialize object to JSON: {}", e.getMessage());
+            return null;
+        }
     }
 
     public static String parseObjToString(Object obj) {

@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
+import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -73,10 +74,9 @@ public class OpenApiParser implements ParserService {
 
     private EndpointEntity createEndpoint(String pathUrl, String httpMethod, JsonNode operation) {
         String name = operation.path("operationId").asString(httpMethod + " " + pathUrl);
+
         String description = operation.path("description")
-                .asString(operation.path("summary")
-                .asString(null)
-        );
+                .asString(operation.path("summary").asString(null));
 
         Map<String, Object> headers = new HashMap<>();
         Map<String, Object> parameters = new HashMap<>();
@@ -84,13 +84,15 @@ public class OpenApiParser implements ParserService {
         JsonNode parametersNode = operation.path("parameters");
         if (parametersNode.isArray()) {
             for (JsonNode param : parametersNode) {
-                String in = param.path("in").asString("");
-                String paramName = param.path("name").asString("");
+                String in = param.path("in").asString(null);
+                String paramName = param.path("name").asString(null);
 
-                if ("query".equals(in)) {
-                    parameters.put(paramName, "");
-                } else if ("header".equals(in)) {
-                    headers.put(paramName, "");
+                if (paramName != null) {
+                    if ("query".equals(in)) {
+                        parameters.put(paramName, "");
+                    } else if ("header".equals(in)) {
+                        headers.put(paramName, "");
+                    }
                 }
             }
         }
@@ -102,31 +104,20 @@ public class OpenApiParser implements ParserService {
             if (!content.isMissingNode() && content.isObject()) {
                 JsonNode appJson = content.path("application/json");
                 if (!appJson.isMissingNode()) {
-                    try {
-                        bodyJson = "{}";
-                    } catch (Exception _) {
-                        // no-op
-                    }
-                } else {
                     bodyJson = "{}";
                 }
             }
         }
 
-        try {
-            return EndpointEntity.builder()
-                    .name(name)
-                    .description(description)
-                    .type("HTTP")
-                    .httpMethod(httpMethod)
-                    .url(pathUrl)
-                    .httpHeaders(headers.isEmpty() ? null : jsonMapper.writeValueAsString(headers))
-                    .httpParameters(parameters.isEmpty() ? null : jsonMapper.writeValueAsString(parameters))
-                    .body(bodyJson)
-                    .build();
-        } catch (Exception e) {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0006,
-                    Map.of(Constants.REASON, "Error creating endpoint entity: " + e.getMessage()));
-        }
+        return EndpointEntity.builder()
+                .name(name)
+                .description(description)
+                .type("HTTP")
+                .httpMethod(httpMethod)
+                .url(pathUrl)
+                .httpHeaders(headers.isEmpty() ? null : DataUtils.parseObjToJson(headers))
+                .httpParameters(parameters.isEmpty() ? null : DataUtils.parseObjToJson(parameters))
+                .body(bodyJson)
+                .build();
     }
 }

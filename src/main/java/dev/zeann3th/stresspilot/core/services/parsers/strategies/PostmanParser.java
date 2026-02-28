@@ -2,6 +2,7 @@ package dev.zeann3th.stresspilot.core.services.parsers.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
+import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -32,8 +33,8 @@ public class PostmanParser implements ParserService {
 
             JsonNode info = root.path("info");
             if (!info.isMissingNode() && info.has("schema")) {
-                String schemaUrl = info.path("schema").asString("").toLowerCase();
-                if (schemaUrl.contains("postman.com/collection")) {
+                String schemaUrl = info.path("schema").asString(null);
+                if (schemaUrl != null && schemaUrl.toLowerCase().contains("postman.com/collection")) {
                     return true;
                 }
             }
@@ -76,21 +77,28 @@ public class PostmanParser implements ParserService {
 
         // Headers
         Map<String, Object> headers = new HashMap<>();
-        for (JsonNode header : request.path("header")) {
-            headers.put(header.path("key").asString(), header.path("value").asString());
+        JsonNode headerNode = request.path("header");
+        if (headerNode.isArray()) {
+            for (JsonNode header : headerNode) {
+                headers.put(header.path("key").asString(null), header.path("value").asString(null));
+            }
         }
 
         // Query parameters
         Map<String, Object> parameters = new HashMap<>();
-        for (JsonNode param : request.path("url").path("query")) {
-            parameters.put(param.path("key").asString(), param.path("value").asString());
+        JsonNode queryNode = request.path("url").path("query");
+        if (queryNode.isArray()) {
+            for (JsonNode param : queryNode) {
+                parameters.put(param.path("key").asString(null), param.path("value").asString(null));
+            }
         }
 
         // Body Processing
         Object bodyObj = null;
-        if ("raw".equals(request.path("body").path("mode").asString())) {
-            String rawBody = request.path("body").path("raw").asString();
-            if (!rawBody.isEmpty()) {
+        JsonNode bodyNode = request.path("body");
+        if ("raw".equals(bodyNode.path("mode").asString(null))) {
+            String rawBody = bodyNode.path("raw").asString(null);
+            if (rawBody != null && !rawBody.isEmpty()) {
                 try {
                     Object parsed = jsonMapper.readValue(rawBody, Object.class);
                     switch (parsed) {
@@ -109,18 +117,22 @@ public class PostmanParser implements ParserService {
             if (bodyObj instanceof String str) {
                 bodyJson = str.isBlank() ? "{}" : str;
             } else {
-                bodyJson = jsonMapper.writeValueAsString(bodyObj);
+                try {
+                    bodyJson = DataUtils.parseObjToString(bodyObj);
+                } catch (Exception _) {
+                    bodyJson = "{}";
+                }
             }
         }
 
         return EndpointEntity.builder()
-                .name(item.path("name").asString())
+                .name(item.path("name").asString(null))
                 .description(item.path("description").asString(null))
                 .type("HTTP")
-                .httpMethod(request.path("method").asString())
-                .url(request.path("url").path("raw").asString())
-                .httpHeaders(headers.isEmpty() ? null : jsonMapper.writeValueAsString(headers))
-                .httpParameters(parameters.isEmpty() ? null : jsonMapper.writeValueAsString(parameters))
+                .httpMethod(request.path("method").asString(null))
+                .url(request.path("url").path("raw").asString(null))
+                .httpHeaders(headers.isEmpty() ? null : DataUtils.parseObjToJson(headers))
+                .httpParameters(parameters.isEmpty() ? null : DataUtils.parseObjToJson(parameters))
                 .body(bodyJson)
                 .build();
     }

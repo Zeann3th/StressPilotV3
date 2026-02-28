@@ -11,6 +11,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
+import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -248,23 +249,15 @@ public class ProjectServiceImpl implements ProjectService {
     private String writeMap(Map<String, Object> map) {
         if (map == null || map.isEmpty())
             return null;
-        try {
-            return objectMapper.writeValueAsString(map);
-        } catch (Exception _) {
-            return null;
-        }
+
+        return DataUtils.parseObjToJson(map);
     }
 
     private String writeBody(Object body) {
         if (body == null)
             return null;
-        if (body instanceof String s)
-            return s;
-        try {
-            return objectMapper.writeValueAsString(body);
-        } catch (Exception _) {
-            return null;
-        }
+
+        return DataUtils.parseObjToString(body);
     }
 
     private Map<String, Object> readMap(String json) {
