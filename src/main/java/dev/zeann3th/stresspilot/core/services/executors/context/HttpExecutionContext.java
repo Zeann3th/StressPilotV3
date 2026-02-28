@@ -11,17 +11,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class HttpExecutionContext implements CookieJar, ExecutionContext {
+public class HttpExecutionContext implements CookieJar {
     private final Map<String, List<Cookie>> cookieStore = new ConcurrentHashMap<>();
 
     @Override
-    public void saveFromResponse(HttpUrl url, @NotNull List<Cookie> cookies) {
+    public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {
         cookieStore.put(url.host(), new ArrayList<>(cookies));
     }
 
     @NotNull
     @Override
-    public List<Cookie> loadForRequest(HttpUrl url) {
+    public List<Cookie> loadForRequest(@NotNull HttpUrl url) {
         List<Cookie> cookies = cookieStore.get(url.host());
         if (cookies == null) {
             return Collections.emptyList();
@@ -36,7 +36,6 @@ public class HttpExecutionContext implements CookieJar, ExecutionContext {
         return validCookies;
     }
 
-    @Override
     public void clear() {
         cookieStore.clear();
     }

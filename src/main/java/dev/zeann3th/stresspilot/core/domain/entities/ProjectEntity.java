@@ -27,18 +27,18 @@ public class ProjectEntity extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "environment_id", nullable = false)
     private EnvironmentEntity environment;
 
     @Builder.Default
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("project")
     @ToString.Exclude
     private List<EndpointEntity> endpoints = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("project")
     @ToString.Exclude
     private List<FlowEntity> flows = new ArrayList<>();

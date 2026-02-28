@@ -1,10 +1,9 @@
-package dev.zeann3th.stresspilot.core.services.flows.impl;
+package dev.zeann3th.stresspilot.core.services.flows;
 
-import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
-
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
@@ -12,9 +11,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
-import dev.zeann3th.stresspilot.core.services.executors.context.HttpExecutionContext;
-import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
-import dev.zeann3th.stresspilot.core.services.flows.FlowService;
+import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
@@ -122,7 +119,6 @@ public class FlowServiceImpl implements FlowService {
 
     @Override
     @Async
-    @Transactional
     @SuppressWarnings("java:S3776")
     public void runFlow(Long flowId, RunFlowCommand runFlowCommand) {
         FlowEntity flow = flowStore.findById(flowId)
@@ -160,12 +156,9 @@ public class FlowServiceImpl implements FlowService {
             baseEnv.putAll(runFlowCommand.getVariables());
 
         AtomicBoolean stopSignal = new AtomicBoolean(false);
-
         int threads = Math.max(1, runFlowCommand.getThreads());
-        ExecutorService pool = Executors.newFixedThreadPool(threads,
-                r -> new Thread(r, "sp-worker-" + run.getId()));
 
-        try {
+        try (ExecutorService pool = Executors.newFixedThreadPool(threads, r -> new Thread(r, "sp-worker-" + run.getId()))) {
             long totalMs = (long) runFlowCommand.getTotalDuration() * 1000;
             long rampUpMs = (long) runFlowCommand.getRampUpDuration() * 1000;
             long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
@@ -173,22 +166,24 @@ public class FlowServiceImpl implements FlowService {
             List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < threads; i++) {
                 final int threadId = i;
+                final long initialDelayMs = i * rampDelay;
 
                 Map<String, Object> threadEnv = new HashMap<>(baseEnv);
                 if (runFlowCommand.getCredentials() != null && !runFlowCommand.getCredentials().isEmpty()) {
                     threadEnv.putAll(runFlowCommand.getCredentials().get(i % runFlowCommand.getCredentials().size()));
                 }
 
-                if (i > 0 && rampDelay > 0) {
-                    try {
-                        Thread.sleep(rampDelay);
-                    } catch (InterruptedException _) {
-                        log.warn("Ramp-up sleep interrupted at thread {}; submitting remaining workers without delay",
-                                i);
+                futures.add(pool.submit(() -> {
+                    if (initialDelayMs > 0) {
+                        try {
+                            Thread.sleep(initialDelayMs);
+                        } catch (InterruptedException _) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
                     }
-                }
-
-                futures.add(pool.submit(() -> runWorker(threadId, run, stepMap, threadEnv, totalMs, stopSignal)));
+                    runWorker(threadId, run, stepMap, threadEnv, totalMs, stopSignal);
+                }));
             }
 
             for (Future<?> f : futures) {
@@ -198,9 +193,6 @@ public class FlowServiceImpl implements FlowService {
                     log.warn("Worker thread encountered error: {}", e.getMessage());
                 }
             }
-
-        } finally {
-            pool.shutdownNow();
         }
 
         requestLogService.ensureFlushed();
@@ -211,15 +203,15 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void runWorker(int threadId, RunEntity run,
-            Map<String, FlowStepEntity> stepMap,
-            Map<String, Object> environment,
-            long totalMs, AtomicBoolean stop) {
+                           Map<String, FlowStepEntity> stepMap,
+                           Map<String, Object> environment,
+                           long totalMs, AtomicBoolean stop) {
         FlowExecutionContext ctx = new FlowExecutionContext();
         ctx.setThreadId(threadId);
         ctx.setRunId(run.getId());
         ctx.setRun(run);
         ctx.setVariables(new ConcurrentHashMap<>(environment));
-        ctx.setExecutionContext(new HttpExecutionContext());
+        ctx.setExecutionContext(new BaseExecutionContext());
 
         FlowStepEntity startStep = findStartNode(stepMap);
         if (startStep == null)
@@ -240,17 +232,18 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private void executeIteration(FlowStepEntity startStep,
-            Map<String, FlowStepEntity> stepMap,
-            FlowExecutionContext ctx) {
+                                  Map<String, FlowStepEntity> stepMap,
+                                  FlowExecutionContext ctx) {
         FlowStepEntity current = startStep;
-        Set<String> visited = new LinkedHashSet<>();
+
+        int jumpCount = 0;
+        final int MAX_JUMPS = 10000;
 
         while (current != null) {
-            if (visited.contains(current.getId())) {
-                log.warn("Cycle detected at step {} — breaking iteration", current.getId());
+            if (jumpCount++ > MAX_JUMPS) {
+                log.warn("Iteration exceeded max jumps ({}) at step {} — breaking iteration", MAX_JUMPS, current.getId());
                 break;
             }
-            visited.add(current.getId());
 
             FlowStepType type;
             try {
@@ -335,8 +328,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-            Set<String> terminals, Set<String> visiting,
-            Map<String, Boolean> memo) {
+                                            Set<String> terminals, Set<String> visiting,
+                                            Map<String, Boolean> memo) {
         if (memo.containsKey(node))
             return memo.get(node);
         if (terminals.contains(node)) {

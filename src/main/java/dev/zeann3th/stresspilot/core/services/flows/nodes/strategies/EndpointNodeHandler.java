@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.flows.nodes.impl;
+package dev.zeann3th.stresspilot.core.services.flows.nodes.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
@@ -11,13 +11,12 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -36,7 +35,6 @@ public class EndpointNodeHandler implements FlowNodeHandler {
 
     private boolean strictLinear;
     private static final Random RANDOM = new Random();
-    private static final SpelExpressionParser SPEL = new SpelExpressionParser();
 
     private final EndpointExecutorServiceFactory executorFactory;
     private final RequestLogService requestLogService;
@@ -77,7 +75,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         try {
             result = executorFactory.getExecutor(endpoint.getType())
                     .execute(endpoint, context.getVariables(), context.getExecutionContext());
-            evaluateSuccessCondition(endpoint, result);
+            EndpointExecutorUtils.evaluateSuccessCondition(endpoint, result);
         } catch (Exception e) {
             Map<String, Object> errData = new HashMap<>();
             errData.put("error", e.getMessage() != null ? e.getMessage() : "Unknown error");
@@ -117,28 +115,6 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                 return step.getNextIfTrue();
             }
             return step.getNextIfFalse();
-        }
-    }
-
-    private void evaluateSuccessCondition(EndpointEntity endpoint, ExecuteEndpointResponse response) {
-        if (!response.isSuccess())
-            return;
-        String condition = endpoint.getSuccessCondition();
-        if (condition == null || condition.isBlank())
-            return;
-
-        try {
-            StandardEvaluationContext ctx = new StandardEvaluationContext(response);
-            Boolean result = SPEL.parseExpression(condition).getValue(ctx, Boolean.class);
-            if (result != null) {
-                response.setSuccess(result);
-                if (!result)
-                    response.setMessage("Condition failed: " + condition);
-            }
-        } catch (Exception e) {
-            log.warn("Success condition eval error: {}", e.getMessage());
-            response.setSuccess(false);
-            response.setMessage("Eval Error: " + e.getMessage());
         }
     }
 

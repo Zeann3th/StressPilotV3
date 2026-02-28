@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.runs.impl;
+package dev.zeann3th.stresspilot.core.services.runs;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
@@ -8,7 +8,6 @@ import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
-import dev.zeann3th.stresspilot.core.services.runs.RunService;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -114,7 +113,6 @@ public class RunServiceImpl implements RunService {
         double durationSeconds = deriveDurationSeconds(run, logs);
         double tps = durationSeconds <= 0 ? 0.0 : totalRequests / durationSeconds;
 
-        // Build a name-lookup map from already-loaded entities (no extra DB calls)
         java.util.Map<Long, String> endpointNameMap = new java.util.HashMap<>();
         for (RequestLogEntity r : logs) {
             if (r.getEndpoint() != null && r.getEndpoint().getId() != null) {

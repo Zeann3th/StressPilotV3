@@ -1,11 +1,10 @@
-package dev.zeann3th.stresspilot.core.services.endpoints.impl;
+package dev.zeann3th.stresspilot.core.services.endpoints;
 
-import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.CreateEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteAdhocEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
-
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
@@ -15,17 +14,14 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.EndpointStore;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
-import dev.zeann3th.stresspilot.core.services.endpoints.EndpointService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
 import dev.zeann3th.stresspilot.core.services.parsers.ParserServiceFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,8 +35,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EndpointServiceImpl implements EndpointService {
-
-    private static final ExpressionParser SPEL = new SpelExpressionParser();
 
     private final EndpointStore endpointStore;
     private final ProjectStore projectStore;
@@ -156,7 +150,7 @@ public class EndpointServiceImpl implements EndpointService {
         try {
             ExecuteEndpointResponse resp = executorFactory.getExecutor(effective.getType())
                     .execute(effective, environment, null);
-            evaluateSuccessCondition(effective, resp);
+            EndpointExecutorUtils.evaluateSuccessCondition(effective, resp);
             return resp;
         } catch (Exception e) {
             log.error("Error executing endpoint {}: {}", endpointId, e.getMessage(), e);
@@ -189,7 +183,7 @@ public class EndpointServiceImpl implements EndpointService {
         try {
             ExecuteEndpointResponse resp = executorFactory.getExecutor(adhoc.getType())
                     .execute(adhoc, environment, null);
-            evaluateSuccessCondition(adhoc, resp);
+            EndpointExecutorUtils.evaluateSuccessCondition(adhoc, resp);
             return resp;
         } catch (Exception e) {
             log.error("Ad-hoc endpoint error: {}", e.getMessage(), e);
@@ -271,53 +265,35 @@ public class EndpointServiceImpl implements EndpointService {
                 .grpcMethodName(stored.getGrpcMethodName())
                 .grpcStubPath(stored.getGrpcStubPath());
 
-        if (hasText(cmd.getUrl()))
+        if (DataUtils.hasText(cmd.getUrl()))
             raw.url(cmd.getUrl());
-        if (hasText(cmd.getHttpMethod()))
+
+        if (DataUtils.hasText(cmd.getHttpMethod()))
             raw.httpMethod(cmd.getHttpMethod());
+
         if (cmd.getHttpHeaders() != null && !cmd.getHttpHeaders().isEmpty())
             raw.httpHeaders(DataUtils.parseObjToJson(cmd.getHttpHeaders()));
+
         if (cmd.getBody() != null)
             raw.body(DataUtils.parseObjToString(cmd.getBody()));
+
         if (cmd.getHttpParameters() != null && !cmd.getHttpParameters().isEmpty())
             raw.httpParameters(DataUtils.parseObjToJson(cmd.getHttpParameters()));
-        if (hasText(cmd.getGrpcServiceName()))
+
+        if (DataUtils.hasText(cmd.getGrpcServiceName()))
             raw.grpcServiceName(cmd.getGrpcServiceName());
-        if (hasText(cmd.getGrpcMethodName()))
+
+        if (DataUtils.hasText(cmd.getGrpcMethodName()))
             raw.grpcMethodName(cmd.getGrpcMethodName());
-        if (hasText(cmd.getGrpcStubPath()))
+
+        if (DataUtils.hasText(cmd.getGrpcStubPath()))
             raw.grpcStubPath(cmd.getGrpcStubPath());
-        if (hasText(cmd.getSuccessCondition()))
+
+        if (DataUtils.hasText(cmd.getSuccessCondition()))
             raw.successCondition(cmd.getSuccessCondition());
 
         EndpointEntity merged = raw.build();
         merged.setId(stored.getId());
         return merged;
-    }
-
-    private void evaluateSuccessCondition(EndpointEntity endpoint, ExecuteEndpointResponse response) {
-        if (!response.isSuccess())
-            return;
-        String condition = endpoint.getSuccessCondition();
-        if (condition == null || condition.isBlank())
-            return;
-
-        try {
-            StandardEvaluationContext ctx = new StandardEvaluationContext(response);
-            Boolean result = SPEL.parseExpression(condition).getValue(ctx, Boolean.class);
-            if (result != null) {
-                response.setSuccess(result);
-                if (!result)
-                    response.setMessage("Condition failed: " + condition);
-            }
-        } catch (Exception e) {
-            log.warn("Success condition eval error: {}", e.getMessage());
-            response.setSuccess(false);
-            response.setMessage("Eval Error: " + e.getMessage());
-        }
-    }
-
-    private static boolean hasText(String s) {
-        return s != null && !s.isBlank();
     }
 }

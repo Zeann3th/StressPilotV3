@@ -36,7 +36,7 @@ CREATE TABLE environment_variables
     "value"        TEXT,
     is_active      BOOLEAN      NOT NULL,
     CONSTRAINT uc_2e64ec9f3bcb663bf5dad176e UNIQUE (environment_id, "key"),
-    CONSTRAINT FK_ENVIRONMENT_VARIABLES_ON_ENVIRONMENT FOREIGN KEY (environment_id) REFERENCES environments (id)
+    CONSTRAINT FK_ENVIRONMENT_VARIABLES_ON_ENVIRONMENT FOREIGN KEY (environment_id) REFERENCES environments (id) ON DELETE CASCADE
 );
 
 CREATE TABLE flows
@@ -47,7 +47,7 @@ CREATE TABLE flows
     project_id  INTEGER      NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description TEXT,
-    CONSTRAINT FK_FLOWS_ON_PROJECT FOREIGN KEY (project_id) REFERENCES projects (id)
+    CONSTRAINT FK_FLOWS_ON_PROJECT FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 
 CREATE TABLE endpoints
@@ -68,7 +68,7 @@ CREATE TABLE endpoints
     grpc_service_name VARCHAR(255),
     grpc_method_name  VARCHAR(255),
     grpc_stub_path    TEXT,
-    CONSTRAINT FK_ENDPOINTS_ON_PROJECT FOREIGN KEY (project_id) REFERENCES projects (id)
+    CONSTRAINT FK_ENDPOINTS_ON_PROJECT FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 
 CREATE TABLE runs
@@ -81,7 +81,7 @@ CREATE TABLE runs
     ramp_up_duration INTEGER     NOT NULL,
     started_at       TIMESTAMP   NOT NULL,
     completed_at     TIMESTAMP,
-    CONSTRAINT FK_RUNS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id)
+    CONSTRAINT FK_RUNS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
 );
 
 CREATE TABLE flow_steps
@@ -98,8 +98,8 @@ CREATE TABLE flow_steps
     next_if_false  VARCHAR(255),
     condition      TEXT,
     CONSTRAINT pk_flow_steps PRIMARY KEY (id),
-    CONSTRAINT FK_FLOW_STEPS_ON_ENDPOINT FOREIGN KEY (endpoint_id) REFERENCES endpoints (id),
-    CONSTRAINT FK_FLOW_STEPS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id)
+    CONSTRAINT FK_FLOW_STEPS_ON_ENDPOINT FOREIGN KEY (endpoint_id) REFERENCES endpoints (id) ON DELETE CASCADE,
+    CONSTRAINT FK_FLOW_STEPS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
 );
 
 CREATE TABLE request_logs
@@ -113,8 +113,8 @@ CREATE TABLE request_logs
     request       TEXT,
     response      TEXT,
     created_at    TIMESTAMP NOT NULL,
-    CONSTRAINT FK_REQUEST_LOGS_ON_ENDPOINT FOREIGN KEY (endpoint_id) REFERENCES endpoints (id),
-    CONSTRAINT FK_REQUEST_LOGS_ON_RUN FOREIGN KEY (run_id) REFERENCES runs (id)
+    CONSTRAINT FK_REQUEST_LOGS_ON_ENDPOINT FOREIGN KEY (endpoint_id) REFERENCES endpoints (id) ON DELETE CASCADE,
+    CONSTRAINT FK_REQUEST_LOGS_ON_RUN FOREIGN KEY (run_id) REFERENCES runs (id) ON DELETE CASCADE
 );
 
 INSERT INTO configs (id, config_key, config_value)
@@ -122,4 +122,6 @@ VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),
        (2, 'HTTP_READ_TIMEOUT', '30'),
        (3, 'HTTP_WRITE_TIMEOUT', '30'),
        (4, 'HTTP_MAX_POOL_SIZE', '100'),
-       (5, 'HTTP_KEEP_ALIVE_DURATION', '5');
+       (5, 'HTTP_KEEP_ALIVE_DURATION', '5'),
+       (6, 'FLOW_ENDPOINT_STRICT_LINEAR', 'false'),
+       (7, 'FLOW_ALLOW_INFINITE', 'false');

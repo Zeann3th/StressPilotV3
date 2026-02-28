@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.executors.impl;
+package dev.zeann3th.stresspilot.core.services.executors.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
@@ -10,6 +10,7 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
+import dev.zeann3th.stresspilot.core.services.executors.context.HttpExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import jakarta.annotation.PostConstruct;
@@ -92,9 +93,11 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
     @Override
     public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
         try {
-            OkHttpClient client = (context instanceof CookieJar cookieJar)
-                    ? baseClient.newBuilder().cookieJar(cookieJar).build()
-                    : baseClient;
+            HttpExecutionContext httpContext = context.getState(HttpExecutionContext.class, HttpExecutionContext::new);
+
+            OkHttpClient client = baseClient.newBuilder()
+                    .cookieJar(httpContext)
+                    .build();
 
             Request request = buildRequest(endpoint, environment);
 

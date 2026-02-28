@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.projects.impl;
+package dev.zeann3th.stresspilot.core.services.projects;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -11,7 +11,6 @@ import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
-import dev.zeann3th.stresspilot.core.services.projects.ProjectService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -75,20 +74,10 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional
     public void deleteProject(Long projectId) {
-        ProjectEntity project = projectStore.findById(projectId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
-        Long envId = project.getEnvironment().getId();
-
-        // Delete children first (flow steps → flows → endpoints), then project, then
-        // env
-        flowStore.findAllByProjectId(projectId).forEach(f -> {
-            flowStepStore.deleteAllByFlowId(f.getId());
-            flowStore.deleteById(f.getId());
-        });
-        endpointStore.deleteAllByProjectId(projectId);
+        if (!projectStore.existsById(projectId)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0002);
+        }
         projectStore.deleteById(projectId);
-        envVarStore.deleteAllByEnvironmentId(envId);
-        environmentStore.deleteById(envId);
     }
 
     @Override
@@ -123,7 +112,7 @@ public class ProjectServiceImpl implements ProjectService {
                 envVarStore.saveAll(vars);
             }
 
-            // Endpoints (no step refs yet)
+            // Endpoints
             Map<Long, Long> endpointIdMap = new HashMap<>();
             if (payload.getEndpoints() != null) {
                 for (ProjectImportExportCommand.EndpointData e : payload.getEndpoints()) {
@@ -255,8 +244,6 @@ public class ProjectServiceImpl implements ProjectService {
             throw CommandExceptionBuilder.exception(ErrorCode.ER0012);
         }
     }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private String writeMap(Map<String, Object> map) {
         if (map == null || map.isEmpty())

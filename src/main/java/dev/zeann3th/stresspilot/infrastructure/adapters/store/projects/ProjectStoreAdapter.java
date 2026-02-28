@@ -33,4 +33,9 @@ public class ProjectStoreAdapter implements ProjectStore {
     public void deleteById(Long id) {
         projectJpaRepository.deleteById(id);
     }
+
+    @Override
+    public boolean existsById(Long projectId) {
+        return projectJpaRepository.existsById(projectId);
+    }
 }

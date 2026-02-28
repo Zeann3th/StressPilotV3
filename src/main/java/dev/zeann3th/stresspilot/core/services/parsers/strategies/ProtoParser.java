@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.parsers.impl;
+package dev.zeann3th.stresspilot.core.services.parsers.strategies;
 
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;

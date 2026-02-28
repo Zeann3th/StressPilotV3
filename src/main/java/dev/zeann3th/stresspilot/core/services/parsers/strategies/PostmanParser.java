@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.parsers.impl;
+package dev.zeann3th.stresspilot.core.services.parsers.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ParserType;

@@ -22,7 +22,7 @@ public class EnvironmentEntity extends BaseEntity{
     private Long id;
 
     @Builder.Default
-    @OneToMany(mappedBy = "environment", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "environment", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("environment")
     @ToString.Exclude
     private List<EnvironmentVariableEntity> variables = new ArrayList<>();

@@ -1,10 +1,13 @@
 package dev.zeann3th.stresspilot.core.domain.entities;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = false)
 @Data
@@ -42,4 +45,10 @@ public class RunEntity {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("run")
+    @ToString.Exclude
+    private List<RequestLogEntity> requestLogs = new ArrayList<>();
 }

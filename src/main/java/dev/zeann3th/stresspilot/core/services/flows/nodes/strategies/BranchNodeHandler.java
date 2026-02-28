@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.flows.nodes.impl;
+package dev.zeann3th.stresspilot.core.services.flows.nodes.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;

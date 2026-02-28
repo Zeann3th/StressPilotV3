@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.environments.impl;
+package dev.zeann3th.stresspilot.core.services.environments;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.commands.environment.UpdateEnvironmentVariablesCommand;
@@ -9,7 +9,6 @@ import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentStore;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
-import dev.zeann3th.stresspilot.core.services.environments.EnvironmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

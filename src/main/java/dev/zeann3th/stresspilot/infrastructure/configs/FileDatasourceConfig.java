@@ -41,7 +41,7 @@ public class FileDatasourceConfig {
             Path dbPath = dataDir.resolve(Constants.DB_FILE_NAME);
             boolean dbExists = Files.exists(dbPath);
 
-            String jdbcUrl = "jdbc:sqlite:" + dbPath.toAbsolutePath() + "?journal_mode=WAL&busy_timeout=5000";
+            String jdbcUrl = "jdbc:sqlite:" + dbPath.toAbsolutePath() + "?journal_mode=WAL&busy_timeout=5000&foreign_keys=on";
             DriverManagerDataSource dataSource = new DriverManagerDataSource();
             dataSource.setDriverClassName("org.sqlite.JDBC");
             dataSource.setUrl(jdbcUrl);

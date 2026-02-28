@@ -14,4 +14,6 @@ public interface ProjectStore {
     Page<ProjectEntity> findAllByCondition(String name, Pageable pageable);
 
     void deleteById(Long id);
+
+    boolean existsById(Long projectId);
 }
