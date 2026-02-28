@@ -16,7 +16,7 @@ COPY lib/elastic-apm-agent-${APM_VERSION}.jar /app/elastic-apm-agent.jar
 
 COPY --from=builder /app/target/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE 52000
 
 ENTRYPOINT ["java", \
             "-javaagent:/app/elastic-apm-agent.jar", \

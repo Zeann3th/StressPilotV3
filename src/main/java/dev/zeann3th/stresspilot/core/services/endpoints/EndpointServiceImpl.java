@@ -25,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -101,8 +103,26 @@ public class EndpointServiceImpl implements EndpointService {
 
         String filename = Objects.requireNonNull(file.getOriginalFilename(), "filename");
         String parserType;
+        String content;
+
+        try {
+            content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (Exception _) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0014,
+                    Map.of(Constants.REASON, "Failed to read file content"));
+        }
+
         if ("application/json".equals(file.getContentType()) || filename.endsWith(".json")) {
-            parserType = ParserType.POSTMAN.name();
+            try {
+                JsonNode root = jsonMapper.readTree(content);
+                if (root.has("openapi") || root.has("swagger")) {
+                    parserType = ParserType.OPENAPI.name();
+                } else {
+                    parserType = ParserType.POSTMAN.name();
+                }
+            } catch (Exception _) {
+                parserType = ParserType.POSTMAN.name();
+            }
         } else if (filename.endsWith(".proto") || filename.endsWith(".pb")) {
             parserType = ParserType.PROTO.name();
         } else {
@@ -111,7 +131,6 @@ public class EndpointServiceImpl implements EndpointService {
         }
 
         try {
-            String content = new String(file.getBytes(), StandardCharsets.UTF_8);
             List<EndpointEntity> parsed = parserServiceFactory.getParser(parserType).parse(content);
             List<EndpointEntity> entities = new ArrayList<>();
             for (EndpointEntity e : parsed) {
@@ -138,9 +157,7 @@ public class EndpointServiceImpl implements EndpointService {
                         Collectors.toMap(
                                 EnvironmentVariableEntity::getKey,
                                 EnvironmentVariableEntity::getValue,
-                                (_, v2) -> v2
-                        )
-                );
+                                (_, v2) -> v2));
 
         if (cmd.getVariables() != null)
             environment.putAll(cmd.getVariables());
@@ -173,7 +190,8 @@ public class EndpointServiceImpl implements EndpointService {
         Map<String, Object> environment = envVarStore
                 .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
                 .stream()
-                .collect(Collectors.toMap(EnvironmentVariableEntity::getKey, EnvironmentVariableEntity::getValue, (_, v2) -> v2));
+                .collect(Collectors.toMap(EnvironmentVariableEntity::getKey, EnvironmentVariableEntity::getValue,
+                        (_, v2) -> v2));
 
         if (cmd.getVariables() != null)
             environment.putAll(cmd.getVariables());
