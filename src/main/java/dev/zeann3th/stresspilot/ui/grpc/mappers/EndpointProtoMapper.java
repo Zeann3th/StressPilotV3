@@ -3,12 +3,13 @@ package dev.zeann3th.stresspilot.ui.grpc.mappers;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.*;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
+import dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig.class)
+@Mapper(config = MapstructProtoConfig.class)
 public interface EndpointProtoMapper {
 
         @Mapping(source = "project.id", target = "projectId")
@@ -35,8 +36,8 @@ public interface EndpointProtoMapper {
                         return new java.util.HashMap<>();
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                        new tools.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
-                                        });
+                                new tools.jackson.core.type.TypeReference<>() {
+                                });
                 } catch (Exception e) {
                         return java.util.Map.of("error", value);
                 }
@@ -47,8 +48,8 @@ public interface EndpointProtoMapper {
                         return new java.util.HashMap<>();
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                        new tools.jackson.core.type.TypeReference<java.util.Map<String, String>>() {
-                                        });
+                                new tools.jackson.core.type.TypeReference<>() {
+                                });
                 } catch (Exception e) {
                         return java.util.Map.of("error", value);
                 }

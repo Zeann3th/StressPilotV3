@@ -4,12 +4,13 @@ import dev.zeann3th.stresspilot.core.domain.commands.project.CreateProjectComman
 import dev.zeann3th.stresspilot.core.domain.commands.project.UpdateProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
+import dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig.class)
+@Mapper(config = MapstructProtoConfig.class)
 public interface ProjectProtoMapper {
 
     @Mapping(source = "environment.id", target = "environmentId")

@@ -4,12 +4,13 @@ import dev.zeann3th.stresspilot.core.domain.commands.flow.*;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
+import dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig.class)
+@Mapper(config = MapstructProtoConfig.class)
 public interface FlowProtoMapper {
 
         @Mapping(source = "project.id", target = "projectId")
@@ -31,8 +32,8 @@ public interface FlowProtoMapper {
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(
                                         value,
-                                        new tools.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
-                                        });
+                                new tools.jackson.core.type.TypeReference<>() {
+                                });
                 } catch (Exception e) {
                         return java.util.Map.of("error", value);
                 }
