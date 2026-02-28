@@ -15,14 +15,14 @@ public interface EndpointProtoMapper {
         @Mapping(source = "project.id", target = "projectId")
         EndpointResponse toProto(EndpointEntity entity);
 
-        @Mapping(source = "bodyJson", target = "body")
-        @Mapping(source = "httpHeadersJson", target = "httpHeaders")
-        @Mapping(source = "httpParamsJson", target = "httpParameters")
+        @Mapping(source = "bodyJson", target = "body", qualifiedByName = "mapToObjectMap")
+        @Mapping(source = "httpHeadersJson", target = "httpHeaders", qualifiedByName = "mapToObjectMap")
+        @Mapping(source = "httpParamsJson", target = "httpParameters", qualifiedByName = "mapToObjectMap")
         CreateEndpointCommand toCreateCommand(CreateEndpointRequest request);
 
-        @Mapping(source = "bodyJson", target = "body")
-        @Mapping(source = "httpHeadersJson", target = "httpHeaders")
-        @Mapping(source = "httpParamsJson", target = "httpParameters")
+        @Mapping(source = "bodyJson", target = "body", qualifiedByName = "mapToObjectMap")
+        @Mapping(source = "httpHeadersJson", target = "httpHeaders", qualifiedByName = "mapToStringMap")
+        @Mapping(source = "httpParamsJson", target = "httpParameters", qualifiedByName = "mapToStringMap")
         ExecuteAdhocEndpointCommand toAdhocCommand(ExecuteAdhocEndpointRequest request);
 
         default ExecuteEndpointCommand toExecuteCommand(ExecuteEndpointRequest request) {
@@ -31,26 +31,28 @@ public interface EndpointProtoMapper {
                                 .build();
         }
 
+        @org.mapstruct.Named("mapToObjectMap")
         default java.util.Map<String, Object> mapToObjectMap(String value) {
                 if (value == null || value.isBlank())
                         return new java.util.HashMap<>();
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                new tools.jackson.core.type.TypeReference<>() {
-                                });
-                } catch (Exception e) {
+                                        new tools.jackson.core.type.TypeReference<>() {
+                                        });
+                } catch (Exception _) {
                         return java.util.Map.of("error", value);
                 }
         }
 
+        @org.mapstruct.Named("mapToStringMap")
         default java.util.Map<String, String> mapToStringMap(String value) {
                 if (value == null || value.isBlank())
                         return new java.util.HashMap<>();
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                new tools.jackson.core.type.TypeReference<>() {
-                                });
-                } catch (Exception e) {
+                                        new tools.jackson.core.type.TypeReference<>() {
+                                        });
+                } catch (Exception _) {
                         return java.util.Map.of("error", value);
                 }
         }
