@@ -11,12 +11,8 @@ import org.mapstruct.*;
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface ProjectMapper {
 
-    // ─── Entity → DTO ────────────────────────────────────────────────────────
-
     @Mapping(source = "environment.id", target = "environmentId")
     ProjectResponseDTO toResponse(ProjectEntity entity);
-
-    // ─── Request → Command ───────────────────────────────────────────────────
 
     CreateProjectCommand toCreateCommand(CreateProjectRequestDTO request);
 

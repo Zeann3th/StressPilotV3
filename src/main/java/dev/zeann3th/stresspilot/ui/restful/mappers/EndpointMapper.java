@@ -8,12 +8,8 @@ import org.mapstruct.*;
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface EndpointMapper {
 
-    // ─── Entity → DTO ────────────────────────────────────────────────────────
-
     @Mapping(source = "project.id", target = "projectId")
     EndpointResponseDTO toResponse(EndpointEntity entity);
-
-    // ─── Request → Command ───────────────────────────────────────────────────
 
     CreateEndpointCommand toCreateCommand(CreateEndpointRequestDTO request);
 

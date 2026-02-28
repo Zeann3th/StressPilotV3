@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.controllers;
+package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.core.services.environments.EnvironmentService;
@@ -32,6 +32,7 @@ public class EnvironmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateEnvironmentVariables(@PathVariable("environmentId") Long environmentId,
             @RequestBody UpdateEnvironmentVariablesRequestDTO request) {
-        environmentService.updateEnvironmentVariables(environmentId, environmentMapper.toUpdateCommand(request));
+        var command = environmentMapper.toUpdateCommand(request);
+        environmentService.updateEnvironmentVariables(environmentId, command);
     }
 }

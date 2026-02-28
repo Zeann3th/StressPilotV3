@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.controllers;
+package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
@@ -42,14 +42,15 @@ public class EndpointController {
     }
 
     @GetMapping("/{endpointId}")
-    public EndpointResponseDTO getEndpointDetail(@PathVariable("endpointId") Long endpointId) {
+    public EndpointResponseDTO getEndpointDetail(@PathVariable Long endpointId) {
         EndpointEntity resp = endpointService.getEndpointById(endpointId);
         return endpointMapper.toResponse(resp);
     }
 
     @PostMapping
     public EndpointResponseDTO createEndpoint(@Valid @RequestBody CreateEndpointRequestDTO request) {
-        EndpointEntity resp = endpointService.createEndpoint(endpointMapper.toCreateCommand(request));
+        var command = endpointMapper.toCreateCommand(request);
+        EndpointEntity resp = endpointService.createEndpoint(command);
         return endpointMapper.toResponse(resp);
     }
 
@@ -63,7 +64,7 @@ public class EndpointController {
 
     @DeleteMapping("/{endpointId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteEndpoint(@PathVariable("endpointId") Long endpointId) {
+    public void deleteEndpoint(@PathVariable Long endpointId) {
         endpointService.deleteEndpoint(endpointId);
     }
 
@@ -79,17 +80,15 @@ public class EndpointController {
     public ExecuteEndpointResponse executeEndpoint(
             @PathVariable Long endpointId,
             @RequestBody ExecuteEndpointRequestDTO requestBody) {
-        ExecuteEndpointResponse resp = endpointService.runEndpoint(endpointId,
-                endpointMapper.toExecuteCommand(requestBody));
-        return resp;
+        var command = endpointMapper.toExecuteCommand(requestBody);
+        return endpointService.runEndpoint(endpointId, command);
     }
 
     @PostMapping("/execute-adhoc")
     public ExecuteEndpointResponse executeAdhocEndpoint(
             @RequestParam("projectId") Long projectId,
             @RequestBody ExecuteAdhocEndpointRequestDTO requestBody) {
-        ExecuteEndpointResponse resp = endpointService.runAdhocEndpoint(projectId,
-                endpointMapper.toAdhocCommand(requestBody));
-        return resp;
+        var command = endpointMapper.toAdhocCommand(requestBody);
+        return endpointService.runAdhocEndpoint(projectId, command);
     }
 }

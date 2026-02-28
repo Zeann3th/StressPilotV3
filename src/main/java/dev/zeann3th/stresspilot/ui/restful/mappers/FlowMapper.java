@@ -8,21 +8,14 @@ import org.mapstruct.*;
 
 import java.util.List;
 
-/**
- * Bi-directional mapper for the Flow domain.
- */
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface FlowMapper {
-
-    // ─── Entity → DTO ────────────────────────────────────────────────────────
 
     @Mapping(source = "project.id", target = "projectId")
     FlowResponseDTO toResponse(FlowEntity entity);
 
     @Mapping(source = "endpoint.id", target = "endpointId")
     FlowStepResponseDTO toStepResponse(FlowStepEntity step);
-
-    // ─── Request → Command ───────────────────────────────────────────────────
 
     CreateFlowCommand toCreateCommand(CreateFlowRequestDTO request);
 

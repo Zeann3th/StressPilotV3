@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.controllers;
+package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;

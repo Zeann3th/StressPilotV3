@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.controllers;
+package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
@@ -60,14 +60,16 @@ public class FlowController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FlowResponseDTO createFlow(@Valid @RequestBody CreateFlowRequestDTO request) {
-        FlowEntity resp = flowService.createFlow(flowMapper.toCreateCommand(request));
+        var command = flowMapper.toCreateCommand(request);
+        FlowEntity resp = flowService.createFlow(command);
         return flowMapper.toResponse(resp);
     }
 
     @PostMapping("/{flowId}/configuration")
     public List<FlowStepResponseDTO> configureFlow(@PathVariable Long flowId,
             @RequestBody List<FlowStepRequestDTO> steps) {
-        var configuredSteps = flowService.configureFlow(flowId, flowMapper.toStepCommands(steps));
+        var commands = flowMapper.toStepCommands(steps);
+        var configuredSteps = flowService.configureFlow(flowId, commands);
         return configuredSteps.getSteps().stream().map(flowMapper::toStepResponse).toList();
     }
 
@@ -91,10 +93,9 @@ public class FlowController {
             @Parameter(content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)) @RequestPart("request") RunFlowRequestDTO runFlowRequestDTO,
             @RequestPart(value = "file", required = false) MultipartFile file) {
         List<Map<String, Object>> credentials = parseCredentialsFile(file);
-        dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand cmd = flowMapper
-                .toRunCommand(runFlowRequestDTO);
-        cmd.setCredentials(credentials);
-        flowService.runFlow(flowId, cmd);
+        var command = flowMapper.toRunCommand(runFlowRequestDTO);
+        command.setCredentials(credentials);
+        flowService.runFlow(flowId, command);
     }
 
     private List<Map<String, Object>> parseCredentialsFile(MultipartFile file) {

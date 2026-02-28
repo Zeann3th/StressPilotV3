@@ -7,8 +7,6 @@ import org.mapstruct.*;
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface RunMapper {
 
-    // ─── Entity → DTO ────────────────────────────────────────────────────────
-
     @Mapping(source = "flow.id", target = "flowId")
     RunResponseDTO toResponse(RunEntity entity);
 }

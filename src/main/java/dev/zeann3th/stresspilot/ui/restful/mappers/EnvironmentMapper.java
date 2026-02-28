@@ -8,11 +8,7 @@ import org.mapstruct.*;
 @Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
 public interface EnvironmentMapper {
 
-    // ─── Entity → DTO ────────────────────────────────────────────────────────
-
     EnvironmentVariableResponseDTO toResponse(EnvironmentVariableEntity entity);
-
-    // ─── Request → Command ───────────────────────────────────────────────────
 
     UpdateEnvironmentVariablesCommand toUpdateCommand(UpdateEnvironmentVariablesRequestDTO request);
 

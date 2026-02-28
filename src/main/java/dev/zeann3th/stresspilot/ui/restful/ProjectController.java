@@ -1,7 +1,5 @@
-package dev.zeann3th.stresspilot.ui.restful.controllers;
+package dev.zeann3th.stresspilot.ui.restful;
 
-import dev.zeann3th.stresspilot.core.domain.commands.project.CreateProjectCommand;
-import dev.zeann3th.stresspilot.core.domain.commands.project.UpdateProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
 import dev.zeann3th.stresspilot.core.services.projects.ProjectService;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.CreateProjectRequestDTO;
@@ -48,7 +46,7 @@ public class ProjectController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProjectResponseDTO createProject(@Valid @RequestBody CreateProjectRequestDTO request) {
-        CreateProjectCommand command = projectMapper.toCreateCommand(request);
+        var command = projectMapper.toCreateCommand(request);
         ProjectEntity resp = projectService.createProject(command);
         return projectMapper.toResponse(resp);
     }
@@ -56,7 +54,7 @@ public class ProjectController {
     @PatchMapping("/{projectId}")
     public ProjectResponseDTO updateProject(@PathVariable Long projectId,
             @RequestBody UpdateProjectRequestDTO request) {
-        UpdateProjectCommand command = projectMapper.toUpdateCommand(request);
+        var command = projectMapper.toUpdateCommand(request);
         ProjectEntity resp = projectService.updateProject(projectId, command);
         return projectMapper.toResponse(resp);
     }
