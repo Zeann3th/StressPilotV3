@@ -2,7 +2,7 @@ package dev.zeann3th.stresspilot.ui.restful.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import org.slf4j.MDC;
+import io.opentelemetry.api.trace.Span;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
@@ -14,7 +14,7 @@ public record ApiResponse<T>(
 ) {
 
     private static String getCurrentTraceId() {
-        return MDC.get("traceId");
+        return Span.current().getSpanContext().getTraceId();
     }
 
     public static <T> ApiResponse<T> success(T data) {
