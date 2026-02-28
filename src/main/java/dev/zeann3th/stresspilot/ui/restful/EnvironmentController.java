@@ -23,15 +23,15 @@ public class EnvironmentController {
 
     @GetMapping("/{environmentId}/variables")
     public List<EnvironmentVariableResponseDTO> getEnvironmentVariables(
-            @PathVariable("environmentId") Long environmentId) {
+            @PathVariable Long environmentId) {
         List<EnvironmentVariableEntity> variables = environmentService.getEnvironmentVariables(environmentId);
         return variables.stream().map(environmentMapper::toResponse).toList();
     }
 
     @PatchMapping("/{environmentId}/variables")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updateEnvironmentVariables(@PathVariable("environmentId") Long environmentId,
-            @RequestBody UpdateEnvironmentVariablesRequestDTO request) {
+    public void updateEnvironmentVariables(@PathVariable Long environmentId,
+                                           @RequestBody UpdateEnvironmentVariablesRequestDTO request) {
         var command = environmentMapper.toUpdateCommand(request);
         environmentService.updateEnvironmentVariables(environmentId, command);
     }

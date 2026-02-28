@@ -61,7 +61,7 @@ public class ProjectController {
 
     @DeleteMapping("/{projectId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteProject(@PathVariable("projectId") Long projectId) {
+    public void deleteProject(@PathVariable Long projectId) {
         projectService.deleteProject(projectId);
     }
 
