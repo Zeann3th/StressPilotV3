@@ -18,10 +18,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j(topic = "GRPC_PARSER")
 @Component
@@ -85,9 +82,20 @@ public class ProtoParser implements ParserService {
 
         List<EndpointEntity> endpoints = new ArrayList<>();
 
+        Map<String, Descriptors.FileDescriptor> parsedDescriptors = new HashMap<>();
+
         for (DescriptorProtos.FileDescriptorProto fileProto : descriptorSet.getFileList()) {
+
+            Descriptors.FileDescriptor[] dependencies = new Descriptors.FileDescriptor[fileProto.getDependencyCount()];
+            for (int i = 0; i < fileProto.getDependencyCount(); i++) {
+                String dependencyName = fileProto.getDependency(i);
+                dependencies[i] = parsedDescriptors.get(dependencyName);
+            }
+
             Descriptors.FileDescriptor fileDescriptor =
-                    Descriptors.FileDescriptor.buildFrom(fileProto, new Descriptors.FileDescriptor[]{});
+                    Descriptors.FileDescriptor.buildFrom(fileProto, dependencies);
+
+            parsedDescriptors.put(fileProto.getName(), fileDescriptor);
 
             for (Descriptors.ServiceDescriptor service : fileDescriptor.getServices()) {
                 for (Descriptors.MethodDescriptor method : service.getMethods()) {
