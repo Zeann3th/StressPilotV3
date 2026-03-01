@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.validators.impl;
+package dev.zeann3th.stresspilot.ui.restful.validators.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.CreateEndpointRequestDTO;
@@ -16,9 +16,7 @@ public class GrpcEndpointValidator implements EndpointTypeValidator {
 
     @Override
     public boolean isValid(CreateEndpointRequestDTO request, ConstraintValidatorContext context) {
-        boolean valid = true;
-        if (request.getGrpcServiceName() == null)
-            valid = false;
+        boolean valid = request.getGrpcServiceName() != null;
         if (request.getGrpcMethodName() == null)
             valid = false;
         if (request.getGrpcStubPath() == null)

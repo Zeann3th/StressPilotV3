@@ -1,13 +1,16 @@
 package dev.zeann3th.stresspilot.core.ports.store;
 
+import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface RequestLogStore {
-    RequestLogEntity save(RequestLogEntity requestLogEntity);
-
+    RequestLogEntity save(RequestLogEntity entity);
     List<RequestLogEntity> saveAll(Iterable<RequestLogEntity> entities);
+    RunReport calculateRunReport(Long runId, RunEntity run);
 
-    List<RequestLogEntity> findAllByRunId(Long runId);
+    void streamLogsByRunId(Long runId, Consumer<RequestLogEntity> consumer);
 }

@@ -49,8 +49,7 @@ public class RunController {
     })
     public void exportRun(
             @PathVariable Long runId,
-            @RequestParam(value = "type", required = false) String type,
             HttpServletResponse response) {
-        runService.exportRun(runId, type, response);
+        runService.exportRun(runId, response);
     }
 }

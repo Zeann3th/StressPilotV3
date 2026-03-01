@@ -13,11 +13,20 @@ public class RequestLogWriterProperties {
 
     private long flushIntervalMs = 1000;
 
-    /** WebSocket push config. */
     private Websocket websocket = new Websocket();
 
-    /** Kafka push config. */
     private Kafka kafka = new Kafka();
+
+    private Datasource datasource = new Datasource();
+
+    @Data
+    public static class Datasource {
+        private String type = "primary";
+        private String url;
+        private String username;
+        private String password;
+        private String driverClassName;
+    }
 
     @Data
     public static class Websocket {

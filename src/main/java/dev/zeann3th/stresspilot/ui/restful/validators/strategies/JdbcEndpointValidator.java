@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.ui.restful.validators.impl;
+package dev.zeann3th.stresspilot.ui.restful.validators.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.CreateEndpointRequestDTO;
@@ -16,10 +16,7 @@ public class JdbcEndpointValidator implements EndpointTypeValidator {
 
     @Override
     public boolean isValid(CreateEndpointRequestDTO request, ConstraintValidatorContext context) {
-        boolean valid = true;
-        if (request.getUrl() == null || !request.getUrl().startsWith("jdbc:")) {
-            valid = false;
-        }
+        boolean valid = request.getUrl() != null && request.getUrl().startsWith("jdbc:");
         if (request.getBody() == null || request.getBody().toString().trim().isEmpty()) {
             valid = false;
         }

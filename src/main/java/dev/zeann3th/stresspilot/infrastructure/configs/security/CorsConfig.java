@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.infrastructure.configs;
+package dev.zeann3th.stresspilot.infrastructure.configs.security;
 
 import dev.zeann3th.stresspilot.infrastructure.configs.properties.CorsProperties;
 import lombok.NonNull;

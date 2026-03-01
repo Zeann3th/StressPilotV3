@@ -23,6 +23,8 @@ application:
       - "localhost:3000"
 
   message:
+    datasource:
+      type: primary
     batch-size: 1000
     flush-interval-ms: 1000
     websocket:

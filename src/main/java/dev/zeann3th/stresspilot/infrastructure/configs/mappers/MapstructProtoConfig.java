@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.infrastructure.configs;
+package dev.zeann3th.stresspilot.infrastructure.configs.mappers;
 
 import org.mapstruct.CollectionMappingStrategy;
 import org.mapstruct.MapperConfig;

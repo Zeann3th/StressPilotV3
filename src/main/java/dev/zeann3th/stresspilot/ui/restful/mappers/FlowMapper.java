@@ -3,12 +3,13 @@ package dev.zeann3th.stresspilot.ui.restful.mappers;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.*;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
+import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructConfig;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.*;
 import org.mapstruct.*;
 
 import java.util.List;
 
-@Mapper(config = dev.zeann3th.stresspilot.infrastructure.configs.MapstructConfig.class)
+@Mapper(config = MapstructConfig.class)
 public interface FlowMapper {
 
     @Mapping(source = "project.id", target = "projectId")

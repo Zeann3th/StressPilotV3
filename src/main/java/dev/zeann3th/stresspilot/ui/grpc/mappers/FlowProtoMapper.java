@@ -4,7 +4,7 @@ import dev.zeann3th.stresspilot.core.domain.commands.flow.*;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
-import dev.zeann3th.stresspilot.infrastructure.configs.MapstructProtoConfig;
+import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructProtoConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -34,7 +34,7 @@ public interface FlowProtoMapper {
                                         value,
                                 new tools.jackson.core.type.TypeReference<>() {
                                 });
-                } catch (Exception e) {
+                } catch (Exception _) {
                         return java.util.Map.of("error", value);
                 }
         }

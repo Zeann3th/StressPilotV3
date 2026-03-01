@@ -12,7 +12,7 @@ import java.util.List;
 
 @Slf4j(topic = "[Kafka-LogWriter]")
 @Component
-@ConditionalOnProperty(prefix = "stresspilot.message.kafka", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "application.message.kafka", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class KafkaRequestMessagePort implements RequestMessagePort {
 

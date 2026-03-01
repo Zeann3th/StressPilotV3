@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.infrastructure.configs;
+package dev.zeann3th.stresspilot.infrastructure.configs.datasource;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
@@ -27,6 +28,7 @@ import java.util.Map;
 public class FileDatasourceConfig {
 
     @Bean
+    @Primary
     public DataSource dataSource() {
         try {
             String appHome = System.getenv("PILOT_HOME");

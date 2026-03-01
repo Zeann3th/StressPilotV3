@@ -36,8 +36,6 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition flushDone = lock.newCondition();
 
-    final ConcurrentLinkedQueue<RequestLogEntity> wsBuffer = new ConcurrentLinkedQueue<>();
-
     @PostConstruct
     public void start() {
         Thread writer = new Thread(this::writerLoop, "request-log-writer");
@@ -100,7 +98,6 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                     flushing.set(true);
                     List<RequestLogEntity> batch = new ArrayList<>(buffer);
                     persistBatch(batch);
-                    wsBuffer.addAll(batch);
                     buffer.clear();
                     lastFlush = System.currentTimeMillis();
                     flushing.set(false);
@@ -129,7 +126,7 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 if (attempt < MAX_RETRIES) {
                     try {
                         Thread.sleep(100L * attempt);
-                    } catch (InterruptedException ie) {
+                    } catch (InterruptedException _) {
                         Thread.currentThread().interrupt();
                         return;
                     }

@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.infrastructure.configs;
+package dev.zeann3th.stresspilot.infrastructure.configs.security;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public class SecurityConfig {
 
     @Bean
     @Profile("prod")
-    public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http, SessionFilter sessionFilter) throws Exception {
+    public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http, SessionFilter sessionFilter) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
@@ -31,7 +31,7 @@ public class SecurityConfig {
 
     @Bean
     @Profile("dev")
-    public SecurityFilterChain devSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain devSecurityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());

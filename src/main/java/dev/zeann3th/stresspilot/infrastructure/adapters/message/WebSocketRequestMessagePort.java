@@ -14,22 +14,25 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j(topic = "[WS-LogWriter]")
 @Component
-@ConditionalOnProperty(prefix = "stresspilot.message.websocket", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "application.message.websocket", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class WebSocketRequestMessagePort implements RequestMessagePort {
 
-    private final DatabaseRequestMessagePort dbWriter;
+    private static final int QUEUE_CAPACITY = 200_000;
+    private final BlockingQueue<RequestLogEntity> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+
     private final SimpMessagingTemplate messagingTemplate;
     private final RequestLogWriterProperties properties;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-            r -> new Thread(r, "ws-log-pusher")
-    );
+            r -> new Thread(r, "ws-log-pusher"));
 
     @PostConstruct
     public void start() {
@@ -39,23 +42,31 @@ public class WebSocketRequestMessagePort implements RequestMessagePort {
                 properties.getWebsocket().getTopic(), interval);
     }
 
+    @Override
+    public void write(RequestLogEntity log) {
+        if (!queue.offer(log)) {
+            WebSocketRequestMessagePort.log.warn("WS Log queue full ({}) — entry dropped", queue.size());
+        }
+    }
 
     @Override
-    public void write(RequestLogEntity log) { /* delegated via wsBuffer */ }
+    public void writeAll(List<RequestLogEntity> logs) {
+        logs.forEach(this::write);
+    }
 
     @Override
-    public void writeAll(List<RequestLogEntity> logs) { /* delegated via wsBuffer */ }
-
-    @Override
-    public void flush() { /* best-effort, no blocking */ }
+    public void flush() {
+        /* best-effort, no blocking */
+    }
 
     private void push() {
-        if (dbWriter.wsBuffer.isEmpty()) return;
+        if (queue.isEmpty())
+            return;
 
         List<RequestLogEntity> batch = new ArrayList<>();
         RequestLogEntity item;
         int limit = properties.getWebsocket().getMaxPerPush();
-        while (batch.size() < limit && (item = dbWriter.wsBuffer.poll()) != null) {
+        while (batch.size() < limit && (item = queue.poll()) != null) {
             batch.add(item);
         }
 

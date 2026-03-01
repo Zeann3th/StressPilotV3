@@ -27,5 +27,4 @@ public class RunReport {
     private Integer rampUpTime;
     private Integer configuredDuration;
     private List<EndpointStats> endpointStats;
-    private List<RequestLog> details;
 }

@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.infrastructure.configs;
+package dev.zeann3th.stresspilot.infrastructure.configs.datasource;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.utils.DriverShim;
@@ -44,7 +44,7 @@ public class SqlDriverConfig {
             return;
         }
 
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(".jar"));
+        File[] files = folder.listFiles((_, name) -> name.endsWith(".jar"));
         if (files == null) {
             log.warn("No files found in drivers directory: {}", folder.getAbsolutePath());
             return;
