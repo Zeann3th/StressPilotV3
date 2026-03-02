@@ -5,12 +5,15 @@ import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
 import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructProtoConfig;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
 @Mapper(config = MapstructProtoConfig.class)
 public interface EnvironmentProtoMapper {
 
+    @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
+    @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
     EnvironmentVariableResponse toProto(EnvironmentVariableEntity entity);
 
     default UpdateEnvironmentVariablesCommand toUpdateCommand(UpdateEnvironmentVariablesRequest request) {

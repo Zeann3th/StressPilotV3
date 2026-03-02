@@ -58,6 +58,8 @@ message ProjectResponse {
   string name           = 2;
   string description    = 3;
   int64  environment_id = 4;
+  string created_at     = 5;
+  string updated_at     = 6;
 }
 
 message ListProjectsResponse {

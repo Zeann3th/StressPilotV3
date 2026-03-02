@@ -14,6 +14,8 @@ import java.util.List;
 public interface ProjectProtoMapper {
 
     @Mapping(source = "environment.id", target = "environmentId")
+    @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
+    @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
     ProjectResponse toProto(ProjectEntity entity);
 
     CreateProjectCommand toCreateCommand(CreateProjectRequest request);

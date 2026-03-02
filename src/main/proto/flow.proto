@@ -81,6 +81,8 @@ message FlowResponse {
   string                   description = 3;
   int64                    project_id  = 4;
   repeated FlowStepMessage steps       = 5;
+  string                   created_at  = 6;
+  string                   updated_at  = 7;
 }
 
 message ListFlowsResponse {

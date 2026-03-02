@@ -13,6 +13,8 @@ import java.util.List;
 public interface EndpointProtoMapper {
 
         @Mapping(source = "project.id", target = "projectId")
+        @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
+        @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
         EndpointResponse toProto(EndpointEntity entity);
 
         @Mapping(source = "bodyJson", target = "body", qualifiedByName = "mapToObjectMap")

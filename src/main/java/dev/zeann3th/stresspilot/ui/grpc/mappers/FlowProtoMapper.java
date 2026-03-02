@@ -14,6 +14,8 @@ import java.util.List;
 public interface FlowProtoMapper {
 
         @Mapping(source = "project.id", target = "projectId")
+        @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
+        @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
         FlowResponse toProto(FlowEntity entity);
 
         @Mapping(source = "endpoint.id", target = "endpointId")
@@ -32,8 +34,8 @@ public interface FlowProtoMapper {
                 try {
                         return new tools.jackson.databind.ObjectMapper().readValue(
                                         value,
-                                new tools.jackson.core.type.TypeReference<>() {
-                                });
+                                        new tools.jackson.core.type.TypeReference<>() {
+                                        });
                 } catch (Exception _) {
                         return java.util.Map.of("error", value);
                 }

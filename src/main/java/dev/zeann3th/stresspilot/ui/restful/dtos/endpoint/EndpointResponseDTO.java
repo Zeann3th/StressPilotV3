@@ -1,9 +1,12 @@
 package dev.zeann3th.stresspilot.ui.restful.dtos.endpoint;
 
+import dev.zeann3th.stresspilot.ui.restful.dtos.BaseDTO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class EndpointResponseDTO {
+@EqualsAndHashCode(callSuper = true)
+public class EndpointResponseDTO extends BaseDTO {
     private Long id;
     private String name;
     private String description;
