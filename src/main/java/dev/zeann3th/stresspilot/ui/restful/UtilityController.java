@@ -7,17 +7,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/v1/utilities")
 @RequiredArgsConstructor
 @ResponseWrapper
 public class UtilityController {
-    private static final String SESSION_ID = "sessionId";
 
     @GetMapping("/session")
-    public Map<String, String> getSession(HttpSession httpSession) {
-        return Map.of(SESSION_ID, httpSession.getId());
+    public String getSession(HttpSession httpSession) {
+        return httpSession.getId();
     }
 }
