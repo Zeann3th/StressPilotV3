@@ -10,10 +10,13 @@ import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import tools.jackson.databind.json.JsonMapper;
 
 @ControllerAdvice
 @RequiredArgsConstructor
 public class HttpResponseWrapper implements ResponseBodyAdvice<Object> {
+
+    private final JsonMapper jsonMapper;
 
     @Override
     public boolean supports(MethodParameter returnType, @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
@@ -33,6 +36,17 @@ public class HttpResponseWrapper implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        return ApiResponse.success(body);
+        var apiResponse = ApiResponse.success(body);
+
+        if (body instanceof String) {
+            try {
+                response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                return jsonMapper.writeValueAsString(apiResponse);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to serialize string response", e);
+            }
+        }
+
+        return apiResponse;
     }
 }
