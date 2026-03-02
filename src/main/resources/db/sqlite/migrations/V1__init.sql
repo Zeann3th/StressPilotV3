@@ -91,7 +91,7 @@ CREATE TABLE flow_steps
     updated_at     TIMESTAMP,
     flow_id        INTEGER      NOT NULL,
     type           VARCHAR(10)  NOT NULL,
-    endpoint_id    INTEGER      NOT NULL,
+    endpoint_id    INTEGER,
     pre_processor  TEXT,
     post_processor TEXT,
     next_if_true   VARCHAR(255),

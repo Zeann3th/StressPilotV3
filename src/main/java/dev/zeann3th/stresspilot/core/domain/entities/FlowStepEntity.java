@@ -27,7 +27,7 @@ public class FlowStepEntity extends BaseEntity {
     private String type;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "endpoint_id", nullable = false)
+    @JoinColumn(name = "endpoint_id")
     @JsonIgnoreProperties("flowSteps")
     private EndpointEntity endpoint;
 
