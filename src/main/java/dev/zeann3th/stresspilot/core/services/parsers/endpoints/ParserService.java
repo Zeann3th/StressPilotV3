@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.parsers;
+package dev.zeann3th.stresspilot.core.services.parsers.endpoints;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import org.pf4j.ExtensionPoint;
@@ -9,5 +9,5 @@ public interface ParserService extends ExtensionPoint {
 
     boolean supports(String filename, String contentType, String content);
 
-    List<EndpointEntity> parse(String spec);
+    List<EndpointEntity> unmarshal(String spec);
 }

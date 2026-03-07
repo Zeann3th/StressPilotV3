@@ -9,21 +9,19 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProjectImportExportCommand {
+public class ImportProjectCommand {
 
-    private Long id;
     private String name;
     private String description;
-    private List<EnvVarData> environmentVariables;
-    private List<EndpointData> endpoints;
-    private List<FlowData> flows;
+    private List<EnvVar> environment;
+    private List<Endpoint> endpoints;
+    private List<Flow> flows;
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class EnvVarData {
-        private Long id;
-        private String key;
+    public static class EnvVar {
+        private String name;
         private String value;
         private Boolean active;
     }
@@ -32,17 +30,17 @@ public class ProjectImportExportCommand {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class EndpointData {
-        private Long oldId;
+    public static class Endpoint {
+        private String id;
         private String name;
         private String description;
         private String type;
         private String url;
+        private String method;
+        private Map<String, Object> headers;
+        private Map<String, Object> parameters;
         private Object body;
         private String successCondition;
-        private String httpMethod;
-        private Map<String, Object> httpHeaders;
-        private Map<String, Object> httpParameters;
         private String grpcServiceName;
         private String grpcMethodName;
         private String grpcStubPath;
@@ -51,25 +49,24 @@ public class ProjectImportExportCommand {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class FlowData {
-        private Long id;
+    public static class Flow {
         private String name;
         private String description;
-        private List<StepData> steps;
+        private List<Step> steps;
     }
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class StepData {
-        private String id;
+    public static class Step {
+        private String name;
         private String type;
-        private Long oldEndpointId;
-        private Map<String, Object> preProcessor;
-        private Map<String, Object> postProcessor;
+        private String endpoint;
+        private String condition;
         private String nextIfTrue;
         private String nextIfFalse;
-        private String condition;
+        private Map<String, Object> preProcess;
+        private Map<String, Object> postProcess;
     }
 }

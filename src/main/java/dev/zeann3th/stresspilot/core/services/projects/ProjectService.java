@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.projects;
 
 import dev.zeann3th.stresspilot.core.domain.commands.project.CreateProjectCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.project.ImportProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.project.UpdateProjectCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
 import org.springframework.core.io.ByteArrayResource;
@@ -20,6 +21,8 @@ public interface ProjectService {
     void deleteProject(Long projectId);
 
     ProjectEntity importProject(MultipartFile file);
+
+    ProjectEntity importProject(ImportProjectCommand command);
 
     ByteArrayResource exportProject(Long projectId);
 }

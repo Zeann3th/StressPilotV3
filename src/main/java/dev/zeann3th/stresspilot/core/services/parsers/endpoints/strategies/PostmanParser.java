@@ -1,7 +1,7 @@
-package dev.zeann3th.stresspilot.core.services.parsers.strategies;
+package dev.zeann3th.stresspilot.core.services.parsers.endpoints.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
-import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
+import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserService;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -47,7 +47,7 @@ public class PostmanParser implements ParserService {
     }
 
     @Override
-    public List<EndpointEntity> parse(String spec) {
+    public List<EndpointEntity> unmarshal(String spec) {
         List<EndpointEntity> endpoints = new ArrayList<>();
         try {
             JsonNode root = jsonMapper.readTree(spec);

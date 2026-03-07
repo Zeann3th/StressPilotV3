@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.ui.grpc.mappers.ProjectProtoMapper;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,10 +16,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.grpc.server.service.GrpcService;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.io.IOException;
 
 @Slf4j
 @GrpcService
@@ -78,7 +79,7 @@ public class ProjectGrpcService extends ProjectServiceGrpc.ProjectServiceImplBas
         ByteArrayResource resource = projectService.exportProject(request.getId());
         responseObserver.onNext(ExportProjectResponse.newBuilder()
                 .setContent(com.google.protobuf.ByteString.copyFrom(resource.getByteArray()))
-                .setFilename("project_" + request.getId() + ".json")
+                .setFilename("project_" + request.getId() + ".yaml")
                 .build());
         responseObserver.onCompleted();
     }
@@ -87,18 +88,18 @@ public class ProjectGrpcService extends ProjectServiceGrpc.ProjectServiceImplBas
     public void importProject(ImportProjectRequest request, StreamObserver<ProjectResponse> responseObserver) {
         MultipartFile file = new MultipartFile() {
             @Override
-            public String getName() {
+            public @NonNull String getName() {
                 return "file";
             }
 
             @Override
             public String getOriginalFilename() {
-                return request.getFilename().isBlank() ? "import.json" : request.getFilename();
+                return request.getFilename().isBlank() ? "import.yaml" : request.getFilename();
             }
 
             @Override
             public String getContentType() {
-                return "application/json";
+                return "application/x-yaml";
             }
 
             @Override
@@ -112,17 +113,17 @@ public class ProjectGrpcService extends ProjectServiceGrpc.ProjectServiceImplBas
             }
 
             @Override
-            public byte[] getBytes() throws IOException {
+            public byte @NonNull [] getBytes() {
                 return request.getContent().toByteArray();
             }
 
             @Override
-            public InputStream getInputStream() throws IOException {
+            public @NonNull InputStream getInputStream() {
                 return new ByteArrayInputStream(request.getContent().toByteArray());
             }
 
             @Override
-            public void transferTo(File dest) throws IOException, IllegalStateException {
+            public void transferTo(@NonNull File dest) throws IllegalStateException {
                 throw new UnsupportedOperationException();
             }
         };
@@ -131,10 +132,8 @@ public class ProjectGrpcService extends ProjectServiceGrpc.ProjectServiceImplBas
         responseObserver.onCompleted();
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
     private static Pageable toPageable(int page, int size, String sort) {
-        int safePage = page <= 0 ? 0 : page;
+        int safePage = Math.max(page, 0);
         int safeSize = size <= 0 ? 20 : size;
         if (sort != null && !sort.isBlank()) {
             return PageRequest.of(safePage, safeSize, Sort.by(sort));

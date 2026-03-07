@@ -15,7 +15,7 @@ import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
-import dev.zeann3th.stresspilot.core.services.parsers.ParserServiceFactory;
+import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserServiceFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,7 +111,7 @@ public class EndpointServiceImpl implements EndpointService {
 
         List<EndpointEntity> parsed = parserServiceFactory
                 .getParser(filename, contentType, content)
-                .parse(content);
+                .unmarshal(content);
         List<EndpointEntity> entities = new ArrayList<>();
         for (EndpointEntity e : parsed) {
             e.setProject(project);

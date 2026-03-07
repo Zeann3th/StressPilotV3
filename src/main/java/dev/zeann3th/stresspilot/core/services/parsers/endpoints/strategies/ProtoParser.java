@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.parsers.strategies;
+package dev.zeann3th.stresspilot.core.services.parsers.endpoints.strategies;
 
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
@@ -7,7 +7,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
-import dev.zeann3th.stresspilot.core.services.parsers.ParserService;
+import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,7 +38,7 @@ public class ProtoParser implements ParserService {
     }
 
     @Override
-    public List<EndpointEntity> parse(String spec) {
+    public List<EndpointEntity> unmarshal(String spec) {
         try {
             String version = UUID.randomUUID().toString();
             Path versionFolder = getAppBaseDir().resolve(Paths.get("core", "grpc", "schemas", version));

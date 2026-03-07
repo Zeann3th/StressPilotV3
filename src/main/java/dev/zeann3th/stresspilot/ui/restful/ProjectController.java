@@ -72,8 +72,8 @@ public class ProjectController {
         ByteArrayResource resource = projectService.exportProject(projectId);
         return ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"project_" + projectId + ".json\"")
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        "attachment; filename=\"project_" + projectId + ".yaml\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("application/x-yaml"))
                 .body(resource);
     }
 

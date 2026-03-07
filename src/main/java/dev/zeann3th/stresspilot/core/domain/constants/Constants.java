@@ -6,6 +6,7 @@ import java.util.List;
 
 @UtilityClass
 public class Constants {
+    public static final String APP_NAME = "stresspilot";
     public static final String APP_DIR = ".pilot";
     public static final String DB_FILE_NAME = "data.sqlite";
     public static final String REASON = "reason";
