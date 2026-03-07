@@ -12,12 +12,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Factory that selects the correct {@link FlowNodeHandler} for a given step type.
- *
- * <p>All handlers are Spring-injected; no manual registration required.
- * Unknown types throw {@link dev.zeann3th.stresspilot.core.domain.exception.CommandException}.</p>
- */
 @Component
 @RequiredArgsConstructor
 public class FlowNodeHandlerFactory {
