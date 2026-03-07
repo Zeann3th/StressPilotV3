@@ -124,4 +124,7 @@ VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),
        (4, 'HTTP_MAX_POOL_SIZE', '100'),
        (5, 'HTTP_KEEP_ALIVE_DURATION', '5'),
        (6, 'FLOW_ENDPOINT_STRICT_LINEAR', 'false'),
-       (7, 'FLOW_ALLOW_INFINITE', 'false');
+       (7, 'HTTP_PROXY_HOST', null),
+       (8, 'HTTP_PROXY_PORT', null),
+       (9, 'HTTP_PROXY_USERNAME', null),
+       (10, 'HTTP_PROXY_PASSWORD', null);

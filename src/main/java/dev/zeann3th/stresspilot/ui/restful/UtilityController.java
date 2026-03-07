@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/utilities")
 @RequiredArgsConstructor
 @ResponseWrapper
+@Tag(name = "Utilities", description = "Utility endpoints for testing and debugging")
 public class UtilityController {
 
     @GetMapping("/session")

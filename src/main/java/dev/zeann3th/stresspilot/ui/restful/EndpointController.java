@@ -9,6 +9,7 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.ExecuteAdhocEndpointReq
 import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.ExecuteEndpointRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import dev.zeann3th.stresspilot.ui.restful.mappers.EndpointMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -27,6 +28,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/endpoints")
 @RequiredArgsConstructor
 @ResponseWrapper
+@Tag(name = "Endpoints", description = "API for managing and executing endpoints")
 public class EndpointController {
 
     private final EndpointService endpointService;

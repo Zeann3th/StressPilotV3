@@ -6,6 +6,7 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.environment.EnvironmentVariableR
 import dev.zeann3th.stresspilot.ui.restful.dtos.environment.UpdateEnvironmentVariablesRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import dev.zeann3th.stresspilot.ui.restful.mappers.EnvironmentMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @RequestMapping("/api/v1/environments")
 @RequiredArgsConstructor
 @ResponseWrapper
+@Tag(name = "Environments", description = "API for managing environment variables for testing")
 public class EnvironmentController {
 
     private final EnvironmentService environmentService;

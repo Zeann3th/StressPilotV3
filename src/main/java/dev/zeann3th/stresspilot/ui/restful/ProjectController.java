@@ -7,6 +7,7 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.project.ProjectResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.UpdateProjectRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import dev.zeann3th.stresspilot.ui.restful.mappers.ProjectMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -24,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
 @ResponseWrapper
+@Tag(name = "Projects", description = "API for managing test projects")
 public class ProjectController {
 
     private final ProjectService projectService;

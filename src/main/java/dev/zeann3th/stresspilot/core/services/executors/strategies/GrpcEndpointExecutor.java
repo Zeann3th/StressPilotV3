@@ -32,6 +32,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,17 +52,22 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
     @PostConstruct
     public void init() {
+        Map<String, String> configs = configService.getConfigsByKeys(List.of(
+                ConfigKey.HTTP_PROXY_HOST.name(),
+                ConfigKey.HTTP_PROXY_PORT.name(),
+                ConfigKey.HTTP_PROXY_USERNAME.name(),
+                ConfigKey.HTTP_PROXY_PASSWORD.name()
+        ));
+
+        String proxyHost = configs.get(ConfigKey.HTTP_PROXY_HOST.name());
+        Integer proxyPort = configs.containsKey(ConfigKey.HTTP_PROXY_PORT.name())
+                ? Integer.parseInt(configs.get(ConfigKey.HTTP_PROXY_PORT.name())) : null;
+        String proxyUser = configs.get(ConfigKey.HTTP_PROXY_USERNAME.name());
+        String proxyPass = configs.get(ConfigKey.HTTP_PROXY_PASSWORD.name());
+
         proxyDetector = targetAddress -> {
-            String proxyHost = configService.getValue(ConfigKey.HTTP_PROXY_HOST.name()).orElse(null);
-            Integer proxyPort = configService.getValue(ConfigKey.HTTP_PROXY_PORT.name())
-                    .map(Integer::parseInt).orElse(null);
-            String proxyUser = configService.getValue(ConfigKey.HTTP_PROXY_USERNAME.name()).orElse(null);
-            String proxyPass = configService.getValue(ConfigKey.HTTP_PROXY_PASSWORD.name()).orElse(null);
+            if (proxyHost == null || proxyPort == null) return null;
 
-            if (proxyHost == null || proxyPort == null)
-                return null;
-
-            log.debug("Routing gRPC through proxy {}:{}", proxyHost, proxyPort);
             var builder = HttpConnectProxiedSocketAddress.newBuilder()
                     .setProxyAddress(new InetSocketAddress(proxyHost, proxyPort))
                     .setTargetAddress((InetSocketAddress) targetAddress);
@@ -194,17 +200,25 @@ public class GrpcEndpointExecutor implements EndpointExecutorService {
 
     private Descriptors.MethodDescriptor resolveMethodDescriptor(
             Path pbPath, String svcName, String methodName) throws Exception {
-        log.debug("Loading .pb descriptor: {}", pbPath);
+
         try (FileInputStream fis = new FileInputStream(pbPath.toFile())) {
             DescriptorProtos.FileDescriptorSet fds = DescriptorProtos.FileDescriptorSet.parseFrom(fis);
+
+            Map<String, Descriptors.FileDescriptor> resolvedDeps = new java.util.HashMap<>();
+
             for (DescriptorProtos.FileDescriptorProto fp : fds.getFileList()) {
-                Descriptors.FileDescriptor fd = Descriptors.FileDescriptor.buildFrom(
-                        fp, new Descriptors.FileDescriptor[] {});
+                Descriptors.FileDescriptor[] dependencies = fp.getDependencyList().stream()
+                        .map(resolvedDeps::get)
+                        .toArray(Descriptors.FileDescriptor[]::new);
+
+                Descriptors.FileDescriptor fd = Descriptors.FileDescriptor.buildFrom(fp, dependencies);
+
+                resolvedDeps.put(fp.getName(), fd);
+
                 for (Descriptors.ServiceDescriptor svc : fd.getServices()) {
                     if (namesMatch(svc.getFullName(), svcName)) {
                         Descriptors.MethodDescriptor m = svc.findMethodByName(methodName);
-                        if (m != null)
-                            return m;
+                        if (m != null) return m;
                     }
                 }
             }

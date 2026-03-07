@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.ports.store.ConfigStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -15,6 +16,11 @@ public class ConfigStoreAdapter implements ConfigStore {
     @Override
     public ConfigEntity save(ConfigEntity configEntity) {
         return configJpaRepository.save(configEntity);
+    }
+
+    @Override
+    public List<ConfigEntity> findAllByKeyIn(Iterable<String> keys) {
+        return configJpaRepository.findAllByKeyIn(keys);
     }
 
     @Override

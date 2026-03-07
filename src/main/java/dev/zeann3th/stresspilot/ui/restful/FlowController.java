@@ -13,6 +13,7 @@ import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import dev.zeann3th.stresspilot.ui.restful.mappers.FlowMapper;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -36,6 +37,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/flows")
 @RequiredArgsConstructor
 @ResponseWrapper
+@Tag(name = "Flows", description = "API for managing and executing test flows")
 public class FlowController {
 
     private final FlowService flowService;

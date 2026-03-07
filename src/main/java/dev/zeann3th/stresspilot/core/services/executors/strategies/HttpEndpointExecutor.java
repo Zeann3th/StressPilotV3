@@ -46,16 +46,32 @@ public class HttpEndpointExecutor implements EndpointExecutorService {
     @PostConstruct
     public void init() {
         log.info("Loading HTTP Executor configurations");
-        int connectTimeout = configService.getValue(ConfigKey.HTTP_CONNECT_TIMEOUT.name()).map(Integer::parseInt).orElse(10);
-        int readTimeout = configService.getValue(ConfigKey.HTTP_READ_TIMEOUT.name()).map(Integer::parseInt).orElse(30);
-        int writeTimeout = configService.getValue(ConfigKey.HTTP_WRITE_TIMEOUT.name()).map(Integer::parseInt).orElse(30);
-        int maxConnections = configService.getValue(ConfigKey.HTTP_MAX_POOL_SIZE.name()).map(Integer::parseInt).orElse(100);
-        int keepAliveDuration = configService.getValue(ConfigKey.HTTP_KEEP_ALIVE_DURATION.name()).map(Integer::parseInt).orElse(5);
+        List<String> keys = List.of(
+                ConfigKey.HTTP_CONNECT_TIMEOUT.name(),
+                ConfigKey.HTTP_READ_TIMEOUT.name(),
+                ConfigKey.HTTP_WRITE_TIMEOUT.name(),
+                ConfigKey.HTTP_MAX_POOL_SIZE.name(),
+                ConfigKey.HTTP_KEEP_ALIVE_DURATION.name(),
+                ConfigKey.HTTP_PROXY_HOST.name(),
+                ConfigKey.HTTP_PROXY_PORT.name(),
+                ConfigKey.HTTP_PROXY_USERNAME.name(),
+                ConfigKey.HTTP_PROXY_PASSWORD.name()
+        );
 
-        String proxyHost = configService.getValue(ConfigKey.HTTP_PROXY_HOST.name()).orElse(null);
-        Integer proxyPort = configService.getValue(ConfigKey.HTTP_PROXY_PORT.name()).map(Integer::parseInt).orElse(null);
-        String proxyUser = configService.getValue(ConfigKey.HTTP_PROXY_USERNAME.name()).orElse(null);
-        String proxyPass = configService.getValue(ConfigKey.HTTP_PROXY_PASSWORD.name()).orElse(null);
+        Map<String, String> configs = configService.getConfigsByKeys(keys);
+
+        int connectTimeout = Integer.parseInt(configs.getOrDefault(ConfigKey.HTTP_CONNECT_TIMEOUT.name(), "10"));
+        int readTimeout = Integer.parseInt(configs.getOrDefault(ConfigKey.HTTP_READ_TIMEOUT.name(), "30"));
+        int writeTimeout = Integer.parseInt(configs.getOrDefault(ConfigKey.HTTP_WRITE_TIMEOUT.name(), "30"));
+        int maxConnections = Integer.parseInt(configs.getOrDefault(ConfigKey.HTTP_MAX_POOL_SIZE.name(), "100"));
+        int keepAliveDuration = Integer.parseInt(configs.getOrDefault(ConfigKey.HTTP_KEEP_ALIVE_DURATION.name(), "5"));
+
+        String proxyHost = configs.get(ConfigKey.HTTP_PROXY_HOST.name());
+        Integer proxyPort = configs.containsKey(ConfigKey.HTTP_PROXY_PORT.name())
+                ? Integer.parseInt(configs.get(ConfigKey.HTTP_PROXY_PORT.name()))
+                : null;
+        String proxyUser = configs.get(ConfigKey.HTTP_PROXY_USERNAME.name());
+        String proxyPass = configs.get(ConfigKey.HTTP_PROXY_PASSWORD.name());
 
         var clientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)

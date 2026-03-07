@@ -8,6 +8,8 @@ import java.util.Optional;
 public interface ConfigStore {
     ConfigEntity save(ConfigEntity configEntity);
 
+    List<ConfigEntity> findAllByKeyIn(Iterable<String> keys);
+
     Optional<ConfigEntity> findByKey(String key);
 
     List<ConfigEntity> findAll();

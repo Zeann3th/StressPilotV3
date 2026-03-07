@@ -22,6 +22,14 @@ public class ConfigService {
                 ));
     }
 
+    public Map<String, String> getConfigsByKeys(Iterable<String> keys) {
+        return configStore.findAllByKeyIn(keys).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ConfigEntity::getKey,
+                        ConfigEntity::getValue
+                ));
+    }
+
     public Optional<String> getValue(String key) {
         return configStore.findByKey(key)
                 .map(ConfigEntity::getValue)
