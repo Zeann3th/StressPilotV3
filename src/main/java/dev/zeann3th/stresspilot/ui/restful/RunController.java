@@ -54,4 +54,10 @@ public class RunController {
             HttpServletResponse response) {
         runService.exportRun(runId, response);
     }
+
+    @DeleteMapping("/{runId}")
+    @Operation(summary = "Interrupt Run", description = "Interrupts an ongoing run.")
+    public void interruptRun(@PathVariable Long runId) {
+        runService.interruptRun(runId);
+    }
 }

@@ -2,14 +2,21 @@ syntax = "proto3";
 
 package dev.zeann3th.stresspilot.grpc.ui;
 
+import "google/protobuf/empty.proto";
+
 option java_multiple_files = true;
 option java_package = "dev.zeann3th.stresspilot.grpc.ui";
 option java_outer_classname = "RunProto";
 
 service RunService {
-  rpc ListRuns   (ListRunsRequest)   returns (ListRunsResponse);
-  rpc GetRun     (GetRunRequest)     returns (RunResponse);
-  rpc GetLastRun (GetLastRunRequest) returns (RunResponse);
+  rpc ListRuns     (ListRunsRequest)     returns (ListRunsResponse);
+  rpc GetRun       (GetRunRequest)       returns (RunResponse);
+  rpc GetLastRun   (GetLastRunRequest)   returns (RunResponse);
+  rpc InterruptRun (InterruptRunRequest) returns (google.protobuf.Empty);
+}
+
+message InterruptRunRequest {
+  int64 id = 1;
 }
 
 message ListRunsRequest {

@@ -13,4 +13,6 @@ public interface RunService {
     RunEntity getLastRun(Long flowId);
 
     void exportRun(Long runId, HttpServletResponse response);
+
+    void interruptRun(Long runId);
 }

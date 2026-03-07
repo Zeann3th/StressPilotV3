@@ -5,6 +5,8 @@ import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
+import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
@@ -12,6 +14,7 @@ import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ public class RunServiceImpl implements RunService {
 
     private final RunStore runStore;
     private final RequestLogStore requestLogStore;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public List<RunEntity> getRunHistory(Long flowId) {
@@ -52,6 +56,10 @@ public class RunServiceImpl implements RunService {
     public void exportRun(Long runId, HttpServletResponse response) {
         RunEntity run = runStore.findById(runId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+
+        if (RunStatus.RUNNING.name().equals(run.getStatus())) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0023);
+        }
 
         RunReport report = requestLogStore.calculateRunReport(runId, run);
 
@@ -78,6 +86,19 @@ public class RunServiceImpl implements RunService {
             log.error("Failed to export run report for runId={}: {}", runId, e.getMessage(), e);
             throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
         }
+    }
+
+    @Override
+    @Transactional
+    public void interruptRun(Long runId) {
+        RunEntity run = runStore.findById(runId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+
+        eventPublisher.publishEvent(new InterruptRunEvent(runId));
+
+        run.setStatus(RunStatus.ABORTED.name());
+        run.setCompletedAt(LocalDateTime.now());
+        runStore.save(run);
     }
 
     private RequestLog mapToDto(RequestLogEntity requestLogEntity) {

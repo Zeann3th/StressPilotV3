@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -16,15 +17,16 @@ public class ConfigService {
 
     public Map<String, String> getAllConfigs() {
         return configStore.findAll().stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         ConfigEntity::getKey,
-                        ConfigEntity::getValue
+                        config -> config.getValue() == null ? "" : config.getValue()
                 ));
     }
 
     public Map<String, String> getConfigsByKeys(Iterable<String> keys) {
         return configStore.findAllByKeyIn(keys).stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .filter(config -> StringUtils.isNotBlank(config.getValue()))
+                .collect(Collectors.toMap(
                         ConfigEntity::getKey,
                         ConfigEntity::getValue
                 ));

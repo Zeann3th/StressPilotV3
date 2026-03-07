@@ -8,7 +8,7 @@ import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,8 +22,7 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
 
     private final FlowStepStore flowStepStore;
 
-    @Lazy
-    private final FlowNodeHandlerFactory nodeHandlerFactory;
+    private final ObjectProvider<FlowNodeHandlerFactory> nodeHandlerFactoryProvider;
 
     @Override
     public FlowStepType getSupportedType() {
@@ -55,6 +54,8 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
 
         int jumpCount = 0;
         final int MAX_JUMPS = 10000;
+
+        FlowNodeHandlerFactory nodeHandlerFactory = nodeHandlerFactoryProvider.getObject();
 
         while (current != null) {
             if (jumpCount++ > MAX_JUMPS) {

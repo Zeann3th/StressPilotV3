@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.ui.grpc;
 
+import com.google.protobuf.Empty;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
 import dev.zeann3th.stresspilot.grpc.ui.*;
@@ -38,6 +39,13 @@ public class RunGrpcService extends RunServiceGrpc.RunServiceImplBase {
     public void getLastRun(GetLastRunRequest request, StreamObserver<RunResponse> responseObserver) {
         RunEntity entity = runService.getLastRun(request.getFlowId());
         responseObserver.onNext(runProtoMapper.toProto(entity));
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void interruptRun(InterruptRunRequest request, StreamObserver<Empty> responseObserver) {
+        runService.interruptRun(request.getId());
+        responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();
     }
 }

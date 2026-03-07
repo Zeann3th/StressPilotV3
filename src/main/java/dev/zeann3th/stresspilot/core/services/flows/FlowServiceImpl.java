@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
+import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
@@ -16,6 +17,7 @@ import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FlowServiceImpl implements FlowService {
+
+    private final Map<Long, AtomicBoolean> activeRuns = new ConcurrentHashMap<>();
 
     private final FlowStore flowStore;
     private final FlowStepStore flowStepStore;
@@ -117,6 +121,18 @@ public class FlowServiceImpl implements FlowService {
         return flowStore.findById(flowId).orElse(flow);
     }
 
+    @EventListener
+    public void handleInterruptRunEvent(InterruptRunEvent event) {
+        AtomicBoolean stopSignal = activeRuns.get(event.runId());
+
+        if (stopSignal != null) {
+            stopSignal.set(true);
+            log.info("FlowService received abort signal. Killing threads for run {}", event.runId());
+        } else {
+            log.warn("FlowService received stop event for run {}, but it is not active in memory.", event.runId());
+        }
+    }
+
     @Override
     @Async
     @SuppressWarnings("java:S3776")
@@ -144,6 +160,9 @@ public class FlowServiceImpl implements FlowService {
                 .startedAt(LocalDateTime.now())
                 .build());
 
+        AtomicBoolean stopSignal = new AtomicBoolean(false);
+        activeRuns.put(run.getId(), stopSignal);
+
         ProjectEntity project = flow.getProject();
         Map<String, Object> baseEnv = envVarStore
                 .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
@@ -155,7 +174,6 @@ public class FlowServiceImpl implements FlowService {
         if (runFlowCommand.getVariables() != null)
             baseEnv.putAll(runFlowCommand.getVariables());
 
-        AtomicBoolean stopSignal = new AtomicBoolean(false);
         int threads = Math.max(1, runFlowCommand.getThreads());
 
         try (ExecutorService pool = Executors.newFixedThreadPool(threads, r -> new Thread(r, "sp-worker-" + run.getId()))) {
@@ -193,13 +211,17 @@ public class FlowServiceImpl implements FlowService {
                     log.warn("Worker thread encountered error: {}", e.getMessage());
                 }
             }
+
+            if (!stopSignal.get()) {
+                run.setStatus(RunStatus.COMPLETED.name());
+            }
+
+        } finally {
+            activeRuns.remove(run.getId());
+            run.setCompletedAt(LocalDateTime.now());
+            runStore.save(run);
+            requestLogService.ensureFlushed();
         }
-
-        requestLogService.ensureFlushed();
-
-        run.setStatus(RunStatus.COMPLETED.name());
-        run.setCompletedAt(LocalDateTime.now());
-        runStore.save(run);
     }
 
     private void runWorker(int threadId, RunEntity run,
@@ -287,7 +309,7 @@ public class FlowServiceImpl implements FlowService {
         return result;
     }
 
-    public static void validateStartStep(List<FlowStepEntity> steps) {
+    private static void validateStartStep(List<FlowStepEntity> steps) {
         long count = steps.stream()
                 .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
                 .count();
@@ -299,7 +321,7 @@ public class FlowServiceImpl implements FlowService {
                     Map.of(Constants.REASON, "Flow must have exactly one START node (found " + count + ")"));
     }
 
-    public static void detectInfiniteLoop(List<FlowStepEntity> steps, Map<String, String> stepIdMap) {
+    private static void detectInfiniteLoop(List<FlowStepEntity> steps, Map<String, String> stepIdMap) {
         Map<String, List<String>> graph = new HashMap<>();
         Set<String> terminals = new HashSet<>();
 
@@ -351,7 +373,7 @@ public class FlowServiceImpl implements FlowService {
         return false;
     }
 
-    public static void sortSteps(List<FlowStepEntity> steps) {
+    private static void sortSteps(List<FlowStepEntity> steps) {
         steps.sort((a, b) -> {
             if (FlowStepType.START.name().equalsIgnoreCase(a.getType()))
                 return -1;
@@ -361,7 +383,7 @@ public class FlowServiceImpl implements FlowService {
         });
     }
 
-    public static FlowStepEntity findStartNode(Map<String, FlowStepEntity> stepMap) {
+    private static FlowStepEntity findStartNode(Map<String, FlowStepEntity> stepMap) {
         return stepMap.values().stream()
                 .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
                 .findFirst()
