@@ -26,10 +26,16 @@ public class RequestLogEntity {
     @ToString.Exclude
     private RunEntity run;
 
+    @Column(name = "run_id", insertable = false, updatable = false)
+    private Long runId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endpoint_id", nullable = false)
     @JsonIgnoreProperties("requestLogs")
     private EndpointEntity endpoint;
+
+    @Column(name = "endpoint_id", insertable = false, updatable = false)
+    private Long endpointId;
 
     @Column(name = "status_code", nullable = false)
     private Integer statusCode;

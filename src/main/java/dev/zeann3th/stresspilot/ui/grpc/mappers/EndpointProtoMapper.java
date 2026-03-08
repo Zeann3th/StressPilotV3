@@ -12,7 +12,6 @@ import java.util.List;
 @Mapper(config = MapstructProtoConfig.class)
 public interface EndpointProtoMapper {
 
-        @Mapping(source = "project.id", target = "projectId")
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
         @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
         EndpointResponse toProto(EndpointEntity entity);

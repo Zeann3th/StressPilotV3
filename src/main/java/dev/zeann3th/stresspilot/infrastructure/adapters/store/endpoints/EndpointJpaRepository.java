@@ -16,12 +16,10 @@ public interface EndpointJpaRepository extends JpaRepository<EndpointEntity, Lon
             """
                 SELECT e FROM EndpointEntity e
                 WHERE (:projectId IS NULL OR e.project.id = :projectId)
-                AND (:name IS NULL OR LOWER(e.name) LIKE LOWER(CONCAT('%', :name, '%')))
+                AND (:name IS NULL OR LOWER(e.name) LIKE :name)
             """
     )
     Page<EndpointEntity> findAllByCondition(@Param("projectId") Long projectId, @Param("name") String name, Pageable pageable);
 
     List<EndpointEntity> findAllByProjectId(Long projectId);
-
-    void deleteAllByProjectId(Long projectId);
 }

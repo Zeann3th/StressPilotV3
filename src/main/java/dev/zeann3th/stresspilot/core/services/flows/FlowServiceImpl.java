@@ -165,7 +165,7 @@ public class FlowServiceImpl implements FlowService {
 
         ProjectEntity project = flow.getProject();
         Map<String, Object> baseEnv = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
+                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
                 .stream()
                 .collect(Collectors.toMap(
                         EnvironmentVariableEntity::getKey,

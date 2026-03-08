@@ -19,6 +19,4 @@ public interface EndpointStore {
     List<EndpointEntity> findAllByProjectId(Long projectId);
 
     void deleteById(Long id);
-
-    void deleteAllByProjectId(Long projectId);
 }

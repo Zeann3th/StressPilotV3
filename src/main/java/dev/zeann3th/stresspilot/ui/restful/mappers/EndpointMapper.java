@@ -9,7 +9,6 @@ import org.mapstruct.*;
 @Mapper(config = MapstructConfig.class)
 public interface EndpointMapper {
 
-    @Mapping(source = "project.id", target = "projectId")
     EndpointResponseDTO toResponse(EndpointEntity entity);
 
     CreateEndpointCommand toCreateCommand(CreateEndpointRequestDTO request);

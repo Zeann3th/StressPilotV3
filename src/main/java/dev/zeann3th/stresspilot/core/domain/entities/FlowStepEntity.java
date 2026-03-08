@@ -23,6 +23,9 @@ public class FlowStepEntity extends BaseEntity {
     @ToString.Exclude
     private FlowEntity flow;
 
+    @Column(name = "flow_id", insertable = false, updatable = false)
+    private Long flowId;
+
     @Column(name = "type", columnDefinition = "VARCHAR(10)", nullable = false)
     private String type;
 
@@ -30,6 +33,9 @@ public class FlowStepEntity extends BaseEntity {
     @JoinColumn(name = "endpoint_id")
     @JsonIgnoreProperties("flowSteps")
     private EndpointEntity endpoint;
+
+    @Column(name = "endpoint_id", insertable = false, updatable = false)
+    private Long endpointId;
 
     @Column(name = "pre_processor", columnDefinition = "TEXT")
     private String preProcessor;

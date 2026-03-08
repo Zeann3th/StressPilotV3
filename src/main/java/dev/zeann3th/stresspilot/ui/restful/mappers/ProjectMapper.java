@@ -12,7 +12,6 @@ import org.mapstruct.*;
 @Mapper(config = MapstructConfig.class)
 public interface ProjectMapper {
 
-    @Mapping(source = "environment.id", target = "environmentId")
     ProjectResponseDTO toResponse(ProjectEntity entity);
 
     CreateProjectCommand toCreateCommand(CreateProjectRequestDTO request);

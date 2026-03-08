@@ -102,7 +102,7 @@ public class RunServiceImpl implements RunService {
     }
 
     private RequestLog mapToDto(RequestLogEntity requestLogEntity) {
-        Long id = (requestLogEntity.getEndpoint() != null) ? requestLogEntity.getEndpoint().getId() : null;
+        Long id = requestLogEntity.getEndpointId();
         String name = (requestLogEntity.getEndpoint() != null) ? requestLogEntity.getEndpoint().getName() : null;
 
         return RequestLog.builder()

@@ -28,6 +28,9 @@ public class EnvironmentVariableEntity extends BaseEntity {
     @ToString.Exclude
     private EnvironmentEntity environment;
 
+    @Column(name = "environment_id", insertable = false, updatable = false)
+    private Long environmentId;
+
     @Column(name = "key", nullable = false)
     private String key;
 

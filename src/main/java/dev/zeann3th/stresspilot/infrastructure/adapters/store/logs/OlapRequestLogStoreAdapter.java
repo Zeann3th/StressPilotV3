@@ -49,8 +49,8 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
 
         jdbcTemplate.batchUpdate(sql, list, 1000, (PreparedStatement ps, RequestLogEntity entity) -> {
             ps.setLong(1, entity.getId() != null ? entity.getId() : 0L);
-            ps.setLong(2, entity.getRun() != null ? entity.getRun().getId() : 0L);
-            ps.setLong(3, entity.getEndpoint() != null ? entity.getEndpoint().getId() : 0L);
+            ps.setLong(2, entity.getRunId() != null ? entity.getRunId() : 0L);
+            ps.setLong(3, entity.getEndpointId() != null ? entity.getEndpointId() : 0L);
             ps.setObject(4, entity.getStatusCode(), java.sql.Types.INTEGER);
             ps.setObject(5, entity.getSuccess() != null ? (entity.getSuccess() ? 1 : 0) : null, java.sql.Types.INTEGER);
             ps.setObject(6, entity.getResponseTime(), java.sql.Types.BIGINT);

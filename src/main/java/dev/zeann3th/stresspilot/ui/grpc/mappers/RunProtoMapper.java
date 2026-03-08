@@ -12,7 +12,6 @@ import java.util.List;
 @Mapper(config = MapstructProtoConfig.class)
 public interface RunProtoMapper {
 
-    @Mapping(source = "flow.id", target = "flowId")
     @Mapping(expression = "java(entity.getStartedAt()   != null ? entity.getStartedAt().toString()   : \"\")", target = "startedAt")
     @Mapping(expression = "java(entity.getCompletedAt() != null ? entity.getCompletedAt().toString() : \"\")", target = "completedAt")
     RunResponse toProto(RunEntity entity);

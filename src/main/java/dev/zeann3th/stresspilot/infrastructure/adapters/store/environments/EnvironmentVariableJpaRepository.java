@@ -9,6 +9,8 @@ import java.util.List;
 @Repository
 public interface EnvironmentVariableJpaRepository extends JpaRepository<EnvironmentVariableEntity, Long> {
     List<EnvironmentVariableEntity> findAllByEnvironmentId(Long environmentId);
+
     List<EnvironmentVariableEntity> findAllByEnvironmentIdAndActiveTrue(Long environmentId);
+
     void deleteAllByEnvironmentId(Long environmentId);
 }

@@ -12,10 +12,8 @@ import java.util.List;
 @Mapper(config = MapstructConfig.class)
 public interface FlowMapper {
 
-    @Mapping(source = "project.id", target = "projectId")
     FlowResponseDTO toResponse(FlowEntity entity);
 
-    @Mapping(source = "endpoint.id", target = "endpointId")
     FlowStepResponseDTO toStepResponse(FlowStepEntity step);
 
     CreateFlowCommand toCreateCommand(CreateFlowRequestDTO request);

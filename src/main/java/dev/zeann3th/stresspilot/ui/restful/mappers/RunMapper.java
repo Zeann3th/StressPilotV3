@@ -8,6 +8,5 @@ import org.mapstruct.*;
 @Mapper(config = MapstructConfig.class)
 public interface RunMapper {
 
-    @Mapping(source = "flow.id", target = "flowId")
     RunResponseDTO toResponse(RunEntity entity);
 }

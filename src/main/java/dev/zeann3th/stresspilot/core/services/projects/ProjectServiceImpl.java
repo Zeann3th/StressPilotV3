@@ -245,7 +245,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         List<EnvironmentVariableEntity> envVars = envVarStore.findAllByEnvironmentId(
-                project.getEnvironment().getId());
+                project.getEnvironmentId());
         List<EndpointEntity> endpoints = endpointStore.findAllByProjectId(projectId);
         List<FlowEntity> flows = flowStore.findAllByProjectId(projectId);
 
@@ -289,7 +289,7 @@ public class ProjectServiceImpl implements ProjectService {
             for (FlowStepEntity s : steps) {
                 String endpointRef = null;
                 if (s.getEndpoint() != null) {
-                    endpointRef = endpointIdToUuid.get(s.getEndpoint().getId());
+                    endpointRef = endpointIdToUuid.get(s.getEndpointId());
                 }
 
                 String condition = s.getCondition();

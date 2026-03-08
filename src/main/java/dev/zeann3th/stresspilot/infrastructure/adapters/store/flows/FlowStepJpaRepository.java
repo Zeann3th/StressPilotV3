@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface FlowStepJpaRepository extends JpaRepository<FlowStepEntity, String> {
     List<FlowStepEntity> findAllByFlowId(Long flowId);
+
     void deleteAllByFlowId(Long flowId);
 }

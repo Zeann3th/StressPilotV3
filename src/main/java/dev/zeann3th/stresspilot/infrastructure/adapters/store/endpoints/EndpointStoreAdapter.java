@@ -32,7 +32,12 @@ public class EndpointStoreAdapter implements EndpointStore {
 
     @Override
     public Page<EndpointEntity> findAllByCondition(Long projectId, String name, Pageable pageable) {
-        return endpointJpaRepository.findAllByCondition(projectId, name, pageable);
+        String term = null;
+        if (name != null && !name.isBlank()) {
+            term = "%" + name.toLowerCase().trim() + "%";
+        }
+
+        return endpointJpaRepository.findAllByCondition(projectId, term, pageable);
     }
 
     @Override
@@ -45,8 +50,4 @@ public class EndpointStoreAdapter implements EndpointStore {
         endpointJpaRepository.deleteById(id);
     }
 
-    @Override
-    public void deleteAllByProjectId(Long projectId) {
-        endpointJpaRepository.deleteAllByProjectId(projectId);
-    }
 }

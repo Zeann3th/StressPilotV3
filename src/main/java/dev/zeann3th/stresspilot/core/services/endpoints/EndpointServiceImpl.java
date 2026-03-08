@@ -15,6 +15,7 @@ import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
+import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserServiceFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
@@ -129,12 +130,14 @@ public class EndpointServiceImpl implements EndpointService {
 
     @Override
     public ExecuteEndpointResponse runEndpoint(Long endpointId, ExecuteEndpointCommand cmd) {
-        EndpointEntity stored = endpointStore.findById(endpointId)
+        EndpointEntity storedEndpoint = endpointStore.findById(endpointId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005));
-        ProjectEntity project = stored.getProject();
+
+        ProjectEntity project = projectStore.findById(storedEndpoint.getProjectId())
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         Map<String, Object> environment = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
+                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
                 .stream()
                 .collect(
                         Collectors.toMap(
@@ -145,11 +148,11 @@ public class EndpointServiceImpl implements EndpointService {
         if (cmd.getVariables() != null)
             environment.putAll(cmd.getVariables());
 
-        EndpointEntity effective = merge(stored, cmd);
+        EndpointEntity effective = merge(project, storedEndpoint, cmd);
         long start = System.currentTimeMillis();
         try {
             ExecuteEndpointResponse resp = executorFactory.getExecutor(effective.getType())
-                    .execute(effective, environment, null);
+                    .execute(effective, environment, new BaseExecutionContext());
             EndpointExecutorUtils.evaluateSuccessCondition(effective, resp);
             return resp;
         } catch (Exception e) {
@@ -171,7 +174,7 @@ public class EndpointServiceImpl implements EndpointService {
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
         Map<String, Object> environment = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironment().getId())
+                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
                 .stream()
                 .collect(Collectors.toMap(EnvironmentVariableEntity::getKey, EnvironmentVariableEntity::getValue,
                         (_, v2) -> v2));
@@ -183,7 +186,7 @@ public class EndpointServiceImpl implements EndpointService {
         long start = System.currentTimeMillis();
         try {
             ExecuteEndpointResponse resp = executorFactory.getExecutor(adhoc.getType())
-                    .execute(adhoc, environment, null);
+                    .execute(adhoc, environment, new BaseExecutionContext());
             EndpointExecutorUtils.evaluateSuccessCondition(adhoc, resp);
             return resp;
         } catch (Exception e) {
@@ -247,24 +250,24 @@ public class EndpointServiceImpl implements EndpointService {
         return DataUtils.parseObjToString(rawBody);
     }
 
-    private EndpointEntity merge(EndpointEntity stored, ExecuteEndpointCommand cmd) {
+    private EndpointEntity merge(ProjectEntity project, EndpointEntity endpoint, ExecuteEndpointCommand cmd) {
         if (cmd == null)
-            return stored;
+            return endpoint;
 
         EndpointEntity.EndpointEntityBuilder<?, ?> raw = EndpointEntity.builder()
-                .project(stored.getProject())
-                .name(stored.getName())
-                .description(stored.getDescription())
-                .type(stored.getType())
-                .url(stored.getUrl())
-                .body(stored.getBody())
-                .successCondition(stored.getSuccessCondition())
-                .httpMethod(stored.getHttpMethod())
-                .httpHeaders(stored.getHttpHeaders())
-                .httpParameters(stored.getHttpParameters())
-                .grpcServiceName(stored.getGrpcServiceName())
-                .grpcMethodName(stored.getGrpcMethodName())
-                .grpcStubPath(stored.getGrpcStubPath());
+                .project(project)
+                .name(endpoint.getName())
+                .description(endpoint.getDescription())
+                .type(endpoint.getType())
+                .url(endpoint.getUrl())
+                .body(endpoint.getBody())
+                .successCondition(endpoint.getSuccessCondition())
+                .httpMethod(endpoint.getHttpMethod())
+                .httpHeaders(endpoint.getHttpHeaders())
+                .httpParameters(endpoint.getHttpParameters())
+                .grpcServiceName(endpoint.getGrpcServiceName())
+                .grpcMethodName(endpoint.getGrpcMethodName())
+                .grpcStubPath(endpoint.getGrpcStubPath());
 
         if (DataUtils.hasText(cmd.getUrl()))
             raw.url(cmd.getUrl());
@@ -294,7 +297,7 @@ public class EndpointServiceImpl implements EndpointService {
             raw.successCondition(cmd.getSuccessCondition());
 
         EndpointEntity merged = raw.build();
-        merged.setId(stored.getId());
+        merged.setId(endpoint.getId());
         return merged;
     }
 }

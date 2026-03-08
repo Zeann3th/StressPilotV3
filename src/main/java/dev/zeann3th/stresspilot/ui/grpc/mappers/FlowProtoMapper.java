@@ -13,12 +13,10 @@ import java.util.List;
 @Mapper(config = MapstructProtoConfig.class)
 public interface FlowProtoMapper {
 
-        @Mapping(source = "project.id", target = "projectId")
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
         @Mapping(expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : \"\")", target = "updatedAt")
         FlowResponse toProto(FlowEntity entity);
 
-        @Mapping(source = "endpoint.id", target = "endpointId")
         FlowStepMessage toStepProto(FlowStepEntity step);
 
         CreateFlowCommand toCreateCommand(CreateFlowRequest request);

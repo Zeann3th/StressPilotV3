@@ -25,6 +25,9 @@ public class FlowEntity extends BaseEntity {
     @JoinColumn(name = "project_id", nullable = false)
     private ProjectEntity project;
 
+    @Column(name = "project_id", insertable = false, updatable = false)
+    private Long projectId;
+
     @Column(name = "name", nullable = false)
     private String name;
 

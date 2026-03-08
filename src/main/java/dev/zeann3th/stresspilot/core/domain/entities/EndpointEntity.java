@@ -34,6 +34,9 @@ public class EndpointEntity extends BaseEntity {
     @JoinColumn(name = "project_id", nullable = false)
     private ProjectEntity project;
 
+    @Column(name = "project_id", insertable = false, updatable = false)
+    private Long projectId;
+
     @Column(name = "url")
     private String url;
 

@@ -26,6 +26,9 @@ public class RunEntity {
     @JoinColumn(name = "flow_id", nullable = false)
     private FlowEntity flow;
 
+    @Column(name = "flow_id", insertable = false, updatable = false)
+    private Long flowId;
+
     @Column(name = "status", columnDefinition = "VARCHAR(10)", nullable = false)
     private String status;
 
