@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(
     name = "environment_variables",

@@ -140,7 +140,7 @@ public class FlowServiceImpl implements FlowService {
         FlowEntity flow = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
 
-        List<FlowStepEntity> steps = flowStepStore.findAllByFlowId(flowId);
+        List<FlowStepEntity> steps = flowStepStore.findAllByFlowIdWithEndpoint(flowId);
         if (steps.isEmpty())
             throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
                     Map.of(Constants.REASON, "Flow has no configured steps"));
@@ -162,6 +162,9 @@ public class FlowServiceImpl implements FlowService {
 
         AtomicBoolean stopSignal = new AtomicBoolean(false);
         activeRuns.put(run.getId(), stopSignal);
+        log.info("Run {} started: flow={}, threads={}, duration={}s, rampUp={}s",
+                run.getId(), flow.getName(), runFlowCommand.getThreads(),
+                runFlowCommand.getTotalDuration(), runFlowCommand.getRampUpDuration());
 
         ProjectEntity project = projectStore.findById(flow.getProjectId())
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
@@ -223,6 +226,7 @@ public class FlowServiceImpl implements FlowService {
             run.setCompletedAt(LocalDateTime.now());
             runStore.save(run);
             requestLogService.ensureFlushed();
+            log.info("Run {} finished: status={}", run.getId(), run.getStatus());
         }
     }
 
@@ -243,6 +247,8 @@ public class FlowServiceImpl implements FlowService {
 
         long deadline = System.currentTimeMillis() + totalMs;
 
+        log.info("Run {} thread {} started", run.getId(), threadId);
+
         while (!stop.get() && System.currentTimeMillis() < deadline && !Thread.currentThread().isInterrupted()) {
             try {
                 executeIteration(startStep, stepMap, ctx);
@@ -252,6 +258,7 @@ public class FlowServiceImpl implements FlowService {
             }
         }
 
+        log.info("Run {} thread {} finished: {} iterations", run.getId(), threadId, ctx.getIterationCount());
         ctx.getExecutionContext().clear();
     }
 

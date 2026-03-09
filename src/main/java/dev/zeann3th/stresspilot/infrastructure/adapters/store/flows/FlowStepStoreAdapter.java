@@ -34,6 +34,11 @@ public class FlowStepStoreAdapter implements FlowStepStore {
     }
 
     @Override
+    public List<FlowStepEntity> findAllByFlowIdWithEndpoint(Long flowId) {
+        return flowStepJpaRepository.findAllByFlowIdWithEndpoint(flowId);
+    }
+
+    @Override
     public void deleteById(String id) {
         flowStepJpaRepository.deleteById(id);
     }

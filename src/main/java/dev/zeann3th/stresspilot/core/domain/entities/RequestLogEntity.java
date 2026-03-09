@@ -7,8 +7,8 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "request_logs")
 @NoArgsConstructor
@@ -22,8 +22,7 @@ public class RequestLogEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "run_id", nullable = false)
-    @JsonIgnoreProperties("requestLogs")
-    @ToString.Exclude
+    @JsonIgnoreProperties({"requestLogs", "flow"})
     private RunEntity run;
 
     @Column(name = "run_id", insertable = false, updatable = false)
@@ -31,7 +30,7 @@ public class RequestLogEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endpoint_id", nullable = false)
-    @JsonIgnoreProperties("requestLogs")
+    @JsonIgnoreProperties({"project"})
     private EndpointEntity endpoint;
 
     @Column(name = "endpoint_id", insertable = false, updatable = false)

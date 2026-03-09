@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "flow_steps")
 @NoArgsConstructor
@@ -32,6 +32,7 @@ public class FlowStepEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endpoint_id")
     @JsonIgnoreProperties("flowSteps")
+    @ToString.Exclude
     private EndpointEntity endpoint;
 
     @Column(name = "endpoint_id", insertable = false, updatable = false)

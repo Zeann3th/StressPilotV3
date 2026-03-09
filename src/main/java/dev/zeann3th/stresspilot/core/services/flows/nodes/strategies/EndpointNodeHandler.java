@@ -88,8 +88,23 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .build();
         }
 
-        Map<String, Object> requestDebug = new HashMap<>();
-        requestDebug.put("endpoint", endpoint.toString());
+        Map<String, Object> endpointDebug = new LinkedHashMap<>();
+        endpointDebug.put("id", endpoint.getId());
+        endpointDebug.put("name", endpoint.getName());
+        endpointDebug.put("type", endpoint.getType());
+        endpointDebug.put("url", endpoint.getUrl());
+        if ("HTTP".equalsIgnoreCase(endpoint.getType())) {
+            endpointDebug.put("method", endpoint.getHttpMethod());
+            endpointDebug.put("headers", endpoint.getHttpHeaders());
+            endpointDebug.put("parameters", endpoint.getHttpParameters());
+        } else if ("GRPC".equalsIgnoreCase(endpoint.getType())) {
+            endpointDebug.put("service", endpoint.getGrpcServiceName());
+            endpointDebug.put("method", endpoint.getGrpcMethodName());
+        }
+        endpointDebug.put("body", endpoint.getBody());
+
+        Map<String, Object> requestDebug = new LinkedHashMap<>();
+        requestDebug.put("endpoint", endpointDebug);
         requestDebug.put("variables_snapshot", new HashMap<>(context.getVariables()));
 
         requestLogService.queueLog(RequestLogEntity.builder()

@@ -37,6 +37,9 @@ public class RunServiceImpl implements RunService {
 
     @Override
     public List<RunEntity> getRunHistory(Long flowId) {
+        if (flowId == null) {
+            return runStore.findAll();
+        }
         return runStore.findAllByFlowId(flowId);
     }
 

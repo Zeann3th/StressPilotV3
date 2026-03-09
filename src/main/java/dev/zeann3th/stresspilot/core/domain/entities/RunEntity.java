@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "runs")
 @NoArgsConstructor
@@ -24,6 +24,7 @@ public class RunEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flow_id", nullable = false)
+    @JsonIgnoreProperties({"steps", "runs", "project"})
     private FlowEntity flow;
 
     @Column(name = "flow_id", insertable = false, updatable = false)

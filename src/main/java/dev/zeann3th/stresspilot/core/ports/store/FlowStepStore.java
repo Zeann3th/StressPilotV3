@@ -14,6 +14,8 @@ public interface FlowStepStore {
 
     List<FlowStepEntity> findAllByFlowId(Long flowId);
 
+    List<FlowStepEntity> findAllByFlowIdWithEndpoint(Long flowId);
+
     void deleteById(String id);
 
     void deleteAllByFlowId(Long flowId);

@@ -8,14 +8,14 @@ import lombok.experimental.SuperBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "environments")
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class EnvironmentEntity extends BaseEntity{
+public class EnvironmentEntity extends BaseEntity {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)

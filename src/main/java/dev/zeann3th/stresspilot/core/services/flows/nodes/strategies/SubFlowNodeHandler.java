@@ -39,7 +39,7 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
             return step.getNextIfFalse();
         }
 
-        List<FlowStepEntity> subSteps = flowStepStore.findAllByFlowId(subFlowId);
+        List<FlowStepEntity> subSteps = flowStepStore.findAllByFlowIdWithEndpoint(subFlowId);
         if (subSteps.isEmpty()) {
             return step.getNextIfTrue();
         }

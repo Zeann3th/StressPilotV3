@@ -8,8 +8,8 @@ import lombok.experimental.SuperBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-@EqualsAndHashCode(callSuper = false)
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "flows")
 @NoArgsConstructor
@@ -23,6 +23,7 @@ public class FlowEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
+    @JsonIgnoreProperties({"endpoints", "flows", "environment"})
     private ProjectEntity project;
 
     @Column(name = "project_id", insertable = false, updatable = false)
