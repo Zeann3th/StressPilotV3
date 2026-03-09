@@ -137,6 +137,10 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                 Thread.sleep(base + jitter);
             }
 
+            if (proc.get("clear") instanceof List<?> keysToClear) {
+                keysToClear.forEach(key -> variables.remove(String.valueOf(key)));
+            }
+
             if (proc.containsKey("inject")) {
                 Object injectObj = proc.get("inject");
                 if (injectObj != null) {

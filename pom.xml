@@ -265,6 +265,7 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<layout>ZIP</layout>
+					<classifier>exec</classifier>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>
