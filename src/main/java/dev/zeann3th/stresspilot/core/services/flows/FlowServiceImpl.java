@@ -163,7 +163,9 @@ public class FlowServiceImpl implements FlowService {
         AtomicBoolean stopSignal = new AtomicBoolean(false);
         activeRuns.put(run.getId(), stopSignal);
 
-        ProjectEntity project = flow.getProject();
+        ProjectEntity project = projectStore.findById(flow.getProjectId())
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
+
         Map<String, Object> baseEnv = envVarStore
                 .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
                 .stream()
