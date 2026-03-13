@@ -28,6 +28,7 @@ public enum ErrorCode {
     ER0021(ErrorType.FAILURE, "No handler registered for flow step type: <type>"),
     ER0022(ErrorType.FAILURE, "Invalid report type: <type>. Accepted values are DETAILED, SUMMARY"),
     ER0023(ErrorType.FAILURE, "Cannot export report for a run that is still running"),
+    ER0024(ErrorType.FAILURE, "Failed to reload plugin: <reason>"),
     ER9999(ErrorType.FAILURE, "System is busy, please try again later"),;
 
     private final ErrorType errorType;

@@ -120,9 +120,10 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
                 transactionTemplate.executeWithoutResult(_ -> requestLogStore.saveAll(batch));
+                log.debug("Flushed {} logs to DB", batch.size());
                 return;
             } catch (Exception e) {
-                log.warn("DB flush attempt {}/{} failed: {}", attempt, MAX_RETRIES, e.getMessage());
+                log.warn("DB flush attempt {}/{} failed (batch={}): {}", attempt, MAX_RETRIES, batch.size(), e.getMessage());
                 if (attempt < MAX_RETRIES) {
                     try {
                         Thread.sleep(100L * attempt);

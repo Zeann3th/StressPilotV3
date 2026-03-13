@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 
 @Configuration
 public class PluginConfig {
+
     @Bean
     public SpringPluginManager pluginManager() {
         String pilotHome = System.getProperty(Constants.PILOT_HOME);
@@ -33,6 +34,11 @@ public class PluginConfig {
             throw new RuntimeException("Could not create plugins directory: " + pluginPath, e);
         }
 
-        return new SpringPluginManager(pluginPath);
+        return new SpringPluginManager(pluginPath) {
+            @Override
+            public void init() {
+                // no-op
+            }
+        };
     }
 }

@@ -107,6 +107,12 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         requestDebug.put("endpoint", endpointDebug);
         requestDebug.put("variables_snapshot", new HashMap<>(context.getVariables()));
 
+        String responseText = result.getRawResponse();
+        if (responseText == null || responseText.isBlank()) {
+            responseText = String.format("[empty body] status=%d success=%s message=%s",
+                    result.getStatusCode(), result.isSuccess(), result.getMessage());
+        }
+
         requestLogService.queueLog(RequestLogEntity.builder()
                 .run(context.getRun())
                 .endpoint(endpoint)
@@ -114,7 +120,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                 .success(result.isSuccess())
                 .responseTime(result.getResponseTimeMs())
                 .request(requestDebug.toString())
-                .response(result.getRawResponse())
+                .response(responseText)
                 .createdAt(LocalDateTime.now())
                 .build());
 
