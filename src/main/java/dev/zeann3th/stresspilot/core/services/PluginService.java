@@ -23,6 +23,7 @@ import java.util.Map;
 @Slf4j
 public class PluginService implements ApplicationListener<ApplicationReadyEvent> {
     private final SpringPluginManager pluginManager;
+    private final ActiveRunRegistry activeRunRegistry;
 
     @Override
     public void onApplicationEvent(@NotNull ApplicationReadyEvent event) {
@@ -37,6 +38,11 @@ public class PluginService implements ApplicationListener<ApplicationReadyEvent>
     }
 
     public void reloadPlugin(String pluginId) {
+        if (activeRunRegistry.hasActiveRuns()) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0024,
+                    Map.of(Constants.REASON, "Cannot reload plugin '" + pluginId + "' while a run is actively executing."));
+        }
+
         log.info("Initiating reload for plugin: {}", pluginId);
 
         PluginWrapper pluginWrapper = pluginManager.getPlugin(pluginId);
@@ -61,6 +67,11 @@ public class PluginService implements ApplicationListener<ApplicationReadyEvent>
     }
 
     public void reloadAllPlugins() {
+        if (activeRunRegistry.hasActiveRuns()) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0024,
+                    Map.of(Constants.REASON, "Cannot perform bulk plugin reload while a run is actively executing."));
+        }
+
         log.info("Initiating full plugin reload...");
 
         List<PluginWrapper> existingPlugins = pluginManager.getPlugins();

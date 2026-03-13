@@ -11,6 +11,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
+import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
@@ -39,8 +40,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FlowServiceImpl implements FlowService {
 
-    private final Map<Long, AtomicBoolean> activeRuns = new ConcurrentHashMap<>();
-
     private final FlowStore flowStore;
     private final FlowStepStore flowStepStore;
     private final ProjectStore projectStore;
@@ -50,6 +49,7 @@ public class FlowServiceImpl implements FlowService {
     private final RequestLogService requestLogService;
     private final FlowNodeHandlerFactory nodeHandlerFactory;
     private final JsonMapper jsonMapper;
+    private final ActiveRunRegistry activeRunRegistry;
 
     @Override
     public Page<FlowEntity> getListFlow(Long projectId, String name, Pageable pageable) {
@@ -123,10 +123,9 @@ public class FlowServiceImpl implements FlowService {
 
     @EventListener
     public void handleInterruptRunEvent(InterruptRunEvent event) {
-        AtomicBoolean stopSignal = activeRuns.get(event.runId());
+        boolean stopped = activeRunRegistry.interruptRun(event.runId());
 
-        if (stopSignal != null) {
-            stopSignal.set(true);
+        if (stopped) {
             log.info("FlowService received abort signal. Killing threads for run {}", event.runId());
         } else {
             log.warn("FlowService received stop event for run {}, but it is not active in memory.", event.runId());
@@ -160,8 +159,8 @@ public class FlowServiceImpl implements FlowService {
                 .startedAt(LocalDateTime.now())
                 .build());
 
-        AtomicBoolean stopSignal = new AtomicBoolean(false);
-        activeRuns.put(run.getId(), stopSignal);
+        AtomicBoolean stopSignal = activeRunRegistry.registerRun(run.getId());
+
         log.info("Run {} started: flow={}, threads={}, duration={}s, rampUp={}s",
                 run.getId(), flow.getName(), runFlowCommand.getThreads(),
                 runFlowCommand.getTotalDuration(), runFlowCommand.getRampUpDuration());
@@ -222,7 +221,7 @@ public class FlowServiceImpl implements FlowService {
             }
 
         } finally {
-            activeRuns.remove(run.getId());
+            activeRunRegistry.deregisterRun(run.getId());
             run.setCompletedAt(LocalDateTime.now());
             runStore.save(run);
             requestLogService.ensureFlushed();
