@@ -2,6 +2,7 @@ package dev.zeann3th.stresspilot.core.utils;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import net.datafaker.Faker;
 
 import java.time.Instant;
 import java.util.*;
@@ -15,10 +16,10 @@ import java.util.regex.Pattern;
 @UtilityClass
 public class MockDataUtils {
     private static final Pattern MOCK_PATTERN = Pattern.compile("@\\{\\s*(.+?)\\s*\\}@");
-    private static final Random RANDOM = new Random();
     private static final int MAX_DEPTH = 5;
 
-    private static final Map<String, List<String>> MOCK_POOLS = new ConcurrentHashMap<>();
+    private static final Faker FAKER = new Faker();
+
     private static final Map<String, AtomicLong> SEQUENCES = new ConcurrentHashMap<>();
 
     public static String interpolate(String input) {
@@ -84,6 +85,8 @@ public class MockDataUtils {
         if (command.startsWith("upper(")) return handleTransform(command, String::toUpperCase);
         if (command.startsWith("lower(")) return handleTransform(command, String::toLowerCase);
 
+        if (command.startsWith("faker(")) return handleFaker(command);
+
         if (command.startsWith("seq(")) {
             String name = extractParam(command);
             return String.valueOf(SEQUENCES.computeIfAbsent(name, _ -> new AtomicLong(0)).incrementAndGet());
@@ -94,12 +97,17 @@ public class MockDataUtils {
 
         if (command.equalsIgnoreCase("uuid")) return UUID.randomUUID().toString();
 
-        if (MOCK_POOLS.containsKey(command)) {
-            List<String> pool = MOCK_POOLS.get(command);
-            return pool.get(RANDOM.nextInt(pool.size()));
-        }
-
         return "@{" + command + "}@";
+    }
+
+    private static String handleFaker(String command) {
+        String expression = extractParam(command);
+        try {
+            return FAKER.expression("#{" + expression + "}");
+        } catch (Exception _) {
+            log.warn("Invalid faker expression: '{}'. Returning original command.", expression);
+            return "@{" + command + "}@";
+        }
     }
 
     private static String handleTransform(String command, UnaryOperator<String> transformer) {
