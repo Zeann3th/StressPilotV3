@@ -1,0 +1,6 @@
+ALTER TABLE flows
+    ADD type VARCHAR(255);
+
+ALTER TABLE flows
+ALTER
+COLUMN type SET NOT NULL;

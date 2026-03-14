@@ -13,4 +13,5 @@ public class CreateFlowCommand {
     private Long projectId;
     private String name;
     private String description;
+    private String type;
 }

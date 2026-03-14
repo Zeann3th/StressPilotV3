@@ -49,6 +49,7 @@ message CreateFlowRequest {
   int64  project_id  = 1;
   string name        = 2;
   string description = 3;
+  string type        = 4;
 }
 
 message UpdateFlowRequest {
@@ -83,6 +84,7 @@ message FlowResponse {
   repeated FlowStepMessage steps       = 5;
   string                   created_at  = 6;
   string                   updated_at  = 7;
+  string                   type        = 8;
 }
 
 message ListFlowsResponse {

@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +25,7 @@ public class FlowEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    @JsonIgnoreProperties({"endpoints", "flows", "environment"})
+    @JsonIgnoreProperties({ "endpoints", "flows", "environment" })
     private ProjectEntity project;
 
     @Column(name = "project_id", insertable = false, updatable = false)
@@ -34,6 +36,10 @@ public class FlowEntity extends BaseEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Builder.Default
+    @Column(name = "type", nullable = false, updatable = false)
+    private String type = FlowType.DEFAULT.name();
 
     @Builder.Default
     @OneToMany(mappedBy = "flow", cascade = CascadeType.ALL, orphanRemoval = true)

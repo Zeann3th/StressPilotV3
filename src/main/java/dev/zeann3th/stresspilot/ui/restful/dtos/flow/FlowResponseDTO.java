@@ -13,5 +13,6 @@ public class FlowResponseDTO extends BaseDTO {
     private String name;
     private String description;
     private Long projectId;
+    private String type;
     private List<FlowStepResponseDTO> steps;
 }

@@ -47,6 +47,7 @@ CREATE TABLE flows
     project_id  INTEGER      NOT NULL,
     name        VARCHAR(255) NOT NULL,
     description TEXT,
+    type        VARCHAR(50)  NOT NULL DEFAULT 'DEFAULT',
     CONSTRAINT FK_FLOWS_ON_PROJECT FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 

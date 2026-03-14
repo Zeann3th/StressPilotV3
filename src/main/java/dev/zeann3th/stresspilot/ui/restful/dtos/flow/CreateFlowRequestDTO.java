@@ -11,4 +11,5 @@ public class CreateFlowRequestDTO {
     @NotBlank
     private String name;
     private String description;
+    private String type;
 }

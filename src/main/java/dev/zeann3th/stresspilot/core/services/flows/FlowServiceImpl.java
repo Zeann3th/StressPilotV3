@@ -7,14 +7,12 @@ import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
-import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
+import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
-import dev.zeann3th.stresspilot.core.services.RequestLogService;
-import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
-import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.services.flows.strategies.FlowExecutionStrategyFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,13 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Slf4j(topic = "[FlowService]")
@@ -43,13 +35,10 @@ public class FlowServiceImpl implements FlowService {
     private final FlowStore flowStore;
     private final FlowStepStore flowStepStore;
     private final ProjectStore projectStore;
-    private final RunStore runStore;
     private final EndpointStore endpointStore;
-    private final EnvironmentVariableStore envVarStore;
-    private final RequestLogService requestLogService;
-    private final FlowNodeHandlerFactory nodeHandlerFactory;
     private final JsonMapper jsonMapper;
     private final ActiveRunRegistry activeRunRegistry;
+    private final FlowExecutionStrategyFactory flowExecutionStrategyFactory;
 
     @Override
     public Page<FlowEntity> getListFlow(Long projectId, String name, Pageable pageable) {
@@ -72,6 +61,7 @@ public class FlowServiceImpl implements FlowService {
                 .project(project)
                 .name(createFlowCommand.getName())
                 .description(createFlowCommand.getDescription())
+                .type(createFlowCommand.getType() != null ? createFlowCommand.getType() : FlowType.DEFAULT.name())
                 .build();
 
         return flowStore.save(entity);
@@ -83,7 +73,7 @@ public class FlowServiceImpl implements FlowService {
         FlowEntity entity = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
         Map<String, Object> safe = patch.entrySet().stream()
-                .filter(e -> !Set.of("id", "projectId", "project", "steps").contains(e.getKey()))
+                .filter(e -> !Set.of("id", "projectId", "project", "steps", "type").contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         try {
             jsonMapper.updateValue(entity, safe);
@@ -147,147 +137,7 @@ public class FlowServiceImpl implements FlowService {
         sortSteps(steps);
         validateStartStep(steps);
 
-        Map<String, FlowStepEntity> stepMap = steps.stream()
-                .collect(Collectors.toMap(FlowStepEntity::getId, s -> s));
-
-        RunEntity run = runStore.save(RunEntity.builder()
-                .flow(flow)
-                .status(RunStatus.RUNNING.name())
-                .threads(runFlowCommand.getThreads())
-                .duration(runFlowCommand.getTotalDuration())
-                .rampUpDuration(runFlowCommand.getRampUpDuration())
-                .startedAt(LocalDateTime.now())
-                .build());
-
-        AtomicBoolean stopSignal = activeRunRegistry.registerRun(run.getId());
-
-        log.info("Run {} started: flow={}, threads={}, duration={}s, rampUp={}s",
-                run.getId(), flow.getName(), runFlowCommand.getThreads(),
-                runFlowCommand.getTotalDuration(), runFlowCommand.getRampUpDuration());
-
-        ProjectEntity project = projectStore.findById(flow.getProjectId())
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
-
-        Map<String, Object> baseEnv = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
-                .stream()
-                .collect(Collectors.toMap(
-                        EnvironmentVariableEntity::getKey,
-                        EnvironmentVariableEntity::getValue,
-                        (_, v2) -> v2, HashMap::new));
-        if (runFlowCommand.getVariables() != null)
-            baseEnv.putAll(runFlowCommand.getVariables());
-
-        int threads = Math.max(1, runFlowCommand.getThreads());
-
-        try (ExecutorService pool = Executors.newFixedThreadPool(threads, r -> new Thread(r, "sp-worker-" + run.getId()))) {
-            long totalMs = (long) runFlowCommand.getTotalDuration() * 1000;
-            long rampUpMs = (long) runFlowCommand.getRampUpDuration() * 1000;
-            long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
-
-            List<Future<?>> futures = new ArrayList<>();
-            for (int i = 0; i < threads; i++) {
-                final int threadId = i;
-                final long initialDelayMs = i * rampDelay;
-
-                Map<String, Object> threadEnv = new HashMap<>(baseEnv);
-                if (runFlowCommand.getCredentials() != null && !runFlowCommand.getCredentials().isEmpty()) {
-                    threadEnv.putAll(runFlowCommand.getCredentials().get(i % runFlowCommand.getCredentials().size()));
-                }
-
-                futures.add(pool.submit(() -> {
-                    if (initialDelayMs > 0) {
-                        try {
-                            Thread.sleep(initialDelayMs);
-                        } catch (InterruptedException _) {
-                            Thread.currentThread().interrupt();
-                            return;
-                        }
-                    }
-                    runWorker(threadId, run, stepMap, threadEnv, totalMs, stopSignal);
-                }));
-            }
-
-            for (Future<?> f : futures) {
-                try {
-                    f.get();
-                } catch (Exception e) {
-                    log.warn("Worker thread encountered error: {}", e.getMessage());
-                }
-            }
-
-            if (!stopSignal.get()) {
-                run.setStatus(RunStatus.COMPLETED.name());
-            }
-
-        } finally {
-            activeRunRegistry.deregisterRun(run.getId());
-            run.setCompletedAt(LocalDateTime.now());
-            runStore.save(run);
-            requestLogService.ensureFlushed();
-            log.info("Run {} finished: status={}", run.getId(), run.getStatus());
-        }
-    }
-
-    private void runWorker(int threadId, RunEntity run,
-                           Map<String, FlowStepEntity> stepMap,
-                           Map<String, Object> environment,
-                           long totalMs, AtomicBoolean stop) {
-        FlowExecutionContext ctx = new FlowExecutionContext();
-        ctx.setThreadId(threadId);
-        ctx.setRunId(run.getId());
-        ctx.setRun(run);
-        ctx.setVariables(new ConcurrentHashMap<>(environment));
-        ctx.setExecutionContext(new BaseExecutionContext());
-
-        FlowStepEntity startStep = findStartNode(stepMap);
-        if (startStep == null)
-            return;
-
-        long deadline = System.currentTimeMillis() + totalMs;
-
-        log.info("Run {} thread {} started", run.getId(), threadId);
-
-        while (!stop.get() && System.currentTimeMillis() < deadline && !Thread.currentThread().isInterrupted()) {
-            try {
-                executeIteration(startStep, stepMap, ctx);
-                ctx.incrementIteration();
-            } catch (Exception e) {
-                log.error("Thread {} iteration error: {}", threadId, e.getMessage(), e);
-            }
-        }
-
-        log.info("Run {} thread {} finished: {} iterations", run.getId(), threadId, ctx.getIterationCount());
-        ctx.getExecutionContext().clear();
-    }
-
-    private void executeIteration(FlowStepEntity startStep,
-                                  Map<String, FlowStepEntity> stepMap,
-                                  FlowExecutionContext ctx) {
-        FlowStepEntity current = startStep;
-
-        int jumpCount = 0;
-        final int MAX_JUMPS = 10000;
-
-        while (current != null) {
-            if (jumpCount++ > MAX_JUMPS) {
-                log.warn("Iteration exceeded max jumps ({}) at step {} — breaking iteration", MAX_JUMPS, current.getId());
-                break;
-            }
-
-            FlowStepType type;
-            try {
-                type = FlowStepType.valueOf(current.getType().toUpperCase());
-            } catch (IllegalArgumentException _) {
-                log.error("Unknown step type: {}", current.getType());
-                break;
-            }
-
-            String nextId = nodeHandlerFactory.getHandler(type)
-                    .handle(current, stepMap, ctx);
-
-            current = nextId != null ? stepMap.get(nextId) : null;
-        }
+        flowExecutionStrategyFactory.getStrategy(flow.getType()).execute(flow, steps, runFlowCommand);
     }
 
     private List<FlowStepEntity> stepsFromCommands(FlowEntity flow, List<FlowStepCommand> cmds) {
@@ -358,8 +208,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-                                            Set<String> terminals, Set<String> visiting,
-                                            Map<String, Boolean> memo) {
+            Set<String> terminals, Set<String> visiting,
+            Map<String, Boolean> memo) {
         if (memo.containsKey(node))
             return memo.get(node);
         if (terminals.contains(node)) {
@@ -389,12 +239,5 @@ public class FlowServiceImpl implements FlowService {
                 return 1;
             return a.getId().compareTo(b.getId());
         });
-    }
-
-    private static FlowStepEntity findStartNode(Map<String, FlowStepEntity> stepMap) {
-        return stepMap.values().stream()
-                .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
-                .findFirst()
-                .orElse(null);
     }
 }
