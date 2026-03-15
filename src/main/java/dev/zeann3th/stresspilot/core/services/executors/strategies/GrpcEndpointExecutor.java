@@ -11,7 +11,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
-import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @RequiredArgsConstructor
 @SuppressWarnings("java:S112")
-public class GrpcEndpointExecutor implements EndpointExecutorService {
+public class GrpcEndpointExecutor implements EndpointExecutor {
 
     private final JsonMapper jsonMapper;
     private final ConfigService configService;

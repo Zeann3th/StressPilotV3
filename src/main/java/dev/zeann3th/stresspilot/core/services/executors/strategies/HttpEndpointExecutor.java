@@ -8,7 +8,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
-import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.services.executors.context.HttpExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 @Slf4j(topic = "HttpEndpointExecutor")
 @RequiredArgsConstructor
 @SuppressWarnings("unused")
-public class HttpEndpointExecutor implements EndpointExecutorService {
+public class HttpEndpointExecutor implements EndpointExecutor {
 
     private static final Pattern PATH_VAR_PATTERN = Pattern.compile("(?<=/):(\\w+)");
 

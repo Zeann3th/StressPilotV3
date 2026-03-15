@@ -13,7 +13,7 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.EndpointStore;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
-import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorFactory;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
 import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserServiceFactory;
@@ -41,7 +41,7 @@ public class EndpointServiceImpl implements EndpointService {
     private final EnvironmentVariableStore envVarStore;
     private final JsonMapper jsonMapper;
     private final ParserServiceFactory parserServiceFactory;
-    private final EndpointExecutorServiceFactory executorFactory;
+    private final EndpointExecutorFactory executorFactory;
 
     @Override
     public Page<EndpointEntity> getAllEndpoints(Long projectId, String name, Pageable pageable) {

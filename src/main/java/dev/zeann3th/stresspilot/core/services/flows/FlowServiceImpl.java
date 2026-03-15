@@ -12,7 +12,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
-import dev.zeann3th.stresspilot.core.services.flows.strategies.FlowExecutionStrategyFactory;
+import dev.zeann3th.stresspilot.core.services.flows.strategies.FlowExecutorFactory;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +38,7 @@ public class FlowServiceImpl implements FlowService {
     private final EndpointStore endpointStore;
     private final JsonMapper jsonMapper;
     private final ActiveRunRegistry activeRunRegistry;
-    private final FlowExecutionStrategyFactory flowExecutionStrategyFactory;
+    private final FlowExecutorFactory flowExecutorFactory;
 
     @Override
     public Page<FlowEntity> getListFlow(Long projectId, String name, Pageable pageable) {
@@ -137,7 +137,7 @@ public class FlowServiceImpl implements FlowService {
         sortSteps(steps);
         validateStartStep(steps);
 
-        flowExecutionStrategyFactory.getStrategy(flow.getType()).execute(flow, steps, runFlowCommand);
+        flowExecutorFactory.getStrategy(flow.getType()).execute(flow, steps, runFlowCommand);
     }
 
     private List<FlowStepEntity> stepsFromCommands(FlowEntity flow, List<FlowStepCommand> cmds) {

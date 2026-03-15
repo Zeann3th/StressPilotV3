@@ -7,7 +7,7 @@ import org.pf4j.ExtensionPoint;
 
 import java.util.Map;
 
-public interface EndpointExecutorService extends ExtensionPoint {
+public interface EndpointExecutor extends ExtensionPoint {
     String getType();
 
     ExecuteEndpointResponse execute(

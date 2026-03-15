@@ -5,7 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
-import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorService;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @Slf4j(topic = "JdbcEndpointExecutor")
 @RequiredArgsConstructor
-public class JdbcEndpointExecutor implements EndpointExecutorService {
+public class JdbcEndpointExecutor implements EndpointExecutor {
 
     private final Map<String, HikariDataSource> dataSources = new ConcurrentHashMap<>();
 

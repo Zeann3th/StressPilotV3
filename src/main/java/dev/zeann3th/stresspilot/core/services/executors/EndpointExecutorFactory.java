@@ -10,12 +10,12 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class EndpointExecutorServiceFactory {
-    private final List<EndpointExecutorService> executors;
+public class EndpointExecutorFactory {
+    private final List<EndpointExecutor> executors;
 
     private final PluginManager pluginManager;
 
-    public EndpointExecutorService getExecutor(String type) {
+    public EndpointExecutor getExecutor(String type) {
         var internal = executors.stream()
                 .filter(executor -> executor.getType().equalsIgnoreCase(type))
                 .findFirst();
@@ -24,7 +24,7 @@ public class EndpointExecutorServiceFactory {
             return internal.get();
         }
 
-        List<EndpointExecutorService> extensions = pluginManager.getExtensions(EndpointExecutorService.class);
+        List<EndpointExecutor> extensions = pluginManager.getExtensions(EndpointExecutor.class);
         return extensions.stream()
                 .filter(executor -> executor.getType().equalsIgnoreCase(type))
                 .findFirst()

@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DefaultFlowExecutionStrategy implements FlowExecutionStrategy {
+public class DefaultFlowExecutor implements FlowExecutor {
 
     private final ProjectStore projectStore;
     private final EnvironmentVariableStore envVarStore;

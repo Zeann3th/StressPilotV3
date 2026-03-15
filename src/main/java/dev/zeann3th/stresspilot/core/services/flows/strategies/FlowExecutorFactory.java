@@ -11,13 +11,13 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-public class FlowExecutionStrategyFactory {
+public class FlowExecutorFactory {
 
-    private final List<FlowExecutionStrategy> strategies;
+    private final List<FlowExecutor> strategies;
     private final PluginManager pluginManager;
 
-    public FlowExecutionStrategy getStrategy(String type) {
-        Optional<FlowExecutionStrategy> internal = strategies.stream()
+    public FlowExecutor getStrategy(String type) {
+        Optional<FlowExecutor> internal = strategies.stream()
                 .filter(strategy -> strategy.supports(type))
                 .findFirst();
 
@@ -25,7 +25,7 @@ public class FlowExecutionStrategyFactory {
             return internal.get();
         }
 
-        List<FlowExecutionStrategy> extensions = pluginManager.getExtensions(FlowExecutionStrategy.class);
+        List<FlowExecutor> extensions = pluginManager.getExtensions(FlowExecutor.class);
         return extensions.stream()
                 .filter(strategy -> strategy.supports(type))
                 .findFirst()

@@ -10,7 +10,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ConfigService;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
-import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorServiceFactory;
+import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorFactory;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
@@ -36,7 +36,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
     private boolean strictLinear;
     private static final Random RANDOM = new Random();
 
-    private final EndpointExecutorServiceFactory executorFactory;
+    private final EndpointExecutorFactory executorFactory;
     private final RequestLogService requestLogService;
     private final JsonMapper jsonMapper;
     private final ConfigService configService;

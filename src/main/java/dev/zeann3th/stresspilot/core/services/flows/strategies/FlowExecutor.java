@@ -7,7 +7,7 @@ import org.pf4j.ExtensionPoint;
 
 import java.util.List;
 
-public interface FlowExecutionStrategy extends ExtensionPoint {
+public interface FlowExecutor extends ExtensionPoint {
     boolean supports(String type);
 
     void execute(FlowEntity flow, List<FlowStepEntity> steps, RunFlowCommand runFlowCommand);
