@@ -13,17 +13,26 @@ public class CreateEndpointRequestDTO {
     private Long projectId;
     @NotBlank
     private String name;
+
     private String description;
     @NotBlank
     private String type;
-    @NotBlank
+
     private String url;
+
     private Object body;
+
     private String successCondition;
+
     private String httpMethod;
+
     private Map<String, String> httpHeaders;
+
     private Map<String, String> httpParameters;
+
     private String grpcServiceName;
+
     private String grpcMethodName;
+
     private String grpcStubPath;
 }
