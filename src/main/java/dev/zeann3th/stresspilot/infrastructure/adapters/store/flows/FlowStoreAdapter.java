@@ -3,6 +3,8 @@ package dev.zeann3th.stresspilot.infrastructure.adapters.store.flows;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.ports.store.FlowStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -24,8 +26,13 @@ public class FlowStoreAdapter implements FlowStore {
     }
 
     @Override
-    public org.springframework.data.domain.Page<FlowEntity> findAllByCondition(Long projectId, String name, org.springframework.data.domain.Pageable pageable) {
-        return flowJpaRepository.findAllByCondition(projectId, name, pageable);
+    public Page<FlowEntity> findAllByCondition(Long projectId, String name, Pageable pageable) {
+        String term = null;
+        if (name != null && !name.isBlank()) {
+            term = "%" + name.toLowerCase().trim() + "%";
+        }
+
+        return flowJpaRepository.findAllByCondition(projectId, term, pageable);
     }
 
     @Override
