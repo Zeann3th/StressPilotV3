@@ -12,11 +12,19 @@ import java.util.List;
 
 @Repository
 public interface FlowJpaRepository extends JpaRepository<FlowEntity, Long> {
-    @Query("""
-                SELECT f FROM FlowEntity f
-                WHERE (:projectId IS NULL OR f.project.id = :projectId)
-                AND (:name IS NULL OR LOWER(f.name) LIKE :name)
-            """)
+    @Query(
+            value = """
+                        SELECT f FROM FlowEntity f
+                        LEFT JOIN FETCH f.steps
+                        WHERE (:projectId IS NULL OR f.project.id = :projectId)
+                        AND (:name IS NULL OR LOWER(f.name) LIKE :name)
+                    """,
+            countQuery = """
+                        SELECT COUNT(f) FROM FlowEntity f
+                        WHERE (:projectId IS NULL OR f.project.id = :projectId)
+                        AND (:name IS NULL OR LOWER(f.name) LIKE :name)
+                    """
+    )
     Page<FlowEntity> findAllByCondition(@Param("projectId") Long projectId, @Param("name") String name, Pageable pageable);
 
     List<FlowEntity> findAllByProjectId(Long projectId);
