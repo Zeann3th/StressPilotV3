@@ -41,11 +41,13 @@ public class FlowServiceImpl implements FlowService {
     private final FlowExecutorFactory flowExecutorFactory;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<FlowEntity> getListFlow(Long projectId, String name, Pageable pageable) {
         return flowStore.findAllByCondition(projectId, name, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FlowEntity getFlowDetail(Long flowId) {
         return flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));

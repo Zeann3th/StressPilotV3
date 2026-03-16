@@ -24,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -44,11 +45,13 @@ public class EndpointServiceImpl implements EndpointService {
     private final EndpointExecutorFactory executorFactory;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<EndpointEntity> getAllEndpoints(Long projectId, String name, Pageable pageable) {
         return endpointStore.findAllByCondition(projectId, name, pageable);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EndpointEntity getEndpointById(Long endpointId) {
         return endpointStore.findById(endpointId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0005));
