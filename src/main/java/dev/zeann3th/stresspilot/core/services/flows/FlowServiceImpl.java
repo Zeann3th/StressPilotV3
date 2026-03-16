@@ -110,7 +110,7 @@ public class FlowServiceImpl implements FlowService {
         flowStepStore.deleteAllByFlowId(flowId);
         flowStepStore.saveAll(preview);
 
-        return flowStore.findById(flowId).orElse(flow);
+        return flowStore.findByIdWithSteps(flowId).orElse(flow);
     }
 
     @EventListener

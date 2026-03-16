@@ -19,5 +19,5 @@ public interface FlowStore {
 
     void deleteById(Long id);
 
-    void deleteAllByProjectId(Long projectId);
+    Optional<FlowEntity> findByIdWithSteps(Long id);
 }

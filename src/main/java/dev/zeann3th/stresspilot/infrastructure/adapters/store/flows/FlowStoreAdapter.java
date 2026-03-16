@@ -46,7 +46,8 @@ public class FlowStoreAdapter implements FlowStore {
     }
 
     @Override
-    public void deleteAllByProjectId(Long projectId) {
-        flowJpaRepository.deleteAllByProjectId(projectId);
+    public Optional<FlowEntity> findByIdWithSteps(Long id) {
+        return flowJpaRepository.findByIdWithSteps(id);
     }
+
 }

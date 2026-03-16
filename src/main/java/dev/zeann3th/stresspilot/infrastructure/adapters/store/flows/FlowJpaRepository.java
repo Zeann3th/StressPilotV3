@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FlowJpaRepository extends JpaRepository<FlowEntity, Long> {
@@ -30,4 +31,7 @@ public interface FlowJpaRepository extends JpaRepository<FlowEntity, Long> {
     List<FlowEntity> findAllByProjectId(Long projectId);
 
     void deleteAllByProjectId(Long projectId);
+
+    @Query("SELECT f FROM FlowEntity f LEFT JOIN FETCH f.steps WHERE f.id = :id")
+    Optional<FlowEntity> findByIdWithSteps(Long id);
 }
