@@ -185,6 +185,11 @@ public class FlowServiceImpl implements FlowService {
         Map<String, List<String>> graph = new HashMap<>();
         Set<String> terminals = new HashSet<>();
 
+        Set<String> allowedTerminalTypes = Set.of(
+                FlowStepType.ENDPOINT.name(),
+                FlowStepType.SUBFLOW.name()
+        );
+
         for (FlowStepEntity step : steps) {
             String id = stepIdMap.get(step.getId());
             List<String> nexts = new ArrayList<>();
@@ -193,13 +198,19 @@ public class FlowServiceImpl implements FlowService {
             if (step.getNextIfFalse() != null)
                 nexts.add(stepIdMap.get(step.getNextIfFalse()));
             graph.put(id, nexts);
-            if (FlowStepType.ENDPOINT.name().equalsIgnoreCase(step.getType()) && nexts.isEmpty())
+
+            if (nexts.isEmpty()) {
+                if (!allowedTerminalTypes.contains(step.getType().toUpperCase())) {
+                    throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
+                            Map.of(Constants.REASON, "Step " + id + " of type " + step.getType() + " cannot be a terminal node"));
+                }
                 terminals.add(id);
+            }
         }
 
         if (terminals.isEmpty())
             throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
-                    Map.of(Constants.REASON, "No terminal ENDPOINT found — flow would be infinite"));
+                    Map.of(Constants.REASON, "No terminal node found — flow would be infinite"));
 
         Map<String, Boolean> memo = new HashMap<>();
         for (String node : graph.keySet()) {
