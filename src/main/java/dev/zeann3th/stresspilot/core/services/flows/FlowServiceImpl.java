@@ -49,7 +49,7 @@ public class FlowServiceImpl implements FlowService {
     @Override
     @Transactional(readOnly = true)
     public FlowEntity getFlowDetail(Long flowId) {
-        return flowStore.findById(flowId)
+        return flowStore.findByIdWithSteps(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
     }
 
@@ -72,7 +72,7 @@ public class FlowServiceImpl implements FlowService {
     @Override
     @Transactional
     public FlowEntity updateFlow(Long flowId, Map<String, Object> patch) {
-        FlowEntity entity = flowStore.findById(flowId)
+        FlowEntity entity = flowStore.findByIdWithSteps(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
         Map<String, Object> safe = patch.entrySet().stream()
                 .filter(e -> !Set.of("id", "projectId", "project", "steps", "type").contains(e.getKey()))
