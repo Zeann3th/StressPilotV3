@@ -1,8 +1,10 @@
 package dev.zeann3th.stresspilot.core.services.parsers.endpoints.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+import dev.zeann3th.stresspilot.core.domain.constants.FileFormat;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserService;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
@@ -22,6 +24,16 @@ import java.util.Map;
 public class OpenApiParser implements ParserService {
 
     private final JsonMapper jsonMapper;
+
+    @Override
+    public String getType() {
+        return ParserType.OPENAPI.name();
+    }
+
+    @Override
+    public List<String> getSupportedFormats() {
+        return List.of(FileFormat.JSON);
+    }
 
     @Override
     public boolean supports(String filename, String contentType, String content) {

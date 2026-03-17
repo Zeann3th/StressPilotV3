@@ -14,6 +14,7 @@ import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
+import dev.zeann3th.stresspilot.core.services.flows.FlowExecutor;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,11 @@ public class DefaultFlowExecutor implements FlowExecutor {
     private final ActiveRunRegistry activeRunRegistry;
     private final RequestLogService requestLogService;
     private final FlowNodeHandlerFactory nodeHandlerFactory;
+
+    @Override
+    public String getType() {
+        return FlowType.DEFAULT.name();
+    }
 
     @Override
     public boolean supports(String type) {

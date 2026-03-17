@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.flows.strategies;
+package dev.zeann3th.stresspilot.core.services.flows;
 
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -31,5 +32,12 @@ public class FlowExecutorFactory {
                 .findFirst()
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0020,
                         java.util.Map.of("reason", "Unsupported flow type: " + type)));
+    }
+
+    public List<String> listTypes() {
+        List<FlowExecutor> extensions = pluginManager.getExtensions(FlowExecutor.class);
+        return Stream.concat(strategies.stream(), extensions.stream())
+                .map(FlowExecutor::getType)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

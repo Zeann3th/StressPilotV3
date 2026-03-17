@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.core.services.parsers.endpoints;
 
+import dev.zeann3th.stresspilot.core.domain.commands.ParserCapability;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -19,23 +21,16 @@ public class ParserServiceFactory {
     private final SpringPluginManager pluginManager;
 
     public ParserService getParser(String filename, String contentType, String content) {
-        return findParser(filename, contentType, content)
+        return Stream.concat(parsers.stream(), pluginManager.getExtensions(ParserService.class).stream())
+                .filter(parser -> parser.supports(filename, contentType, content))
+                .findFirst()
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0006,
                         Map.of(Constants.REASON, "No parser registered for given input: " + filename)));
     }
 
-    private Optional<ParserService> findParser(String filename, String contentType, String content) {
-        var internal = parsers.stream()
-                .filter(parser -> parser.supports(filename, contentType, content))
-                .findFirst();
-
-        if (internal.isPresent()) {
-            return internal;
-        }
-
-        List<ParserService> extensions = pluginManager.getExtensions(ParserService.class);
-        return extensions.stream()
-                .filter(parser -> parser.supports(filename, contentType, content))
-                .findFirst();
+    public List<ParserCapability> listTypes() {
+        return Stream.concat(parsers.stream(), pluginManager.getExtensions(ParserService.class).stream())
+                .map(ParserService::getCapability)
+                .toList();
     }
 }

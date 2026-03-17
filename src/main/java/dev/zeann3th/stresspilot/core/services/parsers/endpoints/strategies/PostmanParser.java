@@ -1,6 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.parsers.endpoints.strategies;
 
+import dev.zeann3th.stresspilot.core.domain.constants.FileFormat;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
+import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserService;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,16 @@ import java.util.Map;
 public class PostmanParser implements ParserService {
 
     private final JsonMapper jsonMapper;
+
+    @Override
+    public String getType() {
+        return ParserType.POSTMAN.name();
+    }
+
+    @Override
+    public List<String> getSupportedFormats() {
+        return List.of(FileFormat.JSON);
+    }
 
     @Override
     public boolean supports(String filename, String contentType, String content) {

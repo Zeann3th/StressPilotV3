@@ -3,9 +3,11 @@ package dev.zeann3th.stresspilot.core.services.parsers.endpoints.strategies;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
+import dev.zeann3th.stresspilot.core.domain.constants.FileFormat;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.enums.ParserType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.parsers.endpoints.ParserService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,16 @@ import java.util.*;
 public class ProtoParser implements ParserService {
 
     private static final String PROTOC = "protoc";
+
+    @Override
+    public String getType() {
+        return ParserType.PROTO.name();
+    }
+
+    @Override
+    public List<String> getSupportedFormats() {
+        return List.of(FileFormat.PROTO);
+    }
 
     @Override
     public boolean supports(String filename, String contentType, String content) {

@@ -7,6 +7,8 @@ import org.pf4j.PluginManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 @RequiredArgsConstructor
@@ -29,5 +31,12 @@ public class EndpointExecutorFactory {
                 .filter(executor -> executor.getType().equalsIgnoreCase(type))
                 .findFirst()
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0009));
+    }
+
+    public List<String> listTypes() {
+            List<EndpointExecutor> extensions = pluginManager.getExtensions(EndpointExecutor.class);
+            return Stream.concat(executors.stream(), extensions.stream())
+                    .map(EndpointExecutor::getType)
+                    .collect(Collectors.toList());
     }
 }
