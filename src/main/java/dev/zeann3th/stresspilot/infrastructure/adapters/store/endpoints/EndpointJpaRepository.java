@@ -21,5 +21,6 @@ public interface EndpointJpaRepository extends JpaRepository<EndpointEntity, Lon
     )
     Page<EndpointEntity> findAllByCondition(@Param("projectId") Long projectId, @Param("name") String name, Pageable pageable);
 
-    List<EndpointEntity> findAllByProjectId(Long projectId);
+    @Query("SELECT e FROM EndpointEntity e WHERE e.project.id = :projectId")
+    List<EndpointEntity> findAllByProjectId(@Param("projectId") Long projectId);
 }

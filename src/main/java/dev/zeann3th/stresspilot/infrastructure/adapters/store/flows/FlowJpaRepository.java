@@ -28,9 +28,8 @@ public interface FlowJpaRepository extends JpaRepository<FlowEntity, Long> {
     )
     Page<FlowEntity> findAllByCondition(@Param("projectId") Long projectId, @Param("name") String name, Pageable pageable);
 
-    List<FlowEntity> findAllByProjectId(Long projectId);
-
-    void deleteAllByProjectId(Long projectId);
+    @Query("SELECT f FROM FlowEntity f WHERE f.project.id = :projectId")
+    List<FlowEntity> findAllByProjectId(@Param("projectId") Long projectId);
 
     @Query("SELECT f FROM FlowEntity f LEFT JOIN FETCH f.steps WHERE f.id = :id")
     Optional<FlowEntity> findByIdWithSteps(Long id);

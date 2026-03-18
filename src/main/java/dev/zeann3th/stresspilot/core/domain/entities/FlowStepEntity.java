@@ -23,9 +23,6 @@ public class FlowStepEntity extends BaseEntity {
     @ToString.Exclude
     private FlowEntity flow;
 
-    @Column(name = "flow_id", insertable = false, updatable = false)
-    private Long flowId;
-
     @Column(name = "type", columnDefinition = "VARCHAR(10)", nullable = false)
     private String type;
 
@@ -34,9 +31,6 @@ public class FlowStepEntity extends BaseEntity {
     @JsonIgnoreProperties("flowSteps")
     @ToString.Exclude
     private EndpointEntity endpoint;
-
-    @Column(name = "endpoint_id", insertable = false, updatable = false)
-    private Long endpointId;
 
     @Column(name = "pre_processor", columnDefinition = "TEXT")
     private String preProcessor;
@@ -52,4 +46,12 @@ public class FlowStepEntity extends BaseEntity {
 
     @Column(name = "condition", columnDefinition = "TEXT")
     private String condition;
+
+    public Long getFlowId() {
+        return flow != null ? flow.getId() : null;
+    }
+
+    public Long getEndpointId() {
+        return endpoint != null ? endpoint.getId() : null;
+    }
 }

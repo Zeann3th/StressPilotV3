@@ -25,16 +25,10 @@ public class RequestLogEntity {
     @JsonIgnoreProperties({"requestLogs", "flow"})
     private RunEntity run;
 
-    @Column(name = "run_id", insertable = false, updatable = false)
-    private Long runId;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endpoint_id", nullable = false)
     @JsonIgnoreProperties({"project"})
     private EndpointEntity endpoint;
-
-    @Column(name = "endpoint_id", insertable = false, updatable = false)
-    private Long endpointId;
 
     @Column(name = "status_code", nullable = false)
     private Integer statusCode;
@@ -54,4 +48,12 @@ public class RequestLogEntity {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public Long getRunId() {
+        return run != null ? run.getId() : null;
+    }
+
+    public Long getEndpointId() {
+        return endpoint != null ? endpoint.getId() : null;
+    }
 }

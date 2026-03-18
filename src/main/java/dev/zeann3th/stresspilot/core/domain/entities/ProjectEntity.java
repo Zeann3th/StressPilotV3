@@ -31,9 +31,6 @@ public class ProjectEntity extends BaseEntity {
     @JoinColumn(name = "environment_id", nullable = false)
     private EnvironmentEntity environment;
 
-    @Column(name = "environment_id", insertable = false, updatable = false)
-    private Long environmentId;
-
     @Builder.Default
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("project")
@@ -45,4 +42,8 @@ public class ProjectEntity extends BaseEntity {
     @JsonIgnoreProperties("project")
     @ToString.Exclude
     private List<FlowEntity> flows = new ArrayList<>();
+
+    public Long getEnvironmentId() {
+        return environment != null ? environment.getId() : null;
+    }
 }

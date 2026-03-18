@@ -10,6 +10,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProjectJpaRepository extends JpaRepository<ProjectEntity, Long> {
-    @Query("SELECT p FROM ProjectEntity p WHERE (:name IS NULL OR p.name LIKE %:name%)")
+    @Query("SELECT p FROM ProjectEntity p WHERE (:name IS NULL OR LOWER(p.name) LIKE :name)")
     Page<ProjectEntity> findAllByCondition(@Param("name") String name, Pageable pageable);
 }

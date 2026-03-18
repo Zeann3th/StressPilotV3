@@ -27,9 +27,6 @@ public class RunEntity {
     @JsonIgnoreProperties({"steps", "runs", "project"})
     private FlowEntity flow;
 
-    @Column(name = "flow_id", insertable = false, updatable = false)
-    private Long flowId;
-
     @Column(name = "status", columnDefinition = "VARCHAR(10)", nullable = false)
     private String status;
 
@@ -55,4 +52,8 @@ public class RunEntity {
     @JsonIgnoreProperties("run")
     @ToString.Exclude
     private List<RequestLogEntity> requestLogs = new ArrayList<>();
+
+    public Long getFlowId() {
+        return flow != null ? flow.getId() : null;
+    }
 }

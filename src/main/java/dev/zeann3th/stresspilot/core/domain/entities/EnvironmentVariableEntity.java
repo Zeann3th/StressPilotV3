@@ -28,9 +28,6 @@ public class EnvironmentVariableEntity extends BaseEntity {
     @ToString.Exclude
     private EnvironmentEntity environment;
 
-    @Column(name = "environment_id", insertable = false, updatable = false)
-    private Long environmentId;
-
     @Column(name = "key", nullable = false)
     private String key;
 
@@ -39,4 +36,8 @@ public class EnvironmentVariableEntity extends BaseEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean active;
+
+    public Long getEnvironmentId() {
+        return environment != null ? environment.getId() : null;
+    }
 }

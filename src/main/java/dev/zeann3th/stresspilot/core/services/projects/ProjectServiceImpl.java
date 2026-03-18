@@ -62,7 +62,6 @@ public class ProjectServiceImpl implements ProjectService {
                 .name(createProjectCommand.getName())
                 .description(createProjectCommand.getDescription())
                 .environment(env)
-                .environmentId(env.getId())
                 .build();
         return projectStore.save(project);
     }

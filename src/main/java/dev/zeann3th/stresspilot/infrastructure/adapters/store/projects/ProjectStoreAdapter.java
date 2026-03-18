@@ -26,7 +26,11 @@ public class ProjectStoreAdapter implements ProjectStore {
 
     @Override
     public Page<ProjectEntity> findAllByCondition(String name, Pageable pageable) {
-        return projectJpaRepository.findAllByCondition(name, pageable);
+        String term = null;
+        if (name != null && !name.isBlank()) {
+            term = "%" + name.toLowerCase().trim() + "%";
+        }
+        return projectJpaRepository.findAllByCondition(term, pageable);
     }
 
     @Override

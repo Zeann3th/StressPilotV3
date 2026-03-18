@@ -34,9 +34,6 @@ public class EndpointEntity extends BaseEntity {
     @JoinColumn(name = "project_id", nullable = false)
     private ProjectEntity project;
 
-    @Column(name = "project_id", insertable = false, updatable = false)
-    private Long projectId;
-
     @Column(name = "url")
     private String url;
 
@@ -65,6 +62,10 @@ public class EndpointEntity extends BaseEntity {
 
     @Column(name = "grpc_stub_path", columnDefinition = "TEXT")
     private String grpcStubPath;
+
+    public Long getProjectId() {
+        return project != null ? project.getId() : null;
+    }
 
     @Override
     public String toString() {

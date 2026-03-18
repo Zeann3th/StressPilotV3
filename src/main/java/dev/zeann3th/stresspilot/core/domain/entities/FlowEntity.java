@@ -1,11 +1,10 @@
 package dev.zeann3th.stresspilot.core.domain.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +27,6 @@ public class FlowEntity extends BaseEntity {
     @JsonIgnoreProperties({ "endpoints", "flows", "environment" })
     private ProjectEntity project;
 
-    @Column(name = "project_id", insertable = false, updatable = false)
-    private Long projectId;
-
     @Column(name = "name", nullable = false)
     private String name;
 
@@ -52,4 +48,8 @@ public class FlowEntity extends BaseEntity {
     @JsonIgnoreProperties("flow")
     @ToString.Exclude
     private List<RunEntity> runs = new ArrayList<>();
+
+    public Long getProjectId() {
+        return project != null ? project.getId() : null;
+    }
 }
