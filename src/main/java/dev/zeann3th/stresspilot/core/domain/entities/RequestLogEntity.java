@@ -27,7 +27,7 @@ public class RequestLogEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "endpoint_id", nullable = false)
-    @JsonIgnoreProperties({"project"})
+    @JsonIgnoreProperties({"project", "requestLogs"})
     private EndpointEntity endpoint;
 
     @Column(name = "status_code", nullable = false)
