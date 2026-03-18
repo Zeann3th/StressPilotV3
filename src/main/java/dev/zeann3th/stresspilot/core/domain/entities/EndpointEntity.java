@@ -1,8 +1,12 @@
 package dev.zeann3th.stresspilot.core.domain.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -66,6 +70,12 @@ public class EndpointEntity extends BaseEntity {
     public Long getProjectId() {
         return project != null ? project.getId() : null;
     }
+
+    @Builder.Default
+    @OneToMany(mappedBy = "endpoint", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("endpoint")
+    @ToString.Exclude
+    private List<RequestLogEntity> requestLogs =  new ArrayList<>();
 
     @Override
     public String toString() {
