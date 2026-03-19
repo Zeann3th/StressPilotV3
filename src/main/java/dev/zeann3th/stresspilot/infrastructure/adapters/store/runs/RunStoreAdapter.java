@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,5 +42,15 @@ public class RunStoreAdapter implements RunStore {
     @Override
     public void deleteById(Long id) {
         runJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public int finalizeRun(Long id, String status, LocalDateTime completedAt) {
+        return runJpaRepository.finalizeRun(id, status, completedAt);
+    }
+
+    @Override
+    public boolean existsById(Long runId) {
+        return runJpaRepository.existsById(runId);
     }
 }

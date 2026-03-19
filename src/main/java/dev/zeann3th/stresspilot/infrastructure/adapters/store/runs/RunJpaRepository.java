@@ -2,10 +2,12 @@ package dev.zeann3th.stresspilot.infrastructure.adapters.store.runs;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,4 +21,12 @@ public interface RunJpaRepository extends JpaRepository<RunEntity, Long> {
 
     @Query("SELECT r FROM RunEntity r ORDER BY r.startedAt DESC")
     List<RunEntity> findAllOrderByStartedAtDesc();
+
+    @Modifying
+    @Query("UPDATE RunEntity r SET r.status = :status, r.completedAt = :completedAt " +
+            "WHERE r.id = :id AND r.status = 'RUNNING'")
+    int finalizeRun(@Param("id") Long id,
+                    @Param("status") String status,
+                    @Param("completedAt") LocalDateTime completedAt
+    );
 }

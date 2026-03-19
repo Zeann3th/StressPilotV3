@@ -133,8 +133,17 @@ public class DefaultFlowExecutor implements FlowExecutor {
 
         } finally {
             activeRunRegistry.deregisterRun(run.getId());
-            run.setCompletedAt(LocalDateTime.now());
-            runStore.save(run);
+
+            int updated = runStore.finalizeRun(
+                    run.getId(),
+                    RunStatus.COMPLETED.name(),
+                    LocalDateTime.now()
+            );
+
+            if (updated == 0) {
+                log.info("Run {} already finalized externally (likely ABORTED)", run.getId());
+            }
+
             requestLogService.ensureFlushed();
             log.info("Run {} finished: status={}", run.getId(), run.getStatus());
         }

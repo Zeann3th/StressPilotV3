@@ -94,14 +94,16 @@ public class RunServiceImpl implements RunService {
     @Override
     @Transactional
     public void interruptRun(Long runId) {
-        RunEntity run = runStore.findById(runId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+        if (!runStore.existsById(runId)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0010);
+        }
 
         eventPublisher.publishEvent(new InterruptRunEvent(runId));
 
-        run.setStatus(RunStatus.ABORTED.name());
-        run.setCompletedAt(LocalDateTime.now());
-        runStore.save(run);
+        int updated = runStore.finalizeRun(runId, RunStatus.ABORTED.name(), LocalDateTime.now());
+        if (updated == 0) {
+            log.warn("Run {} could not be aborted - already finished", runId);
+        }
     }
 
     private RequestLog mapToDto(RequestLogEntity requestLogEntity) {
