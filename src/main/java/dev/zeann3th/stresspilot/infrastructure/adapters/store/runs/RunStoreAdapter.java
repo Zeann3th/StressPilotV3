@@ -4,6 +4,8 @@ import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,6 +47,7 @@ public class RunStoreAdapter implements RunStore {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int finalizeRun(Long id, String status, LocalDateTime completedAt) {
         return runJpaRepository.finalizeRun(id, status, completedAt);
     }
