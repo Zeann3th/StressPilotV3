@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.datafaker.Faker;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
 public class MockDataUtils {
     private static final Pattern MOCK_PATTERN = Pattern.compile("@\\{\\s*(.+?)\\s*\\}@");
     private static final int MAX_DEPTH = 5;
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private static final Faker FAKER = new Faker();
 
@@ -88,12 +91,23 @@ public class MockDataUtils {
         if (command.startsWith("faker(")) return handleFaker(command);
 
         if (command.startsWith("seq(")) {
-            String name = extractParam(command);
-            return String.valueOf(SEQUENCES.computeIfAbsent(name, _ -> new AtomicLong(0)).incrementAndGet());
+            String param = extractParam(command);
+            String[] parts = param.split(",", 2);
+            String name = parts[0].trim();
+            long start = parts.length > 1 ? Long.parseLong(parts[1].trim()) - 1 : 0;
+            return String.valueOf(SEQUENCES.computeIfAbsent(name, _ -> new AtomicLong(start)).incrementAndGet());
+        }
+
+        if (command.startsWith("pick(")) {
+            String param = extractParam(command);
+            String[] values = param.split(",");
+            if (values.length == 0) return "@{" + command + "}@";
+            return values[FAKER.random().nextInt(values.length)].trim();
         }
 
         if (command.equalsIgnoreCase("timestamp")) return String.valueOf(System.currentTimeMillis());
         if (command.equalsIgnoreCase("date")) return Instant.now().toString();
+        if (command.equalsIgnoreCase("datetime")) return LocalDateTime.now().format(DATETIME_FORMATTER);
 
         if (command.equalsIgnoreCase("uuid")) return UUID.randomUUID().toString();
 
