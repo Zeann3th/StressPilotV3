@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 @Slf4j(topic = "MockDataUtils")
 @UtilityClass
 public class MockDataUtils {
-    private static final Pattern MOCK_PATTERN = Pattern.compile("@\\{\\s*(.+?)\\s*\\}@");
+    private static final Pattern MOCK_PATTERN = Pattern.compile("@\\{\\s*([^}]+?)\\s*\\}@");
     private static final int MAX_DEPTH = 5;
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
