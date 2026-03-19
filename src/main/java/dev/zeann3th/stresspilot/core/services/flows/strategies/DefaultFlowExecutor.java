@@ -90,8 +90,8 @@ public class DefaultFlowExecutor implements FlowExecutor {
 
         int threads = Math.max(1, runFlowCommand.getThreads());
 
-        try (ExecutorService pool = Executors.newFixedThreadPool(threads,
-                r -> new Thread(r, "sp-worker-" + run.getId()))) {
+        try (ExecutorService pool = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("sp-worker-" + run.getId() + "-", 0).factory())) {
             long totalMs = (long) runFlowCommand.getTotalDuration() * 1000;
             long rampUpMs = (long) runFlowCommand.getRampUpDuration() * 1000;
             long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
