@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public interface FlowStepJpaRepository extends JpaRepository<FlowStepEntity, String> {
     @Query("SELECT s FROM FlowStepEntity s WHERE s.flow.id = :flowId")
-    List<FlowStepEntity> findAllByFlowId(@Param("Long") Long flowId);
+    List<FlowStepEntity> findAllByFlowId(@Param("flowId") Long flowId);
 
     @Query("SELECT s FROM FlowStepEntity s LEFT JOIN FETCH s.endpoint WHERE s.flow.id = :flowId")
     List<FlowStepEntity> findAllByFlowIdWithEndpoint(@Param("flowId") Long flowId);

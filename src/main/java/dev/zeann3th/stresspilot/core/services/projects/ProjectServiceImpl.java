@@ -103,12 +103,6 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    @Transactional
-    public ProjectEntity importProject(ImportProjectCommand command) {
-        return persistProject(command);
-    }
-
-    @Override
     public ByteArrayResource exportProject(Long projectId) {
         try {
             ImportProjectCommand cmd = buildExportCommand(projectId);

@@ -24,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
-@ResponseWrapper
 @Tag(name = "Projects", description = "API for managing test projects")
 public class ProjectController {
 
@@ -32,6 +31,7 @@ public class ProjectController {
     private final ProjectMapper projectMapper;
 
     @GetMapping
+    @ResponseWrapper
     public Page<ProjectResponseDTO> getListProjects(
             @RequestParam(value = "name", required = false) String name,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -40,6 +40,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}")
+    @ResponseWrapper
     public ProjectResponseDTO getProjectDetail(@PathVariable Long projectId) {
         ProjectEntity resp = projectService.getProjectDetail(projectId);
         return projectMapper.toResponse(resp);
@@ -47,6 +48,7 @@ public class ProjectController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @ResponseWrapper
     public ProjectResponseDTO createProject(@Valid @RequestBody CreateProjectRequestDTO request) {
         var command = projectMapper.toCreateCommand(request);
         ProjectEntity resp = projectService.createProject(command);
@@ -54,6 +56,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{projectId}")
+    @ResponseWrapper
     public ProjectResponseDTO updateProject(@PathVariable Long projectId,
             @RequestBody UpdateProjectRequestDTO request) {
         var command = projectMapper.toUpdateCommand(request);
@@ -62,6 +65,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{projectId}")
+    @ResponseWrapper
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProject(@PathVariable Long projectId) {
         projectService.deleteProject(projectId);
@@ -78,6 +82,7 @@ public class ProjectController {
     }
 
     @PostMapping(value = "/import", consumes = "multipart/form-data")
+    @ResponseWrapper
     public ProjectResponseDTO importProject(@RequestPart("file") MultipartFile file) {
         ProjectEntity resp = projectService.importProject(file);
         return projectMapper.toResponse(resp);
