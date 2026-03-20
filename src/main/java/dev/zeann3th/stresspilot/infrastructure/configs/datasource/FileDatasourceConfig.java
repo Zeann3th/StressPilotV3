@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.infrastructure.configs.datasource;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
+import dev.zeann3th.stresspilot.infrastructure.utils.KeyringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
@@ -20,6 +21,7 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.Properties;
 
 @Slf4j(topic = "[Database Migrator]")
 @Configuration
@@ -43,28 +45,36 @@ public class FileDatasourceConfig {
             Path dbPath = dataDir.resolve(Constants.DB_FILE_NAME);
             boolean dbExists = Files.exists(dbPath);
 
-            String jdbcUrl = "jdbc:sqlite:" + dbPath.toAbsolutePath() + "?journal_mode=WAL&busy_timeout=5000&foreign_keys=on";
+            Properties props = new Properties();
+            props.setProperty("key", KeyringUtils.getOrCreateKey());
+
             DriverManagerDataSource dataSource = new DriverManagerDataSource();
             dataSource.setDriverClassName("org.sqlite.JDBC");
-            dataSource.setUrl(jdbcUrl);
+            dataSource.setUrl("jdbc:sqlite:" + dbPath.toAbsolutePath());
+            dataSource.setConnectionProperties(props);
 
-            if (!dbExists) {
-                log.info("Database file not found, creating and initializing new database at {}", dbPath);
-                try (Connection conn = dataSource.getConnection()) {
+            try (Connection conn = dataSource.getConnection();
+                 Statement stmt = conn.createStatement()) {
 
-                    try (Statement stmt = conn.createStatement()) {
-                        stmt.execute("PRAGMA journal_mode = WAL;");
-                    }
+                stmt.execute("PRAGMA cipher_page_size = 4096;");
+                stmt.execute("PRAGMA kdf_iter = 256000;");
+                stmt.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512;");
+                // SQLite
+                stmt.execute("PRAGMA journal_mode = WAL;");
+                stmt.execute("PRAGMA busy_timeout = 10000;");
+                stmt.execute("PRAGMA foreign_keys = ON;");
 
+                if (!dbExists) {
+                    log.info("Database not found, initializing at {}", dbPath);
                     ScriptUtils.executeSqlScript(conn, new ClassPathResource("db/sqlite/migrations/V1__init.sql"));
-
-                    log.info("Database initialized successfully using V1__init.sql");
+                    log.info("Database initialized successfully");
+                } else {
+                    stmt.execute("SELECT count(*) FROM sqlite_master;");
+                    log.info("Database key verified at {}", dbPath);
                 }
-            } else {
-                log.info("Database file exists at {}, skipping initialization", dbPath);
             }
 
-            log.info("Data source configured with URL: {}", jdbcUrl);
+            log.info("Data source configured at: {}", dbPath);
             return dataSource;
 
         } catch (Exception e) {

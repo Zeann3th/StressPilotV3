@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.utils;
+package dev.zeann3th.stresspilot.infrastructure.utils;
 
 import java.sql.*;
 import java.util.Properties;
