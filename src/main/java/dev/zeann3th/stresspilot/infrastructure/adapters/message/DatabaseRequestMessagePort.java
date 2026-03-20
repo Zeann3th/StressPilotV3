@@ -13,7 +13,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -42,7 +44,7 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
         writer.setDaemon(true);
         writer.start();
         log.info("DatabaseRequestLogWriter started (batchSize={}, flushIntervalMs={})",
-                properties.getBatchSize(), properties.getFlushIntervalMs());
+                properties.getDatasource().getBatchSize(), properties.getDatasource().getFlushIntervalMs());
     }
 
     @Override
@@ -74,24 +76,24 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
     }
 
     private void writerLoop() {
-        List<RequestLogEntity> buffer = new ArrayList<>(properties.getBatchSize());
+        List<RequestLogEntity> buffer = new ArrayList<>(properties.getDatasource().getBatchSize());
         long lastFlush = System.currentTimeMillis();
 
         while (running.get() || !queue.isEmpty() || !buffer.isEmpty()) {
             try {
                 long now = System.currentTimeMillis();
                 long elapsed = now - lastFlush;
-                long waitMs = Math.max(0, properties.getFlushIntervalMs() - elapsed);
+                long waitMs = Math.max(0, properties.getDatasource().getFlushIntervalMs() - elapsed);
 
                 RequestLogEntity entry = queue.poll(waitMs, TimeUnit.MILLISECONDS);
                 if (entry != null) {
                     buffer.add(entry);
-                    queue.drainTo(buffer, properties.getBatchSize() - 1);
+                    queue.drainTo(buffer, properties.getDatasource().getBatchSize() - 1);
                 }
 
                 now = System.currentTimeMillis();
-                boolean full = buffer.size() >= properties.getBatchSize();
-                boolean timeout = (now - lastFlush) >= properties.getFlushIntervalMs();
+                boolean full = buffer.size() >= properties.getDatasource().getBatchSize();
+                boolean timeout = (now - lastFlush) >= properties.getDatasource().getFlushIntervalMs();
                 boolean shutdown = !running.get() && !buffer.isEmpty();
 
                 if ((full || timeout || shutdown) && !buffer.isEmpty()) {

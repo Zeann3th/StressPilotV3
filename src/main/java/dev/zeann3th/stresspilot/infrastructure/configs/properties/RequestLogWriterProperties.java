@@ -9,10 +9,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "application.message")
 public class RequestLogWriterProperties {
 
-    private int batchSize = 1000;
-
-    private long flushIntervalMs = 1000;
-
     private Websocket websocket = new Websocket();
 
     private Kafka kafka = new Kafka();
@@ -26,6 +22,8 @@ public class RequestLogWriterProperties {
         private String username;
         private String password;
         private String driverClassName;
+        private int batchSize = 1000;
+        private long flushIntervalMs = 1000;
     }
 
     @Data

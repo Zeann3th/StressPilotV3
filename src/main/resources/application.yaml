@@ -6,8 +6,6 @@ server:
       timeout: 30m
 
 spring:
-  profiles:
-    active: dev
   application:
     name: stresspilot
   servlet:
@@ -15,44 +13,44 @@ spring:
       max-file-size: 20MB
       max-request-size: 10MB
 
-  # ONLY CONFIGURE ON SERVER MODE
-  datasource:
-    url: jdbc:postgresql://localhost:5432/stresspilot
-    username: postgres
-    password: Viettel!VDS
-    driver-class-name:
-    hikari:
-      minimum-idle: 20
-      maximum-pool-size: 20
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      connection-timeout: 30000
-      initialization-fail-timeout: 1
-      connection-init-sql: SELECT 1
-      keepalive-time: 60000
-
-  # ONLY CONFIGURE ON SERVER MODE
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        jdbc:
-          batch_size: 50
-        order_inserts: true
-        order_updates: true
-
-  # ONLY CONFIGURE ON SERVER MODE
+#  # ONLY CONFIGURE ON SERVER MODE
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/stresspilot
+#    username: postgres
+#    password: Viettel!VDS
+#    driver-class-name:
+#    hikari:
+#      minimum-idle: 20
+#      maximum-pool-size: 20
+#      idle-timeout: 600000
+#      max-lifetime: 1800000
+#      connection-timeout: 30000
+#      initialization-fail-timeout: 1
+#      connection-init-sql: SELECT 1
+#      keepalive-time: 60000
+#
+#  # ONLY CONFIGURE ON SERVER MODE
+#  jpa:
+#    open-in-view: false
+#    hibernate:
+#      ddl-auto: none
+#    show-sql: true
+#    properties:
+#      hibernate:
+#        format_sql: true
+#        jdbc:
+#          batch_size: 50
+#        order_inserts: true
+#        order_updates: true
+#
+#  # ONLY CONFIGURE ON SERVER MODE
   flyway:
     locations:
       - classpath:db/postgres/migrations
-    enabled: true
+    enabled: false
 
 application:
-  mode: server
+  mode: desktop
 
   cors:
     allowed-origins:
@@ -61,8 +59,8 @@ application:
   message:
     datasource:
       type: primary
-    batch-size: 1000
-    flush-interval-ms: 1000
+      batch-size: 1000
+      flush-interval-ms: 1000
     websocket:
       enabled: true
       push-interval-ms: 500
