@@ -59,7 +59,7 @@ public class FileDatasourceConfig {
                 stmt.execute("PRAGMA cipher_page_size = 4096;");
                 stmt.execute("PRAGMA kdf_iter = 256000;");
                 stmt.execute("PRAGMA cipher_hmac_algorithm = HMAC_SHA512;");
-                // SQLite
+
                 stmt.execute("PRAGMA journal_mode = WAL;");
                 stmt.execute("PRAGMA busy_timeout = 10000;");
                 stmt.execute("PRAGMA foreign_keys = ON;");

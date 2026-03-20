@@ -6,6 +6,8 @@ server:
       timeout: 30m
 
 spring:
+  profiles:
+    active: dev
   application:
     name: stresspilot
   servlet:
@@ -76,9 +78,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health,shutdown"
+        include: "health"
   endpoint:
-    shutdown:
-      access: unrestricted
     health:
       show-details: always
