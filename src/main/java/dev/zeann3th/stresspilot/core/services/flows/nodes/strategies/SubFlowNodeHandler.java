@@ -58,6 +58,10 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
         FlowNodeHandlerFactory nodeHandlerFactory = nodeHandlerFactoryProvider.getObject();
 
         while (current != null) {
+            if (context.shouldStop()) {
+                break;
+            }
+
             if (jumpCount++ > MAX_JUMPS) {
                 log.warn("Sub-flow {} exceeded max jumps!", subFlowId);
                 break;

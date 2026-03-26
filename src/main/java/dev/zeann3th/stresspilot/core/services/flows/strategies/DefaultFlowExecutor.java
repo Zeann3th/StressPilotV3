@@ -129,14 +129,17 @@ public class DefaultFlowExecutor implements FlowExecutor {
 
             if (!stopSignal.get()) {
                 run.setStatus(RunStatus.COMPLETED.name());
+            } else {
+                run.setStatus(RunStatus.ABORTED.name());
             }
 
         } finally {
             activeRunRegistry.deregisterRun(run.getId());
 
+            String finalStatus = stopSignal.get() ? RunStatus.ABORTED.name() : RunStatus.COMPLETED.name();
             int updated = runStore.finalizeRun(
                     run.getId(),
-                    RunStatus.COMPLETED.name(),
+                    finalStatus,
                     LocalDateTime.now()
             );
 
@@ -153,18 +156,20 @@ public class DefaultFlowExecutor implements FlowExecutor {
             Map<String, FlowStepEntity> stepMap,
             Map<String, Object> environment,
             long totalMs, AtomicBoolean stop) {
+        long deadline = System.currentTimeMillis() + totalMs;
+
         FlowExecutionContext ctx = new FlowExecutionContext();
         ctx.setThreadId(threadId);
         ctx.setRunId(run.getId());
         ctx.setRun(run);
         ctx.setVariables(new ConcurrentHashMap<>(environment));
         ctx.setExecutionContext(new BaseExecutionContext());
+        ctx.setStopSignal(stop);
+        ctx.setDeadline(deadline);
 
         FlowStepEntity startStep = findStartNode(stepMap);
         if (startStep == null)
             return;
-
-        long deadline = System.currentTimeMillis() + totalMs;
 
         log.info("Run {} thread {} started", run.getId(), threadId);
 
@@ -190,6 +195,10 @@ public class DefaultFlowExecutor implements FlowExecutor {
         final int MAX_JUMPS = 10000;
 
         while (current != null) {
+            if (ctx.shouldStop()) {
+                break;
+            }
+
             if (jumpCount++ > MAX_JUMPS) {
                 log.warn("Iteration exceeded max jumps ({}) at step {} — breaking iteration", MAX_JUMPS,
                         current.getId());

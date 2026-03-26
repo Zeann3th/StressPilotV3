@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Data
@@ -17,6 +18,14 @@ public class FlowExecutionContext {
     private Map<String, Object> variables = new ConcurrentHashMap<>();
     private ExecutionContext executionContext;
     private final AtomicInteger iterationCount = new AtomicInteger(0);
+    private AtomicBoolean stopSignal;
+    private long deadline;
+
+    public boolean shouldStop() {
+        return (stopSignal != null && stopSignal.get())
+                || System.currentTimeMillis() >= deadline
+                || Thread.currentThread().isInterrupted();
+    }
 
     public void incrementIteration() {
         iterationCount.incrementAndGet();
