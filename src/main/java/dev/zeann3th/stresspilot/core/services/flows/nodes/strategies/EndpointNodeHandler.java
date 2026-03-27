@@ -88,6 +88,8 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .build();
         }
 
+        context.recordRequest(result.isSuccess());
+
         Map<String, Object> endpointDebug = new LinkedHashMap<>();
         endpointDebug.put("id", endpoint.getId());
         endpointDebug.put("name", endpoint.getName());

@@ -128,4 +128,5 @@ VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),
        (7, 'HTTP_PROXY_HOST', null),
        (8, 'HTTP_PROXY_PORT', null),
        (9, 'HTTP_PROXY_USERNAME', null),
-       (10, 'HTTP_PROXY_PASSWORD', null);
+       (10, 'HTTP_PROXY_PASSWORD', null),
+       (11, 'BREAKPOINT_ERROR_THRESHOLD', '0.5');

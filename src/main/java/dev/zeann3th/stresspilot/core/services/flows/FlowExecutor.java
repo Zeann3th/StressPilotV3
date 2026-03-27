@@ -8,8 +8,10 @@ import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
+import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.ExtensionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +35,19 @@ public abstract class FlowExecutor implements ExtensionPoint {
     @Autowired protected RunStore runStore;
     @Autowired protected ActiveRunRegistry activeRunRegistry;
     @Autowired protected RequestLogService requestLogService;
+    @Autowired protected FlowNodeHandlerFactory nodeHandlerFactory;
 
     public abstract String getType();
 
     public abstract boolean supports(String type);
+
+    /**
+     * Maximum number of virtual threads this executor will spawn.
+     * Override to restrict concurrency (e.g. Playwright must return 1).
+     */
+    protected int maxThreads() {
+        return Integer.MAX_VALUE;
+    }
 
     /**
      * Template method — orchestrates the full run lifecycle.
@@ -76,11 +87,13 @@ public abstract class FlowExecutor implements ExtensionPoint {
             baseEnv.putAll(cmd.getVariables());
         }
 
-        int threads = Math.max(1, cmd.getThreads());
+        int threads = Math.min(Math.max(1, cmd.getThreads()), maxThreads());
         long totalMs = (long) cmd.getTotalDuration() * 1000;
         long rampUpMs = (long) cmd.getRampUpDuration() * 1000;
         long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
         long deadline = System.currentTimeMillis() + totalMs;
+
+        beforeWorkers(runId, cmd);
 
         try (ExecutorService pool = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("sp-worker-" + runId + "-", 0).factory())) {
@@ -117,6 +130,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
             }
 
         } finally {
+            afterWorkers(runId);
             activeRunRegistry.deregisterRun(runId);
 
             boolean durationMet = System.currentTimeMillis() >= deadline;
@@ -137,6 +151,18 @@ public abstract class FlowExecutor implements ExtensionPoint {
     }
 
     /**
+     * Called once after the run is registered but before any workers are spawned.
+     * Override to perform executor-specific setup (e.g. registering with a breakpoint registry).
+     */
+    protected void beforeWorkers(String runId, RunFlowCommand cmd) { }
+
+    /**
+     * Called once in the finally block after all workers finish, before the run is deregistered.
+     * Override to perform executor-specific teardown.
+     */
+    protected void afterWorkers(String runId) { }
+
+    /**
      * Executes the work for a single virtual thread.
      * Plugin makers implement this method — the infrastructure (run save, project lookup,
      * env merge, register/deregister, finalize) is handled by the template above.
@@ -147,15 +173,54 @@ public abstract class FlowExecutor implements ExtensionPoint {
             long totalMs, AtomicBoolean stopSignal);
 
     /**
+     * Walks the flow graph for one iteration, from startStep until there is no next node.
+     */
+    protected final void executeIteration(FlowStepEntity startStep,
+            Map<String, FlowStepEntity> stepMap,
+            FlowExecutionContext ctx) {
+        FlowStepEntity current = startStep;
+        int jumpCount = 0;
+        final int MAX_JUMPS = 10000;
+
+        while (current != null) {
+            if (ctx.shouldStop()) break;
+
+            if (jumpCount++ > MAX_JUMPS) {
+                log.warn("Iteration exceeded max jumps ({}) at step {} — breaking iteration", MAX_JUMPS, current.getId());
+                break;
+            }
+
+            FlowStepType type;
+            try {
+                type = FlowStepType.valueOf(current.getType().toUpperCase());
+            } catch (IllegalArgumentException _) {
+                log.error("Unknown step type: {}", current.getType());
+                break;
+            }
+
+            String nextId = nodeHandlerFactory.getHandler(type).handle(current, stepMap, ctx);
+            current = nextId != null ? stepMap.get(nextId) : null;
+        }
+    }
+
+    protected final FlowStepEntity findStartNode(Map<String, FlowStepEntity> stepMap) {
+        return stepMap.values().stream()
+                .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Called by {@link FlowExecutorFactory} to inject infrastructure dependencies
      * into plugin-loaded extensions that are not managed by Spring.
      */
     public void initInfra(ProjectStore ps, EnvironmentVariableStore evs, RunStore rs,
-            ActiveRunRegistry arr, RequestLogService rls) {
+            ActiveRunRegistry arr, RequestLogService rls, FlowNodeHandlerFactory nhf) {
         this.projectStore = ps;
         this.envVarStore = evs;
         this.runStore = rs;
         this.activeRunRegistry = arr;
         this.requestLogService = rls;
+        this.nodeHandlerFactory = nhf;
     }
 }
