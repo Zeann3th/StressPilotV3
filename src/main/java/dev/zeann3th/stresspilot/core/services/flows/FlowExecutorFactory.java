@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
@@ -53,6 +52,6 @@ public class FlowExecutorFactory {
         List<FlowExecutor> extensions = pluginManager.getExtensions(FlowExecutor.class);
         return Stream.concat(strategies.stream(), extensions.stream())
                 .map(FlowExecutor::getType)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
