@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class RunResponseDTO {
-    private Long id;
+    private String id;
     private Long flowId;
     private String status;
     private Integer threads;

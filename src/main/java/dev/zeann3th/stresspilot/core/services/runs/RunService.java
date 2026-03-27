@@ -8,11 +8,11 @@ import java.util.List;
 public interface RunService {
     List<RunEntity> getRunHistory(Long flowId);
 
-    RunEntity getRunDetail(Long runId);
+    RunEntity getRunDetail(String runId);
 
     RunEntity getLastRun(Long flowId);
 
-    void exportRun(Long runId, HttpServletResponse response);
+    void exportRun(String runId, HttpServletResponse response);
 
-    void interruptRun(Long runId);
+    void interruptRun(String runId);
 }

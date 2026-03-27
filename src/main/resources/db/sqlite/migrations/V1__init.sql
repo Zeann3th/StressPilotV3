@@ -74,13 +74,13 @@ CREATE TABLE endpoints
 
 CREATE TABLE runs
 (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    flow_id          INTEGER     NOT NULL,
-    status           VARCHAR(10) NOT NULL,
-    threads          INTEGER     NOT NULL,
-    duration         INTEGER     NOT NULL,
-    ramp_up_duration INTEGER     NOT NULL,
-    started_at       TIMESTAMP   NOT NULL,
+    id               VARCHAR(20) PRIMARY KEY NOT NULL,
+    flow_id          INTEGER                 NOT NULL,
+    status           VARCHAR(10)             NOT NULL,
+    threads          INTEGER                 NOT NULL,
+    duration         INTEGER                 NOT NULL,
+    ramp_up_duration INTEGER                 NOT NULL,
+    started_at       TIMESTAMP               NOT NULL,
     completed_at     TIMESTAMP,
     CONSTRAINT FK_RUNS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
 );
@@ -106,8 +106,8 @@ CREATE TABLE flow_steps
 CREATE TABLE request_logs
 (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id        INTEGER   NOT NULL,
-    endpoint_id   INTEGER   NOT NULL,
+    run_id        VARCHAR(20) NOT NULL,
+    endpoint_id   INTEGER     NOT NULL,
     status_code   INTEGER   NOT NULL,
     is_success    BOOLEAN   NOT NULL,
     response_time INTEGER   NOT NULL,

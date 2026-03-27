@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.ui.grpc;
 
 import com.google.protobuf.Empty;
+import dev.zeann3th.stresspilot.grpc.ui.RunFlowResponse;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
@@ -90,10 +91,10 @@ public class FlowGrpcService extends FlowServiceGrpc.FlowServiceImplBase {
     }
 
     @Override
-    public void runFlow(RunFlowRequest request, StreamObserver<Empty> responseObserver) {
+    public void runFlow(RunFlowRequest request, StreamObserver<RunFlowResponse> responseObserver) {
         RunFlowCommand cmd = flowProtoMapper.toRunCommand(request);
-        flowService.runFlow(request.getFlowId(), cmd);
-        responseObserver.onNext(Empty.getDefaultInstance());
+        String runId = flowService.runFlow(request.getFlowId(), cmd);
+        responseObserver.onNext(RunFlowResponse.newBuilder().setRunId(runId).build());
         responseObserver.onCompleted();
     }
 

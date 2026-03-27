@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface RunStore {
     RunEntity save(RunEntity runEntity);
 
-    Optional<RunEntity> findById(Long id);
+    Optional<RunEntity> findById(String id);
 
     List<RunEntity> findAllByFlowId(Long flowId);
 
@@ -17,9 +17,9 @@ public interface RunStore {
 
     List<RunEntity> findAll();
 
-    void deleteById(Long id);
+    void deleteById(String id);
 
-    int finalizeRun(Long id, String status, LocalDateTime completedAt);
+    int finalizeRun(String id, String status, LocalDateTime completedAt);
 
-    boolean existsById(Long runId);
+    boolean existsById(String runId);
 }

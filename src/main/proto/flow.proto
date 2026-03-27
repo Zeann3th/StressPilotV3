@@ -15,7 +15,7 @@ service FlowService {
   rpc UpdateFlow    (UpdateFlowRequest)    returns (FlowResponse);
   rpc DeleteFlow    (DeleteFlowRequest)    returns (google.protobuf.Empty);
   rpc ConfigureFlow (ConfigureFlowRequest) returns (ConfigureFlowResponse);
-  rpc RunFlow       (RunFlowRequest)       returns (google.protobuf.Empty);
+  rpc RunFlow       (RunFlowRequest)       returns (RunFlowResponse);
 }
 
 message FlowStepMessage {
@@ -97,4 +97,8 @@ message ListFlowsResponse {
 
 message ConfigureFlowResponse {
   repeated FlowStepMessage steps = 1;
+}
+
+message RunFlowResponse {
+  string run_id = 1;
 }

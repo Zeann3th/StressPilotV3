@@ -49,7 +49,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
 
         jdbcTemplate.batchUpdate(sql, list, 1000, (PreparedStatement ps, RequestLogEntity entity) -> {
             ps.setLong(1, entity.getId() != null ? entity.getId() : 0L);
-            ps.setLong(2, entity.getRunId() != null ? entity.getRunId() : 0L);
+            ps.setString(2, entity.getRunId());
             ps.setLong(3, entity.getEndpointId() != null ? entity.getEndpointId() : 0L);
             ps.setObject(4, entity.getStatusCode(), java.sql.Types.INTEGER);
             ps.setObject(5, entity.getSuccess() != null ? (entity.getSuccess() ? 1 : 0) : null, java.sql.Types.INTEGER);
@@ -62,7 +62,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
     }
 
     @Override
-    public void streamLogsByRunId(Long runId, Consumer<RequestLogEntity> consumer) {
+    public void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer) {
         String sql = "SELECT id, endpoint_id, status_code, is_success, response_time, request, response, created_at FROM request_logs WHERE run_id = ?";
 
         jdbcTemplate.query(sql, rs -> {
@@ -97,7 +97,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
     }
 
     @Override
-    public RunReport calculateRunReport(Long runId, RunEntity run) {
+    public RunReport calculateRunReport(String runId, RunEntity run) {
         String summarySql = """
             SELECT 
               count() as total_requests, 

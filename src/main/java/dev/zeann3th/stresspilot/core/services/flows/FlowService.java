@@ -23,5 +23,5 @@ public interface FlowService {
 
     FlowEntity configureFlow(Long flowId, List<FlowStepCommand> steps);
 
-    void runFlow(Long flowId, RunFlowCommand runFlowCommand);
+    String runFlow(Long flowId, RunFlowCommand runFlowCommand);
 }

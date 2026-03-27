@@ -34,7 +34,7 @@ public class RunController {
     }
 
     @GetMapping("/{runId}")
-    public RunResponseDTO getRunDetail(@PathVariable Long runId) {
+    public RunResponseDTO getRunDetail(@PathVariable String runId) {
         RunEntity resp = runService.getRunDetail(runId);
         return runMapper.toResponse(resp);
     }
@@ -50,14 +50,14 @@ public class RunController {
             @ApiResponse(responseCode = "200", description = "Excel file downloaded successfully", content = @Content(mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", schema = @Schema(type = "string", format = "binary")))
     })
     public void exportRun(
-            @PathVariable Long runId,
+            @PathVariable String runId,
             HttpServletResponse response) {
         runService.exportRun(runId, response);
     }
 
     @DeleteMapping("/{runId}")
     @Operation(summary = "Interrupt Run", description = "Interrupts an ongoing run.")
-    public void interruptRun(@PathVariable Long runId) {
+    public void interruptRun(@PathVariable String runId) {
         runService.interruptRun(runId);
     }
 }

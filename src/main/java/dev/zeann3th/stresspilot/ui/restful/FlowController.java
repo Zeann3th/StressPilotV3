@@ -90,14 +90,14 @@ public class FlowController {
 
     @PostMapping(value = "/{flowId}/execute", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void runFlow(
+    public String runFlow(
             @PathVariable Long flowId,
             @Parameter(content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)) @RequestPart("request") RunFlowRequestDTO runFlowRequestDTO,
             @RequestPart(value = "file", required = false) MultipartFile file) {
         List<Map<String, Object>> credentials = parseCredentialsFile(file);
         var command = flowMapper.toRunCommand(runFlowRequestDTO);
         command.setCredentials(credentials);
-        flowService.runFlow(flowId, command);
+        return flowService.runFlow(flowId, command);
     }
 
     private List<Map<String, Object>> parseCredentialsFile(MultipartFile file) {

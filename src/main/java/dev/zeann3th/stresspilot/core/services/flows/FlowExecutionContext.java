@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FlowExecutionContext {
 
     private int threadId;
-    private Long runId;
+    private String runId;
     private RunEntity run;
     private Map<String, Object> variables = new ConcurrentHashMap<>();
     private ExecutionContext executionContext;

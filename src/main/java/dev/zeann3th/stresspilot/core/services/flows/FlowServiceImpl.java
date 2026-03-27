@@ -19,12 +19,12 @@ import dev.zeann3th.stresspilot.core.ports.store.FlowStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
+import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,7 +43,8 @@ public class FlowServiceImpl implements FlowService {
     private final EndpointStore endpointStore;
     private final JsonMapper jsonMapper;
     private final ActiveRunRegistry activeRunRegistry;
-    private final FlowExecutorFactory flowExecutorFactory;
+    private final FlowAsyncRunner flowAsyncRunner;
+    private final SnowflakeId snowflakeId;
 
     @Override
     @Transactional(readOnly = true)
@@ -130,9 +131,8 @@ public class FlowServiceImpl implements FlowService {
     }
 
     @Override
-    @Async
     @SuppressWarnings("java:S3776")
-    public void runFlow(Long flowId, RunFlowCommand runFlowCommand) {
+    public String runFlow(Long flowId, RunFlowCommand runFlowCommand) {
         FlowEntity flow = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
 
@@ -144,7 +144,9 @@ public class FlowServiceImpl implements FlowService {
         sortSteps(steps);
         validateStartStep(steps);
 
-        flowExecutorFactory.getStrategy(flow.getType()).execute(flow, steps, runFlowCommand);
+        String runId = String.valueOf(snowflakeId.nextId());
+        flowAsyncRunner.run(runId, flow, steps, runFlowCommand);
+        return runId;
     }
 
     private List<FlowStepEntity> stepsFromCommands(FlowEntity flow, List<FlowStepCommand> cmds) {

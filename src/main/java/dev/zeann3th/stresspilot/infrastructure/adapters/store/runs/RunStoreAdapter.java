@@ -22,7 +22,7 @@ public class RunStoreAdapter implements RunStore {
     }
 
     @Override
-    public Optional<RunEntity> findById(Long id) {
+    public Optional<RunEntity> findById(String id) {
         return runJpaRepository.findById(id);
     }
 
@@ -42,18 +42,18 @@ public class RunStoreAdapter implements RunStore {
     }
 
     @Override
-    public void deleteById(Long id) {
+    public void deleteById(String id) {
         runJpaRepository.deleteById(id);
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public int finalizeRun(Long id, String status, LocalDateTime completedAt) {
+    public int finalizeRun(String id, String status, LocalDateTime completedAt) {
         return runJpaRepository.finalizeRun(id, status, completedAt);
     }
 
     @Override
-    public boolean existsById(Long runId) {
+    public boolean existsById(String runId) {
         return runJpaRepository.existsById(runId);
     }
 }

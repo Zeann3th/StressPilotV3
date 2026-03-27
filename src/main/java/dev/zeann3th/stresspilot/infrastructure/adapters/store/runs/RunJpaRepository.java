@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RunJpaRepository extends JpaRepository<RunEntity, Long> {
+public interface RunJpaRepository extends JpaRepository<RunEntity, String> {
     @Query("SELECT r FROM RunEntity r WHERE r.flow.id = :flowId ORDER BY r.startedAt DESC")
     List<RunEntity> findByFlowIdOrderByStartedAtDesc(@Param("flowId") Long flowId);
 
@@ -25,8 +25,7 @@ public interface RunJpaRepository extends JpaRepository<RunEntity, Long> {
     @Modifying
     @Query("UPDATE RunEntity r SET r.status = :status, r.completedAt = :completedAt " +
             "WHERE r.id = :id AND r.status = 'RUNNING'")
-    int finalizeRun(@Param("id") Long id,
+    int finalizeRun(@Param("id") String id,
                     @Param("status") String status,
-                    @Param("completedAt") LocalDateTime completedAt
-    );
+                    @Param("completedAt") LocalDateTime completedAt);
 }

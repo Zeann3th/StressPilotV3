@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 public interface RequestLogStore {
     RequestLogEntity save(RequestLogEntity entity);
     List<RequestLogEntity> saveAll(Iterable<RequestLogEntity> entities);
-    RunReport calculateRunReport(Long runId, RunEntity run);
+    RunReport calculateRunReport(String runId, RunEntity run);
 
-    void streamLogsByRunId(Long runId, Consumer<RequestLogEntity> consumer);
+    void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer);
 }

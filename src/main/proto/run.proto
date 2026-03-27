@@ -16,7 +16,7 @@ service RunService {
 }
 
 message InterruptRunRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 message ListRunsRequest {
@@ -24,7 +24,7 @@ message ListRunsRequest {
 }
 
 message GetRunRequest {
-  int64 id = 1;
+  string id = 1;
 }
 
 message GetLastRunRequest {
@@ -32,7 +32,7 @@ message GetLastRunRequest {
 }
 
 message RunResponse {
-  int64  id               = 1;
+  string id               = 1;
   int64  flow_id          = 2;
   string status           = 3;
   int32  threads          = 4;

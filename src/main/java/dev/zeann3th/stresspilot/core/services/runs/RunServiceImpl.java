@@ -44,7 +44,7 @@ public class RunServiceImpl implements RunService {
     }
 
     @Override
-    public RunEntity getRunDetail(Long runId) {
+    public RunEntity getRunDetail(String runId) {
         return runStore.findById(runId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
     }
@@ -56,7 +56,7 @@ public class RunServiceImpl implements RunService {
 
     @Override
     @Transactional(readOnly = true)
-    public void exportRun(Long runId, HttpServletResponse response) {
+    public void exportRun(String runId, HttpServletResponse response) {
         RunEntity run = runStore.findById(runId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
 
@@ -93,16 +93,20 @@ public class RunServiceImpl implements RunService {
 
     @Override
     @Transactional
-    public void interruptRun(Long runId) {
-        if (!runStore.existsById(runId)) {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0010);
-        }
+    public void interruptRun(String runId) {
+        RunEntity run = runStore.findById(runId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
 
         eventPublisher.publishEvent(new InterruptRunEvent(runId));
 
-        int updated = runStore.finalizeRun(runId, RunStatus.ABORTED.name(), LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        boolean durationMet = run.getStartedAt() != null && run.getDuration() != null
+                && !now.isBefore(run.getStartedAt().plusSeconds(run.getDuration()));
+        String finalStatus = durationMet ? RunStatus.COMPLETED.name() : RunStatus.ABORTED.name();
+
+        int updated = runStore.finalizeRun(runId, finalStatus, now);
         if (updated == 0) {
-            log.warn("Run {} could not be aborted - already finished", runId);
+            log.warn("Run {} could not be finalized - already finished", runId);
         }
     }
 

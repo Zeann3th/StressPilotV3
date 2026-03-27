@@ -35,8 +35,7 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public void streamLogsByRunId(Long runId, Consumer<RequestLogEntity> consumer) {
+    @Transactional(readOnly = true) public void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer) {
         try (Stream<RequestLogEntity> stream = repository.streamAllByRunId(runId)) {
             stream.forEach(consumer);
         }
@@ -44,7 +43,7 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
 
     @Override
     @SuppressWarnings("java:S3776")
-    public RunReport calculateRunReport(Long runId, RunEntity run) {
+    public RunReport calculateRunReport(String runId, RunEntity run) {
         RunReport.RunReportBuilder builder = RunReport.builder().runId(runId);
 
         List<Object[]> summaryRows = repository.getRunSummaryStats(runId);

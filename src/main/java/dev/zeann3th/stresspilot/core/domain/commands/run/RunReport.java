@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RunReport {
-    private Long runId;
+    private String runId;
     private Integer totalRequests;
     private Integer successCount;
     private Integer failureCount;
