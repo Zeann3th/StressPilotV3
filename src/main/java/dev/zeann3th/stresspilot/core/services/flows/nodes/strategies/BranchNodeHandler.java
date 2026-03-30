@@ -21,8 +21,8 @@ public class BranchNodeHandler implements FlowNodeHandler {
     private static final SpelExpressionParser SPEL = new SpelExpressionParser();
 
     @Override
-    public FlowStepType getSupportedType() {
-        return FlowStepType.BRANCH;
+    public String getSupportedType() {
+        return FlowStepType.BRANCH.name();
     }
 
     @Override

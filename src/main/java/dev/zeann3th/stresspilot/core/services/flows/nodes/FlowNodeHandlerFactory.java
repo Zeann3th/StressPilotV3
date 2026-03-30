@@ -2,7 +2,6 @@ package dev.zeann3th.stresspilot.core.services.flows.nodes;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
-import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,7 +17,7 @@ public class FlowNodeHandlerFactory {
 
     private final List<FlowNodeHandler> handlers;
 
-    private Map<FlowStepType, FlowNodeHandler> handlerMap;
+    private Map<String, FlowNodeHandler> handlerMap;
 
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -26,7 +25,7 @@ public class FlowNodeHandlerFactory {
                 .collect(Collectors.toMap(FlowNodeHandler::getSupportedType, Function.identity()));
     }
 
-    public FlowNodeHandler getHandler(FlowStepType type) {
+    public FlowNodeHandler getHandler(String type) {
         FlowNodeHandler handler = handlerMap.get(type);
         if (handler == null) {
             throw CommandExceptionBuilder.exception(ErrorCode.ER0021,

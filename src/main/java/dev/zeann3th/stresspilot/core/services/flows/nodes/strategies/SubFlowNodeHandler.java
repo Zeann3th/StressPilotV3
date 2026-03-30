@@ -25,8 +25,8 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
     private final ObjectProvider<FlowNodeHandlerFactory> nodeHandlerFactoryProvider;
 
     @Override
-    public FlowStepType getSupportedType() {
-        return FlowStepType.SUBFLOW;
+    public String getSupportedType() {
+        return FlowStepType.SUBFLOW.name();
     }
 
     @Override
@@ -67,7 +67,7 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
                 break;
             }
 
-            FlowStepType type = FlowStepType.valueOf(current.getType().toUpperCase());
+            String type = current.getType().toUpperCase();
 
             String nextId = nodeHandlerFactory.getHandler(type).handle(current, subStepMap, context);
 

@@ -51,8 +51,8 @@ public class EndpointNodeHandler implements FlowNodeHandler {
     }
 
     @Override
-    public FlowStepType getSupportedType() {
-        return FlowStepType.ENDPOINT;
+    public String getSupportedType() {
+        return FlowStepType.ENDPOINT.name();
     }
 
     @Override

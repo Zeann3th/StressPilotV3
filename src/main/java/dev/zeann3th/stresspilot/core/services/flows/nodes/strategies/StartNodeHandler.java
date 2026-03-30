@@ -12,8 +12,8 @@ import java.util.Map;
 public class StartNodeHandler implements FlowNodeHandler {
 
     @Override
-    public FlowStepType getSupportedType() {
-        return FlowStepType.START;
+    public String getSupportedType() {
+        return FlowStepType.START.name();
     }
 
     @Override

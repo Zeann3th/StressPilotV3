@@ -190,13 +190,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 break;
             }
 
-            FlowStepType type;
-            try {
-                type = FlowStepType.valueOf(current.getType().toUpperCase());
-            } catch (IllegalArgumentException _) {
-                log.error("Unknown step type: {}", current.getType());
-                break;
-            }
+            String type = current.getType().toUpperCase();
 
             String nextId = nodeHandlerFactory.getHandler(type).handle(current, stepMap, ctx);
             current = nextId != null ? stepMap.get(nextId) : null;
