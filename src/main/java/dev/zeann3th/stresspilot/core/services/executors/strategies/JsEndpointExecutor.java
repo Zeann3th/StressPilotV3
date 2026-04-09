@@ -2,21 +2,19 @@ package dev.zeann3th.stresspilot.core.services.executors.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.FunctionEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.services.executors.context.JsExecutionContext;
+import dev.zeann3th.stresspilot.core.services.functions.FunctionService;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.*;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +28,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JsEndpointExecutor implements EndpointExecutor {
 
-    private static final String UDF_ENV_KEY = "stresspilot-user-defined-functions";
+    private final FunctionService functionService;
 
     private Engine engine;
 
@@ -41,17 +39,25 @@ public class JsEndpointExecutor implements EndpointExecutor {
         engine = Engine.newBuilder("js")
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
-        List<String> udfs = loadUdfsFromStorage();
+        loadUserDefinedFunctions();
+    }
 
-        if (!udfs.isEmpty()) {
-            String combined = String.join("\n", udfs);
+    public void loadUserDefinedFunctions() {
+        List<FunctionEntity> functions = functionService.getAllFunctions();
+        List<String> activeUdfs = functions.stream()
+                .filter(f -> f.getActive() != null && f.getActive())
+                .map(FunctionEntity::getBody)
+                .toList();
+
+        if (!activeUdfs.isEmpty()) {
+            String combined = String.join("\n", activeUdfs);
             udfSource = Source.newBuilder("js", combined, "udf-library.js")
                     .cached(true)
                     .buildLiteral();
-            log.info("Loaded {} user-defined function(s) into JS engine", udfs.size());
+            log.info("Loaded {} user-defined function(s) into JS engine", activeUdfs.size());
         } else {
             udfSource = null;
-            log.info("No user-defined functions found at startup");
+            log.info("No active user-defined functions found");
         }
     }
 
@@ -60,10 +66,6 @@ public class JsEndpointExecutor implements EndpointExecutor {
         if (engine != null) {
             engine.close();
         }
-    }
-
-    private List<String> loadUdfsFromStorage() {
-        return List.of();
     }
 
     @Override
@@ -86,8 +88,6 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String functionName = jsState.getFunctionName();
         List<Object> functionArgs = jsState.getFunctionArgs();
 
-        List<String> runtimeUdfs = getRuntimeUdfs(environment);
-
         try (Context context = Context.newBuilder("js")
                 .engine(engine)
                 .allowHostAccess(HostAccess.ALL)
@@ -108,23 +108,6 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
             if (udfSource != null) {
                 context.eval(udfSource);
-            }
-
-            if (!runtimeUdfs.isEmpty()) {
-                for (String udf : runtimeUdfs) {
-                    if (udf != null && !udf.isBlank()) {
-                        try {
-                            context.eval("js", udf);
-                        } catch (Exception e) {
-                            return ExecuteEndpointResponse.builder()
-                                    .statusCode(500)
-                                    .success(false)
-                                    .responseTimeMs(System.currentTimeMillis() - startTime)
-                                    .message("Failed to load runtime UDF: " + e.getMessage())
-                                    .build();
-                        }
-                    }
-                }
             }
 
             Value result;
@@ -186,15 +169,6 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .message("JS Execution Error: " + e.getMessage())
                     .build();
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<String> getRuntimeUdfs(Map<String, Object> environment) {
-        Object raw = environment.get(UDF_ENV_KEY);
-        if (raw instanceof List<?> list) {
-            return (List<String>) list;
-        }
-        return List.of();
     }
 
     private Object safeUnwrap(Value v) {

@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "FunctionProto";
+
+import "google/protobuf/empty.proto";
+
+service FunctionService {
+  rpc ListFunctions (ListFunctionsRequest) returns (ListFunctionsResponse);
+  rpc GetFunction   (GetFunctionRequest)   returns (FunctionResponse);
+  rpc CreateFunction(CreateFunctionRequest) returns (FunctionResponse);
+  rpc UpdateFunction(UpdateFunctionRequest) returns (FunctionResponse);
+  rpc DeleteFunction(DeleteFunctionRequest) returns (google.protobuf.Empty);
+}
+
+message ListFunctionsRequest {
+  string name = 1;
+  int32  page = 2;
+  int32  size = 3;
+  string sort = 4;
+}
+
+message GetFunctionRequest {
+  int64 id = 1;
+}
+
+message CreateFunctionRequest {
+  string name        = 1;
+  string body        = 2;
+  string description = 3;
+}
+
+message UpdateFunctionRequest {
+  int64  id          = 1;
+  string name        = 2;
+  string body        = 3;
+  string description = 4;
+}
+
+message DeleteFunctionRequest {
+  int64 id = 1;
+}
+
+message FunctionResponse {
+  int64  id          = 1;
+  string name        = 2;
+  string body        = 3;
+  string description = 4;
+  bool   active      = 5;
+  string created_at  = 6;
+  string updated_at  = 7;
+}
+
+message ListFunctionsResponse {
+  repeated FunctionResponse functions      = 1;
+  int64                     total_elements = 2;
+  int32                     total_pages    = 3;
+  int32                     page           = 4;
+  int32                     size           = 5;
+}

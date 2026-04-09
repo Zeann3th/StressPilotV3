@@ -17,7 +17,7 @@ public class JsEndpointValidator implements EndpointTypeValidator {
 
     @Override
     public boolean isValid(CreateEndpointRequestDTO request, ConstraintValidatorContext context) {
-        if (request.getBody() == null || request.getBody().isBlank()) {
+        if (request.getBody() == null || request.getBody().toString().isBlank()) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate("JS endpoint requires a script in the body")
                     .addPropertyNode("body")
