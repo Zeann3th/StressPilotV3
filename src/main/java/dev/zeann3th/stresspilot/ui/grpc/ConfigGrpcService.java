@@ -3,7 +3,7 @@ package dev.zeann3th.stresspilot.ui.grpc;
 import com.google.protobuf.Empty;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandException;
-import dev.zeann3th.stresspilot.core.services.ConfigService;
+import dev.zeann3th.stresspilot.core.services.configs.ConfigService;
 import dev.zeann3th.stresspilot.grpc.ui.*;
 import dev.zeann3th.stresspilot.ui.grpc.mappers.ConfigProtoMapper;
 import io.grpc.stub.StreamObserver;

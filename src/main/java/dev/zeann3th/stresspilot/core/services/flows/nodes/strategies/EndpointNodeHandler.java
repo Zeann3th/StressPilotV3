@@ -8,7 +8,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
-import dev.zeann3th.stresspilot.core.services.ConfigService;
+import dev.zeann3th.stresspilot.core.services.configs.ConfigService;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorFactory;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;

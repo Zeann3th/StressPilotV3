@@ -10,7 +10,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
-import dev.zeann3th.stresspilot.core.services.ConfigService;
+import dev.zeann3th.stresspilot.core.services.configs.ConfigService;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;

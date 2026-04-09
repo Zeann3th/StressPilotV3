@@ -1,8 +1,9 @@
-package dev.zeann3th.stresspilot.core.services;
+package dev.zeann3th.stresspilot.core.services.plugins;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
+import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +22,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class PluginService implements ApplicationListener<ApplicationReadyEvent> {
+public class PluginServiceImpl implements PluginService, ApplicationListener<ApplicationReadyEvent> {
     private final SpringPluginManager pluginManager;
     private final ActiveRunRegistry activeRunRegistry;
 

@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services;
+package dev.zeann3th.stresspilot.core.services.configs;
 
 import dev.zeann3th.stresspilot.core.domain.entities.ConfigEntity;
 import dev.zeann3th.stresspilot.core.ports.store.ConfigStore;
@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ConfigService {
+public class ConfigServiceImpl implements ConfigService {
     private final ConfigStore configStore;
 
     public Map<String, String> getAllConfigs() {
@@ -46,4 +46,3 @@ public class ConfigService {
         configStore.save(configEntity);
     }
 }
-

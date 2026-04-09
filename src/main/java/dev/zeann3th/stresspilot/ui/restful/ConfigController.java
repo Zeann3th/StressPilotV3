@@ -1,6 +1,6 @@
 package dev.zeann3th.stresspilot.ui.restful;
 
-import dev.zeann3th.stresspilot.core.services.ConfigService;
+import dev.zeann3th.stresspilot.core.services.configs.ConfigService;
 import dev.zeann3th.stresspilot.ui.restful.dtos.config.ConfigDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;

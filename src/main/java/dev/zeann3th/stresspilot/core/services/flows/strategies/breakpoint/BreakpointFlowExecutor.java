@@ -5,7 +5,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ConfigKey;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
-import dev.zeann3th.stresspilot.core.services.ConfigService;
+import dev.zeann3th.stresspilot.core.services.configs.ConfigService;
 import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutor;
@@ -41,7 +41,7 @@ public class BreakpointFlowExecutor extends FlowExecutor {
         double threshold = configService.getValue(ConfigKey.BREAKPOINT_ERROR_THRESHOLD.name())
                 .map(v -> {
                     try { return Double.parseDouble(v); }
-                    catch (NumberFormatException e) { return DEFAULT_THRESHOLD; }
+                    catch (NumberFormatException _) { return DEFAULT_THRESHOLD; }
                 })
                 .orElse(DEFAULT_THRESHOLD);
         breakpointRegistry.register(runId, threshold);
