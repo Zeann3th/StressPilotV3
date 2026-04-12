@@ -118,6 +118,18 @@ CREATE TABLE request_logs
     CONSTRAINT FK_REQUEST_LOGS_ON_RUN FOREIGN KEY (run_id) REFERENCES runs (id) ON DELETE CASCADE
 );
 
+CREATE TABLE functions
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TIMESTAMP,
+    updated_at  TIMESTAMP,
+    name        VARCHAR(100) NOT NULL,
+    body        TEXT         NOT NULL,
+    description VARCHAR(500),
+    is_active   BOOLEAN      NOT NULL,
+    CONSTRAINT uc_functions_name UNIQUE (name)
+);
+
 INSERT INTO configs (id, config_key, config_value)
 VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),
        (2, 'HTTP_READ_TIMEOUT', '30'),
