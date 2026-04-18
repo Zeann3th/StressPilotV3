@@ -12,7 +12,6 @@ import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
-import dev.zeann3th.stresspilot.core.services.metrics.MetricsPollerManager;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.ExtensionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +35,6 @@ public abstract class FlowExecutor implements ExtensionPoint {
     @Autowired protected RunStore runStore;
     @Autowired protected ActiveRunRegistry activeRunRegistry;
     @Autowired protected RequestLogService requestLogService;
-    @Autowired protected MetricsPollerManager metricsPollerManager;
     @Autowired protected FlowNodeHandlerFactory nodeHandlerFactory;
 
     public abstract String getType();
@@ -58,7 +56,6 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 .threads(cmd.getThreads())
                 .duration(cmd.getTotalDuration())
                 .rampUpDuration(cmd.getRampUpDuration())
-                .metricsEndpoint(cmd.getMetricsEndpoint())
                 .startedAt(LocalDateTime.now())
                 .build());
 
@@ -89,7 +86,6 @@ public abstract class FlowExecutor implements ExtensionPoint {
         long deadline = System.currentTimeMillis() + totalMs;
 
         beforeWorkers(runId, cmd);
-        metricsPollerManager.start(run);
 
         try (ExecutorService pool = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("sp-worker-" + runId + "-", 0).factory())) {
@@ -126,7 +122,6 @@ public abstract class FlowExecutor implements ExtensionPoint {
             }
 
         } finally {
-            metricsPollerManager.stop(runId);
             afterWorkers(runId);
             activeRunRegistry.deregisterRun(runId);
 
@@ -186,13 +181,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
     }
 
     public void initInfra(ProjectStore ps, EnvironmentVariableStore evs, RunStore rs,
-            ActiveRunRegistry arr, RequestLogService rls, MetricsPollerManager mpm, FlowNodeHandlerFactory nhf) {
+            ActiveRunRegistry arr, RequestLogService rls, FlowNodeHandlerFactory nhf) {
         this.projectStore = ps;
         this.envVarStore = evs;
         this.runStore = rs;
         this.activeRunRegistry = arr;
         this.requestLogService = rls;
-        this.metricsPollerManager = mpm;
         this.nodeHandlerFactory = nhf;
     }
 }

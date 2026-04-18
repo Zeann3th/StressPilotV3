@@ -11,7 +11,6 @@ public class RunResponseDTO {
     private Integer threads;
     private Integer duration;
     private Integer rampUpDuration;
-    private String metricsEndpoint;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
 }

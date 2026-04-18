@@ -80,7 +80,6 @@ CREATE TABLE runs
     threads          INTEGER                 NOT NULL,
     duration         INTEGER                 NOT NULL,
     ramp_up_duration INTEGER                 NOT NULL,
-    metrics_endpoint VARCHAR(255),
     started_at       TIMESTAMP               NOT NULL,
     completed_at     TIMESTAMP,
     CONSTRAINT FK_RUNS_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
@@ -130,44 +129,6 @@ CREATE TABLE functions
     is_active   BOOLEAN      NOT NULL,
     CONSTRAINT uc_functions_name UNIQUE (name)
 );
-
-CREATE TABLE metric_defs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    unit VARCHAR(50),
-    description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE metric_scrape_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_id VARCHAR(20) NOT NULL,
-    host VARCHAR(255) NOT NULL,
-    collected_at TIMESTAMP NOT NULL,
-    source VARCHAR(10),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (run_id) REFERENCES runs(id)
-);
-
-CREATE INDEX idx_metric_scrape_events_run_id ON metric_scrape_events(run_id);
-CREATE INDEX idx_metric_scrape_events_collected_at ON metric_scrape_events(collected_at);
-
-CREATE TABLE metric_values (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id INTEGER NOT NULL,
-    def_id INTEGER NOT NULL,
-    value DOUBLE NOT NULL,
-    labels TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (event_id) REFERENCES metric_scrape_events(id),
-    FOREIGN KEY (def_id) REFERENCES metric_defs(id)
-);
-
-CREATE INDEX idx_metric_values_event_id ON metric_values(event_id);
-CREATE INDEX idx_metric_values_def_id ON metric_values(def_id);
 
 INSERT INTO configs (id, config_key, config_value)
 VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),

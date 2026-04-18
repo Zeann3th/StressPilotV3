@@ -38,9 +38,6 @@ public class RunEntity {
     @Column(name = "ramp_up_duration", nullable = false)
     private Integer rampUpDuration;
 
-    @Column(name = "metrics_endpoint")
-    private String metricsEndpoint;
-
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(name = "started_at", nullable = false, updatable = false)
     private LocalDateTime startedAt;

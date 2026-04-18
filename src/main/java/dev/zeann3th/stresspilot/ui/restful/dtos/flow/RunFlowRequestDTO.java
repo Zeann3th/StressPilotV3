@@ -13,7 +13,6 @@ public class RunFlowRequestDTO {
     private int totalDuration;
     @Min(0)
     private int rampUpDuration;
-    private String metricsEndpoint;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;
 }
