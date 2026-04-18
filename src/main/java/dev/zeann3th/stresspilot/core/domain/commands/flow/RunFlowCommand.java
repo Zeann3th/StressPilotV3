@@ -18,4 +18,5 @@ public class RunFlowCommand {
     private int rampUpDuration;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;
+    private String runMode;
 }

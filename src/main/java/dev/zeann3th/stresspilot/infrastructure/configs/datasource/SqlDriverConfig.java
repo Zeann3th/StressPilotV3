@@ -39,8 +39,8 @@ public class SqlDriverConfig {
     public synchronized void refreshDrivers() {
         File folder = new File(driversPath);
 
-        if (!folder.exists()) {
-            log.warn("Drivers directory not found: {}", folder.getAbsolutePath());
+        if (!folder.exists() && !folder.mkdirs()) {
+            log.error("Failed to create drivers directory: {}", folder.getAbsolutePath());
             return;
         }
 

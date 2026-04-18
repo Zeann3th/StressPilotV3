@@ -11,8 +11,8 @@ public class RunFlowRequestDTO {
     private int threads;
     @Min(1)
     private int totalDuration;
-    @Min(0)
     private int rampUpDuration;
+    private String runMode;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;
 }

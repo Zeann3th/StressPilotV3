@@ -50,6 +50,9 @@ public interface FlowProtoMapper {
                                 .threads(request.getThreads())
                                 .totalDuration(request.getTotalDuration())
                                 .rampUpDuration(request.getRampUpDuration())
+                                .runMode(request.getRunMode() == null || request.getRunMode().isBlank()
+                                                ? dev.zeann3th.stresspilot.core.domain.enums.FlowRunType.LOCAL.name()
+                                                : request.getRunMode())
                                 .variables(variables)
                                 .credentials(credentials)
                                 .build();
