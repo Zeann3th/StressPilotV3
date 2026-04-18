@@ -1,7 +1,9 @@
 package dev.zeann3th.stresspilot.ui.grpc;
 
 import com.google.protobuf.Empty;
-import dev.zeann3th.stresspilot.core.domain.commands.endpoint.*;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.CreateEndpointCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteAdhocEndpointCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.services.endpoints.EndpointService;
 import dev.zeann3th.stresspilot.grpc.ui.*;
@@ -14,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.grpc.server.service.GrpcService;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
 
@@ -25,7 +26,6 @@ public class EndpointGrpcService extends EndpointServiceGrpc.EndpointServiceImpl
 
     private final EndpointService endpointService;
     private final EndpointProtoMapper endpointProtoMapper;
-    private final JsonMapper jsonMapper;
 
     @Override
     public void listEndpoints(ListEndpointsRequest request, StreamObserver<ListEndpointsResponse> responseObserver) {
@@ -93,8 +93,6 @@ public class EndpointGrpcService extends EndpointServiceGrpc.EndpointServiceImpl
         responseObserver.onCompleted();
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
     private static Map<String, Object> buildPatchMap(UpdateEndpointRequest r) {
         Map<String, Object> patch = new java.util.LinkedHashMap<>();
         if (!r.getName().isBlank())
@@ -121,7 +119,7 @@ public class EndpointGrpcService extends EndpointServiceGrpc.EndpointServiceImpl
     }
 
     private static Pageable toPageable(int page, int size, String sort) {
-        int safePage = page <= 0 ? 0 : page;
+        int safePage = Math.max(page, 0);
         int safeSize = size <= 0 ? 20 : size;
         if (sort != null && !sort.isBlank()) {
             return PageRequest.of(safePage, safeSize, Sort.by(sort));

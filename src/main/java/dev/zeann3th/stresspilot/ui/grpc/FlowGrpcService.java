@@ -98,10 +98,8 @@ public class FlowGrpcService extends FlowServiceGrpc.FlowServiceImplBase {
         responseObserver.onCompleted();
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
     private static Pageable toPageable(int page, int size, String sort) {
-        int safePage = page <= 0 ? 0 : page;
+        int safePage = Math.max(page, 0);
         int safeSize = size <= 0 ? 20 : size;
         if (sort != null && !sort.isBlank()) {
             return PageRequest.of(safePage, safeSize, Sort.by(sort));

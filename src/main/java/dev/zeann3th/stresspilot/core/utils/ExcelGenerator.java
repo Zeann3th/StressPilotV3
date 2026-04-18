@@ -141,10 +141,10 @@ public class ExcelGenerator {
         createCell(dataRow, 4, logDto.getResponseTime(), numberStyle);
         trackWidth(4, String.valueOf(logDto.getResponseTime()));
 
-        // Col 5: Request (FIXED WIDTH, WRAPPED) -> NO TRACKING
+        // Col 5: Request
         createCell(dataRow, 5, truncateText(logDto.getRequest()), wrapStyle);
 
-        // Col 6: Response (FIXED WIDTH, WRAPPED) -> NO TRACKING
+        // Col 6: Response
         createCell(dataRow, 6, truncateText(logDto.getResponse()), wrapStyle);
 
         // Col 7: Timestamp

@@ -52,8 +52,4 @@ public class RunStoreAdapter implements RunStore {
         return runJpaRepository.finalizeRun(id, status, completedAt);
     }
 
-    @Override
-    public boolean existsById(String runId) {
-        return runJpaRepository.existsById(runId);
-    }
 }

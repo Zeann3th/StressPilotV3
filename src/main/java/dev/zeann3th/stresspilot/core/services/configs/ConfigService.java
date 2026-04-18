@@ -12,4 +12,3 @@ public interface ConfigService {
 
     void setValue(String key, String value);
 }
-

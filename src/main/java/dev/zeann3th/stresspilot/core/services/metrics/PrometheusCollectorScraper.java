@@ -61,7 +61,7 @@ public class PrometheusCollectorScraper {
             if (line.isBlank()) continue;
 
             if (line.startsWith("# HELP ")) {
-                // "# HELP metric_name description text"
+
                 String rest = line.substring(7);
                 int space = rest.indexOf(' ');
                 if (space > 0) {
@@ -85,7 +85,7 @@ public class PrometheusCollectorScraper {
                     .event(event)
                     .def(def)
                     .value(parsed.value())
-                    .labels(parsed.labelsJson())     // null when no labels
+                    .labels(parsed.labelsJson())
                     .build();
 
             event.getValues().add(value);
@@ -101,7 +101,7 @@ public class PrometheusCollectorScraper {
     }
 
     private ParsedLine parseLine(String line) {
-        // split off optional timestamp: last token if it looks like an epoch ms
+
         String[] tokens = line.split("\\s+");
         if (tokens.length < 2) return null;
 
@@ -118,7 +118,7 @@ public class PrometheusCollectorScraper {
 
         int braceOpen = nameWithLabels.indexOf('{');
         if (braceOpen < 0) {
-            // no labels
+
             return new ParsedLine(nameWithLabels, value, null);
         }
 
@@ -140,7 +140,7 @@ public class PrometheusCollectorScraper {
             int eq = pair.indexOf('=');
             if (eq < 0) continue;
             String key = pair.substring(0, eq);
-            String val = pair.substring(eq + 1).replaceAll("^\"|\"$", ""); // strip surrounding quotes
+            String val = pair.substring(eq + 1).replaceAll("^\"|\"$", "");
             sb.append("\"").append(escapeJson(key)).append("\":")
                     .append("\"").append(escapeJson(val)).append("\"");
             if (i < pairs.length - 1) sb.append(",");

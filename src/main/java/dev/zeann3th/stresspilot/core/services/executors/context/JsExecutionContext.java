@@ -1,6 +1,5 @@
 package dev.zeann3th.stresspilot.core.services.executors.context;
 
-
 import lombok.Getter;
 import lombok.Setter;
 

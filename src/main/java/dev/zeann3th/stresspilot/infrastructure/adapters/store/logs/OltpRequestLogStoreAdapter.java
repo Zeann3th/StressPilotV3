@@ -68,7 +68,6 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
                     .tps(durationSec <= 0 ? 0.0 : round(totalReq / durationSec));
         }
 
-        // Calculate Percentiles
         List<Long> times = repository.findResponseTimesByRunId(runId);
         Collections.sort(times);
         builder.p90(round(percentile(times, 90))).p95(round(percentile(times, 95)));
@@ -88,7 +87,6 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
                     .build();
         }).toList();
 
-        // Map Endpoint Percentiles
         Map<Long, List<Long>> epTimes = repository.findEndpointResponseTimesByRunId(runId).stream()
                 .collect(Collectors.groupingBy(
                         row -> (Long) row[0],

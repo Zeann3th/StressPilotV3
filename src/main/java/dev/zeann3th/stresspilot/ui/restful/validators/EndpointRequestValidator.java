@@ -32,7 +32,6 @@ public class EndpointRequestValidator implements ConstraintValidator<ValidEndpoi
         String type = request.getType().toUpperCase().trim();
         log.debug("Validating endpoint type: {}", type);
 
-        // 1. Check built-in Spring Bean validators (HTTP, JDBC, etc.)
         for (EndpointTypeValidator validator : validators) {
             if (validator.supports(type)) {
                 log.debug("Found built-in validator for: {}", type);
@@ -40,7 +39,6 @@ public class EndpointRequestValidator implements ConstraintValidator<ValidEndpoi
             }
         }
 
-        // 2. Check PF4J Plugin Extensions
         try {
             List<EndpointTypeValidator> extensions = pluginManager.getExtensions(EndpointTypeValidator.class);
             log.info("PF4J lookup for {}. Found {} extensions.", type, extensions.size());

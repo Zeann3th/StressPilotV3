@@ -51,7 +51,7 @@ public class WebSocketRequestMessagePort implements RequestMessagePort {
 
     @Override
     public void flush() {
-        /* best-effort, no blocking */
+
     }
 
     private void push() {

@@ -118,7 +118,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
             Timestamp startTs = rs.getTimestamp("start_time");
             Timestamp endTs = rs.getTimestamp("end_time");
 
-            double durationSeconds = 1.0; // Fallback
+            double durationSeconds = 1.0;
             if (run != null && run.getStartedAt() != null && run.getCompletedAt() != null) {
                 durationSeconds = Duration.between(run.getStartedAt(), run.getCompletedAt()).toMillis() / 1000.0;
             } else if (startTs != null && endTs != null) {

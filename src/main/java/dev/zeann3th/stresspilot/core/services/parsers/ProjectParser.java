@@ -110,8 +110,6 @@ public class ProjectParser {
         return yaml.dump(root);
     }
 
-    // --- Unmarshal helpers ---
-
     protected Map<String, Object> parseRoot(String spec) {
         try {
             Yaml yaml = new Yaml();

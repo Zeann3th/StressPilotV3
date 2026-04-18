@@ -23,7 +23,6 @@ public class MetricsPollerManager {
     private final ConcurrentHashMap<String, ScheduledFuture<?>> activeTasks
             = new ConcurrentHashMap<>();
 
-    // small pool — metrics are lightweight, 2 threads cover many concurrent runs
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(
             2, Thread.ofVirtual().name("metrics-poller-", 0).factory());
 
@@ -52,21 +51,17 @@ public class MetricsPollerManager {
         log.info("Metrics poller stopped for run {}", runId);
     }
 
-    // ── internal ─────────────────────────────────────────────────────────────
-
     private void collect(RunEntity run) {
         try {
             MetricScrapeEventEntity event = scraper.scrape(run.getMetricsEndpoint(), run);
             if (event == null) return;
 
-            // 1. WS push immediately — zero DB involvement, non-blocking
             ws.convertAndSend("/topic/metrics/" + run.getId(), event);
 
-            // 2. queue for DB — goes through BatchMetricWriter, single-writer safe
             metricLogService.queueEvent(event);
 
         } catch (Exception e) {
-            // never let a scrape error kill the scheduler thread
+
             log.warn("Metrics collection error for run {}: {}", run.getId(), e.getMessage());
         }
     }
