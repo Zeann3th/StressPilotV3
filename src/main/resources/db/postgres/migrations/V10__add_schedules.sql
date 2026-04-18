@@ -1,0 +1,12 @@
+CREATE TABLE schedules (
+    id BIGSERIAL PRIMARY KEY,
+    flow_id BIGINT NOT NULL,
+    quartz_expr VARCHAR(255) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    threads INTEGER NOT NULL DEFAULT 1,
+    duration INTEGER NOT NULL DEFAULT 60,
+    ramp_up INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    CONSTRAINT fk_schedules_flow FOREIGN KEY (flow_id) REFERENCES flows(id) ON DELETE CASCADE
+);

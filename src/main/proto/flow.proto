@@ -72,7 +72,6 @@ message RunFlowRequest {
   int32  threads        = 2;
   int32  total_duration = 3;
   int32  ramp_up_duration = 4;
-  string run_mode         = 7;
   map<string, string>      variables   = 5;
   repeated CredentialEntry credentials = 6;
 }

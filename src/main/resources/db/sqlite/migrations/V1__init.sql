@@ -142,3 +142,17 @@ VALUES (1, 'HTTP_CONNECT_TIMEOUT', '10'),
        (9, 'HTTP_PROXY_USERNAME', null),
        (10, 'HTTP_PROXY_PASSWORD', null),
        (11, 'BREAKPOINT_ERROR_THRESHOLD', '0.5');
+
+CREATE TABLE schedules
+(
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    flow_id     INTEGER      NOT NULL,
+    quartz_expr VARCHAR(255) NOT NULL,
+    enabled     BOOLEAN      NOT NULL DEFAULT 1,
+    threads     INTEGER      NOT NULL DEFAULT 1,
+    duration    INTEGER      NOT NULL DEFAULT 60,
+    ramp_up     INTEGER      NOT NULL DEFAULT 0,
+    created_at  DATETIME     NOT NULL,
+    updated_at  DATETIME     NOT NULL,
+    FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
+);

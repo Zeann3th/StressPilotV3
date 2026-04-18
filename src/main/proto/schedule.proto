@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package dev.zeann3th.stresspilot.grpc.ui;
+
+option java_multiple_files = true;
+option java_package = "dev.zeann3th.stresspilot.grpc.ui";
+option java_outer_classname = "ScheduleProto";
+
+import "google/protobuf/empty.proto";
+
+service ScheduleService {
+  rpc ListSchedules   (ListSchedulesRequest)   returns (ListSchedulesResponse);
+  rpc GetSchedule     (GetScheduleRequest)     returns (ScheduleResponse);
+  rpc CreateSchedule  (CreateScheduleRequest)  returns (ScheduleResponse);
+  rpc UpdateSchedule  (UpdateScheduleRequest)  returns (ScheduleResponse);
+  rpc DeleteSchedule  (DeleteScheduleRequest)  returns (google.protobuf.Empty);
+}
+
+message ListSchedulesRequest {
+  int32 page = 1;
+  int32 size = 2;
+}
+
+message GetScheduleRequest {
+  int64 id = 1;
+}
+
+message CreateScheduleRequest {
+  int64  flow_id     = 1;
+  string quartz_expr = 2;
+  int32  threads     = 3;
+  int32  duration    = 4;
+  int32  ramp_up     = 5;
+  bool   enabled     = 6;
+}
+
+message UpdateScheduleRequest {
+  int64  id          = 1;
+  string quartz_expr = 2;
+  int32  threads     = 3;
+  int32  duration    = 4;
+  int32  ramp_up     = 5;
+  bool   enabled     = 6;
+}
+
+message DeleteScheduleRequest {
+  int64 id = 1;
+}
+
+message ScheduleResponse {
+  int64  id          = 1;
+  int64  flow_id     = 2;
+  string quartz_expr = 3;
+  bool   enabled     = 4;
+  int32  threads     = 5;
+  int32  duration    = 6;
+  int32  ramp_up     = 7;
+  string created_at  = 8;
+  string updated_at  = 9;
+}
+
+message ListSchedulesResponse {
+  repeated ScheduleResponse schedules      = 1;
+  int64                    total_elements = 2;
+  int32                    total_pages    = 3;
+}

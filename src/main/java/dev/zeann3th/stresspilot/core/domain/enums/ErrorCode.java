@@ -30,6 +30,7 @@ public enum ErrorCode {
     ER0023(ErrorType.FAILURE, "Cannot export report for a run that is still running"),
     ER0024(ErrorType.FAILURE, "Failed to reload plugin: <reason>"),
     ER0025(ErrorType.FAILURE, "Function not found: <id>"),
+    ER0026(ErrorType.FAILURE, "Failed to schedule job: <reason>"),
     ER9999(ErrorType.FAILURE, "System is busy, please try again later"),;
 
     private final ErrorType errorType;

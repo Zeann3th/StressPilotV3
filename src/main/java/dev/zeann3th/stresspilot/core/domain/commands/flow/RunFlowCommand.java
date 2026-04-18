@@ -13,10 +13,10 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RunFlowCommand {
+    private Long environmentId;
     private int threads;
     private int totalDuration;
     private int rampUpDuration;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;
-    private String runMode;
 }

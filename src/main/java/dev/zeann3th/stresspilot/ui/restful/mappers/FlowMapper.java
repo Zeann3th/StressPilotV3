@@ -18,7 +18,6 @@ public interface FlowMapper {
 
     CreateFlowCommand toCreateCommand(CreateFlowRequestDTO request);
 
-    @Mapping(target = "runMode", expression = "java(request.getRunMode() == null || request.getRunMode().isBlank() ? dev.zeann3th.stresspilot.core.domain.enums.FlowRunType.LOCAL.name() : request.getRunMode())")
     RunFlowCommand toRunCommand(RunFlowRequestDTO request);
 
     FlowStepCommand toStepCommand(FlowStepRequestDTO request);
