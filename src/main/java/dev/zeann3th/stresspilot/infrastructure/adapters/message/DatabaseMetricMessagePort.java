@@ -1,8 +1,8 @@
 package dev.zeann3th.stresspilot.infrastructure.adapters.message;
 
-import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
-import dev.zeann3th.stresspilot.core.ports.message.RequestMessagePort;
-import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
+import dev.zeann3th.stresspilot.core.domain.entities.MetricScrapeEventEntity;
+import dev.zeann3th.stresspilot.core.ports.message.MetricMessagePort;
+import dev.zeann3th.stresspilot.core.ports.store.MetricScrapeEventStore;
 import dev.zeann3th.stresspilot.infrastructure.configs.properties.RequestLogWriterProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -20,19 +20,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-@Slf4j(topic = "[DB-LogWriter]")
+@Slf4j(topic = "[DB-MetricWriter]")
 @Component
 @RequiredArgsConstructor
-public class DatabaseRequestMessagePort implements RequestMessagePort {
+public class DatabaseMetricMessagePort implements MetricMessagePort {
 
-    private static final int QUEUE_CAPACITY = 200_000;
+    private static final int QUEUE_CAPACITY = 50_000;
     private static final int MAX_RETRIES = 3;
 
-    private final RequestLogStore requestLogStore;
+    private final MetricScrapeEventStore metricScrapeEventStore;
     private final TransactionTemplate transactionTemplate;
     private final RequestLogWriterProperties properties;
 
-    private final BlockingQueue<RequestLogEntity> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+    private final BlockingQueue<MetricScrapeEventEntity> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final AtomicBoolean flushing = new AtomicBoolean(false);
     private final ReentrantLock lock = new ReentrantLock();
@@ -40,17 +40,17 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
 
     @PostConstruct
     public void start() {
-        Thread writer = new Thread(this::writerLoop, "request-log-writer");
+        Thread writer = new Thread(this::writerLoop, "metric-writer");
         writer.setDaemon(true);
         writer.start();
-        log.info("DatabaseRequestLogWriter started (batchSize={}, flushIntervalMs={})",
+        log.info("DatabaseMetricWriter started (batchSize={}, flushIntervalMs={})",
                 properties.getDatasource().getBatchSize(), properties.getDatasource().getFlushIntervalMs());
     }
 
     @Override
-    public void write(RequestLogEntity entry) {
+    public void write(MetricScrapeEventEntity entry) {
         if (!queue.offer(entry)) {
-            log.warn("Log queue full ({}) — entry dropped", queue.size());
+            log.warn("Metric queue full ({}) — entry dropped", queue.size());
         }
     }
 
@@ -64,14 +64,14 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
             }
         } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-            log.warn("Interrupted while waiting for log flush");
+            log.warn("Interrupted while waiting for metric flush");
         } finally {
             lock.unlock();
         }
     }
 
     private void writerLoop() {
-        List<RequestLogEntity> buffer = new ArrayList<>(properties.getDatasource().getBatchSize());
+        List<MetricScrapeEventEntity> buffer = new ArrayList<>(properties.getDatasource().getBatchSize());
         long lastFlush = System.currentTimeMillis();
 
         while (running.get() || !queue.isEmpty() || !buffer.isEmpty()) {
@@ -80,7 +80,7 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 long elapsed = now - lastFlush;
                 long waitMs = Math.max(0, properties.getDatasource().getFlushIntervalMs() - elapsed);
 
-                RequestLogEntity entry = queue.poll(waitMs, TimeUnit.MILLISECONDS);
+                MetricScrapeEventEntity entry = queue.poll(waitMs, TimeUnit.MILLISECONDS);
                 if (entry != null) {
                     buffer.add(entry);
                     queue.drainTo(buffer, properties.getDatasource().getBatchSize() - 1);
@@ -93,7 +93,7 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
 
                 if ((full || timeout || shutdown) && !buffer.isEmpty()) {
                     flushing.set(true);
-                    List<RequestLogEntity> batch = new ArrayList<>(buffer);
+                    List<MetricScrapeEventEntity> batch = new ArrayList<>(buffer);
                     persistBatch(batch);
                     buffer.clear();
                     lastFlush = System.currentTimeMillis();
@@ -108,19 +108,19 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                log.error("Unexpected error in log-writer thread", e);
+                log.error("Unexpected error in metric-writer thread", e);
             }
         }
     }
 
-    private void persistBatch(List<RequestLogEntity> batch) {
+    private void persistBatch(List<MetricScrapeEventEntity> batch) {
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
-                transactionTemplate.executeWithoutResult(_ -> requestLogStore.saveAll(batch));
-                log.debug("Flushed {} logs to DB", batch.size());
+                transactionTemplate.executeWithoutResult(_ -> metricScrapeEventStore.saveAll(batch));
+                log.debug("Flushed {} metrics to DB", batch.size());
                 return;
             } catch (Exception e) {
-                log.warn("DB flush attempt {}/{} failed (batch={}): {}", attempt, MAX_RETRIES, batch.size(), e.getMessage());
+                log.warn("DB metric flush attempt {}/{} failed (batch={}): {}", attempt, MAX_RETRIES, batch.size(), e.getMessage());
                 if (attempt < MAX_RETRIES) {
                     try {
                         Thread.sleep(100L * attempt);
@@ -131,7 +131,7 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 }
             }
         }
-        log.error("Dropped {} log entries after {} failed flush attempts", batch.size(), MAX_RETRIES);
+        log.error("Dropped {} metric entries after {} failed flush attempts", batch.size(), MAX_RETRIES);
     }
 
     private void signalFlushDone() {

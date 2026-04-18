@@ -16,6 +16,7 @@ public class RunFlowCommand {
     private int threads;
     private int totalDuration;
     private int rampUpDuration;
+    private String metricsEndpoint;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;
 }

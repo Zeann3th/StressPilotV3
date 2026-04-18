@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.services.metrics.MetricsPollerManager;
 import lombok.RequiredArgsConstructor;
 import org.pf4j.PluginManager;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,7 @@ public class FlowExecutorFactory {
     private final RunStore runStore;
     private final ActiveRunRegistry activeRunRegistry;
     private final RequestLogService requestLogService;
+    private final MetricsPollerManager metricsPollerManager;
     private final FlowNodeHandlerFactory nodeHandlerFactory;
 
     public FlowExecutor getStrategy(String type) {
@@ -43,7 +45,7 @@ public class FlowExecutorFactory {
                 .filter(strategy -> strategy.supports(type))
                 .findFirst()
                 .map(ext -> {
-                    ext.initInfra(projectStore, envVarStore, runStore, activeRunRegistry, requestLogService, nodeHandlerFactory);
+                    ext.initInfra(projectStore, envVarStore, runStore, activeRunRegistry, requestLogService, metricsPollerManager, nodeHandlerFactory);
                     return ext;
                 })
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0020,

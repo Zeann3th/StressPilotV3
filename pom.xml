@@ -33,6 +33,7 @@
 		<spring-grpc.version>1.0.2</spring-grpc.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<lombok.version>1.18.42</lombok.version>
+		<graalvm.version>25.0.1</graalvm.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -130,7 +131,7 @@
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java-util</artifactId>
-			<version>4.33.1</version>
+			<version>${protobuf-java.version}</version>
 		</dependency>
 
 		<dependency>
@@ -168,13 +169,13 @@
 		<dependency>
 			<groupId>org.graalvm.polyglot</groupId>
 			<artifactId>polyglot</artifactId>
-			<version>25.0.1</version>
+			<version>${graalvm.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.graalvm.polyglot</groupId>
 			<artifactId>js</artifactId>
-			<version>25.0.1</version>
+			<version>${graalvm.version}</version>
 			<type>pom</type>
 		</dependency>
 

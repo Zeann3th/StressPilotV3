@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Slf4j(topic = "[Kafka-LogWriter]")
 @Component
 @ConditionalOnProperty(prefix = "application.message.kafka", name = "enabled", havingValue = "true")
@@ -23,11 +21,6 @@ public class KafkaRequestMessagePort implements RequestMessagePort {
         log.debug("[KAFKA STUB] Would send log id={} to topic {}",
                 logEntry.getId(), properties.getKafka().getTopic());
         // TODO: kafkaTemplate.send(properties.getKafka().getTopic(), logEntry);
-    }
-
-    @Override
-    public void writeAll(List<RequestLogEntity> logs) {
-        logs.forEach(this::write);
     }
 
     @Override

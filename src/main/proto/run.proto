@@ -38,6 +38,7 @@ message RunResponse {
   int32  threads          = 4;
   int32  duration         = 5;
   int32  ramp_up_duration = 6;
+  string metrics_endpoint = 9;
   string started_at       = 7;
   string completed_at     = 8;
 }

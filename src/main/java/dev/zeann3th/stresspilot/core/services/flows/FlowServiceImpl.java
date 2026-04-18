@@ -124,9 +124,9 @@ public class FlowServiceImpl implements FlowService {
         boolean stopped = activeRunRegistry.interruptRun(event.runId());
 
         if (stopped) {
-            log.info("FlowService received abort signal. Killing threads for run {}", event.runId());
+            log.info("received abort signal. Killing threads for run {}", event.runId());
         } else {
-            log.warn("FlowService received stop event for run {}, but it is not active in memory.", event.runId());
+            log.warn("received stop event for run {}, but it is not active in memory.", event.runId());
         }
     }
 

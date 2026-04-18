@@ -50,6 +50,7 @@ public interface FlowProtoMapper {
                                 .threads(request.getThreads())
                                 .totalDuration(request.getTotalDuration())
                                 .rampUpDuration(request.getRampUpDuration())
+                                .metricsEndpoint(request.getMetricsEndpoint())
                                 .variables(variables)
                                 .credentials(credentials)
                                 .build();

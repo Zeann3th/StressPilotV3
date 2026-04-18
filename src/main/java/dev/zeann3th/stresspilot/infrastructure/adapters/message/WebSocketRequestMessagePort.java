@@ -50,11 +50,6 @@ public class WebSocketRequestMessagePort implements RequestMessagePort {
     }
 
     @Override
-    public void writeAll(List<RequestLogEntity> logs) {
-        logs.forEach(this::write);
-    }
-
-    @Override
     public void flush() {
         /* best-effort, no blocking */
     }
