@@ -10,7 +10,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = MapstructProtoConfig.class, uses = MappingUtils.class)
+@Mapper(config = MapstructProtoConfig.class, uses = {MappingUtils.class})
 public interface EndpointProtoMapper {
 
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")

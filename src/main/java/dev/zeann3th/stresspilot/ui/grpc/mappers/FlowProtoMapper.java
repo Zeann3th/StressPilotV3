@@ -11,7 +11,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = MapstructProtoConfig.class, uses = MappingUtils.class)
+@Mapper(config = MapstructProtoConfig.class, uses = {MappingUtils.class})
 public interface FlowProtoMapper {
 
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
@@ -22,6 +22,8 @@ public interface FlowProtoMapper {
 
         CreateFlowCommand toCreateCommand(CreateFlowRequest request);
 
+        @Mapping(source = "preProcessor", target = "preProcessor", qualifiedByName = "mapToObjectMap")
+        @Mapping(source = "postProcessor", target = "postProcessor", qualifiedByName = "mapToObjectMap")
         FlowStepCommand toStepCommand(FlowStepMessage message);
 
         List<FlowStepCommand> toStepCommands(List<FlowStepMessage> messages);

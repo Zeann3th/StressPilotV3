@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.ui.utils;
 
 import lombok.experimental.UtilityClass;
+import org.mapstruct.Named;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 public class MappingUtils {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    @Named("mapToObjectMap")
     public static Map<String, Object> mapToObjectMap(String value) {
         if (value == null || value.isBlank())
             return new HashMap<>();
@@ -21,6 +23,7 @@ public class MappingUtils {
         }
     }
 
+    @Named("mapToStringMap")
     public static Map<String, String> mapToStringMap(String value) {
         if (value == null || value.isBlank())
             return new HashMap<>();
