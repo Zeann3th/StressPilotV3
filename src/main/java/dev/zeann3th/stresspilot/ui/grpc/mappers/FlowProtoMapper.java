@@ -5,12 +5,13 @@ import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
 import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructProtoConfig;
+import dev.zeann3th.stresspilot.ui.utils.MappingUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = MapstructProtoConfig.class)
+@Mapper(config = MapstructProtoConfig.class, uses = MappingUtils.class)
 public interface FlowProtoMapper {
 
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
@@ -24,20 +25,6 @@ public interface FlowProtoMapper {
         FlowStepCommand toStepCommand(FlowStepMessage message);
 
         List<FlowStepCommand> toStepCommands(List<FlowStepMessage> messages);
-
-        default java.util.Map<String, Object> map(String value) {
-                if (value == null || value.isBlank()) {
-                        return new java.util.HashMap<>();
-                }
-                try {
-                        return new tools.jackson.databind.ObjectMapper().readValue(
-                                        value,
-                                        new tools.jackson.core.type.TypeReference<>() {
-                                        });
-                } catch (Exception _) {
-                        return java.util.Map.of("error", value);
-                }
-        }
 
         default RunFlowCommand toRunCommand(RunFlowRequest request) {
                 List<java.util.Map<String, Object>> credentials = request.getCredentialsList().stream()

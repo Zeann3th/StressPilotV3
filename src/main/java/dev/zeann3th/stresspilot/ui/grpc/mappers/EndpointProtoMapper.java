@@ -4,12 +4,13 @@ import dev.zeann3th.stresspilot.core.domain.commands.endpoint.*;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.grpc.ui.*;
 import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructProtoConfig;
+import dev.zeann3th.stresspilot.ui.utils.MappingUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(config = MapstructProtoConfig.class)
+@Mapper(config = MapstructProtoConfig.class, uses = MappingUtils.class)
 public interface EndpointProtoMapper {
 
         @Mapping(expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : \"\")", target = "createdAt")
@@ -30,32 +31,6 @@ public interface EndpointProtoMapper {
                 return ExecuteEndpointCommand.builder()
                                 .variables(new java.util.HashMap<>(request.getVariablesMap()))
                                 .build();
-        }
-
-        @org.mapstruct.Named("mapToObjectMap")
-        default java.util.Map<String, Object> mapToObjectMap(String value) {
-                if (value == null || value.isBlank())
-                        return new java.util.HashMap<>();
-                try {
-                        return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                        new tools.jackson.core.type.TypeReference<>() {
-                                        });
-                } catch (Exception _) {
-                        return java.util.Map.of("error", value);
-                }
-        }
-
-        @org.mapstruct.Named("mapToStringMap")
-        default java.util.Map<String, String> mapToStringMap(String value) {
-                if (value == null || value.isBlank())
-                        return new java.util.HashMap<>();
-                try {
-                        return new tools.jackson.databind.ObjectMapper().readValue(value,
-                                        new tools.jackson.core.type.TypeReference<>() {
-                                        });
-                } catch (Exception _) {
-                        return java.util.Map.of("error", value);
-                }
         }
 
         @Mapping(source = "responseTimeMs", target = "responseTimeMs")
