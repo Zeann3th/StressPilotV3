@@ -33,12 +33,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
         return Integer.MAX_VALUE;
     }
 
-    public final String execute(FlowExecutionData data) {
-        String runId = data.getRunId();
-        RunEntity run = data.getRun();
-        RunFlowCommand cmd = data.getCommand();
+    public final String execute(FlowExecutionContext baseContext) {
+        String runId = baseContext.getRunId();
+        RunEntity run = baseContext.getRun();
+        RunFlowCommand cmd = baseContext.getCommand();
 
-        Map<String, FlowStepEntity> stepMap = data.getSteps().stream()
+        Map<String, FlowStepEntity> stepMap = baseContext.getSteps().stream()
                 .collect(Collectors.toMap(FlowStepEntity::getId, s -> s));
 
         AtomicBoolean stopSignal = activeRunRegistry.registerRun(runId);
@@ -53,6 +53,9 @@ public abstract class FlowExecutor implements ExtensionPoint {
         long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
         long deadline = System.currentTimeMillis() + totalMs;
 
+        baseContext.setStopSignal(stopSignal);
+        baseContext.setDeadline(deadline);
+
         beforeWorkers(runId, cmd);
 
         try (ExecutorService pool = Executors.newThreadPerTaskExecutor(
@@ -63,10 +66,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 final int threadId = i;
                 final long initialDelayMs = i * rampDelay;
 
-                Map<String, Object> threadEnv = new java.util.HashMap<>(data.getBaseEnvironment());
+                Map<String, Object> threadEnv = new java.util.HashMap<>(baseContext.getBaseEnvironment());
                 if (cmd.getCredentials() != null && !cmd.getCredentials().isEmpty()) {
                     threadEnv.putAll(cmd.getCredentials().get(i % cmd.getCredentials().size()));
                 }
+
+                FlowExecutionContext threadContext = baseContext.fork(threadId, threadEnv);
 
                 futures.add(pool.submit(() -> {
                     if (initialDelayMs > 0) {
@@ -77,7 +82,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
                             return;
                         }
                     }
-                    executeWorker(threadId, run, stepMap, threadEnv, totalMs, stopSignal);
+                    executeWorker(threadContext, stepMap);
                 }));
             }
 
@@ -104,10 +109,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
 
     protected void afterWorkers(String runId) { }
 
-    protected abstract void executeWorker(int threadId, RunEntity run,
-            Map<String, FlowStepEntity> stepMap,
-            Map<String, Object> environment,
-            long totalMs, AtomicBoolean stopSignal);
+    protected abstract void executeWorker(FlowExecutionContext ctx, Map<String, FlowStepEntity> stepMap);
 
     protected final void executeIteration(FlowStepEntity startStep,
             Map<String, FlowStepEntity> stepMap,

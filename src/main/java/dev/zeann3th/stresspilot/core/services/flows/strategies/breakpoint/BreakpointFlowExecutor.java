@@ -54,35 +54,21 @@ public class BreakpointFlowExecutor extends FlowExecutor {
     }
 
     @Override
-    protected void executeWorker(int threadId, RunEntity run,
-            Map<String, FlowStepEntity> stepMap,
-            Map<String, Object> environment,
-            long totalMs, AtomicBoolean stopSignal) {
-        long deadline = System.currentTimeMillis() + totalMs;
-
-        FlowExecutionContext ctx = new FlowExecutionContext();
-        ctx.setThreadId(threadId);
-        ctx.setRunId(run.getId());
-        ctx.setRun(run);
-        ctx.setVariables(new ConcurrentHashMap<>(environment));
-        ctx.setExecutionContext(new BaseExecutionContext());
-        ctx.setStopSignal(stopSignal);
-        ctx.setDeadline(deadline);
-
+    protected void executeWorker(FlowExecutionContext ctx, Map<String, FlowStepEntity> stepMap) {
         FlowStepEntity startStep = findStartNode(stepMap);
         if (startStep == null) return;
 
-        log.info("Breakpoint Run {} thread {} started", run.getId(), threadId);
+        log.info("Breakpoint Run {} thread {} started", ctx.getRunId(), ctx.getThreadId());
 
         long lastTotal = 0;
         long lastFailed = 0;
 
-        while (!stopSignal.get() && System.currentTimeMillis() < deadline && !Thread.currentThread().isInterrupted()) {
+        while (!ctx.shouldStop()) {
             try {
                 executeIteration(startStep, stepMap, ctx);
                 ctx.incrementIteration();
             } catch (Exception e) {
-                log.error("Breakpoint thread {} iteration error: {}", threadId, e.getMessage(), e);
+                log.error("Breakpoint thread {} iteration error: {}", ctx.getThreadId(), e.getMessage(), e);
             }
 
             long currentTotal = ctx.getRequestCount();
@@ -93,16 +79,16 @@ public class BreakpointFlowExecutor extends FlowExecutor {
             lastFailed = currentFailed;
 
             if (deltaTotal > 0) {
-                breakpointRegistry.record(run.getId(), deltaTotal, deltaFailed);
-                if (breakpointRegistry.isBreached(run.getId())) {
-                    log.warn("Breakpoint Run {} thread {}: error rate exceeded threshold — stopping run", run.getId(), threadId);
-                    stopSignal.set(true);
+                breakpointRegistry.record(ctx.getRunId(), deltaTotal, deltaFailed);
+                if (breakpointRegistry.isBreached(ctx.getRunId())) {
+                    log.warn("Breakpoint Run {} thread {}: error rate exceeded threshold — stopping run", ctx.getRunId(), ctx.getThreadId());
+                    ctx.getStopSignal().set(true);
                     break;
                 }
             }
         }
 
-        log.info("Breakpoint Run {} thread {} finished: {} iterations", run.getId(), threadId, ctx.getIterationCount());
+        log.info("Breakpoint Run {} thread {} finished: {} iterations", ctx.getRunId(), ctx.getThreadId(), ctx.getIterationCount());
         ctx.getExecutionContext().clear();
     }
 }

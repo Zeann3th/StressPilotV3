@@ -20,11 +20,11 @@ public class FlowAsyncRunner {
     private final RequestLogService requestLogService;
 
     @Async
-    public void run(FlowExecutionData data) {
-        String runId = data.getRunId();
+    public void run(FlowExecutionContext context) {
+        String runId = context.getRunId();
         String finalStatus = RunStatus.ABORTED.name();
         try {
-            finalStatus = flowExecutorFactory.getStrategy(data.getFlowType()).execute(data);
+            finalStatus = flowExecutorFactory.getStrategy(context.getFlowType()).execute(context);
         } catch (Exception e) {
             log.error("Error executing flow run {}", runId, e);
         } finally {

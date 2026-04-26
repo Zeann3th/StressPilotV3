@@ -28,37 +28,22 @@ public class DefaultFlowExecutor extends FlowExecutor {
     }
 
     @Override
-    @SuppressWarnings("java:S3776")
-    protected void executeWorker(int threadId, RunEntity run,
-            Map<String, FlowStepEntity> stepMap,
-            Map<String, Object> environment,
-            long totalMs, AtomicBoolean stopSignal) {
-        long deadline = System.currentTimeMillis() + totalMs;
-
-        FlowExecutionContext ctx = new FlowExecutionContext();
-        ctx.setThreadId(threadId);
-        ctx.setRunId(run.getId());
-        ctx.setRun(run);
-        ctx.setVariables(new ConcurrentHashMap<>(environment));
-        ctx.setExecutionContext(new BaseExecutionContext());
-        ctx.setStopSignal(stopSignal);
-        ctx.setDeadline(deadline);
-
+    protected void executeWorker(FlowExecutionContext ctx, Map<String, FlowStepEntity> stepMap) {
         FlowStepEntity startStep = findStartNode(stepMap);
         if (startStep == null) return;
 
-        log.info("Run {} thread {} started", run.getId(), threadId);
+        log.info("Run {} thread {} started", ctx.getRunId(), ctx.getThreadId());
 
-        while (!stopSignal.get() && System.currentTimeMillis() < deadline && !Thread.currentThread().isInterrupted()) {
+        while (!ctx.shouldStop()) {
             try {
                 executeIteration(startStep, stepMap, ctx);
                 ctx.incrementIteration();
             } catch (Exception e) {
-                log.error("Thread {} iteration error: {}", threadId, e.getMessage(), e);
+                log.error("Thread {} iteration error: {}", ctx.getThreadId(), e.getMessage(), e);
             }
         }
 
-        log.info("Run {} thread {} finished: {} iterations", run.getId(), threadId, ctx.getIterationCount());
+        log.info("Run {} thread {} finished: {} iterations", ctx.getRunId(), ctx.getThreadId(), ctx.getIterationCount());
         ctx.getExecutionContext().clear();
     }
 
