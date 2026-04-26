@@ -167,7 +167,7 @@ public class FlowServiceImpl implements FlowService {
                 .startedAt(LocalDateTime.now())
                 .build());
 
-        FlowExecutionData executionData = FlowExecutionData.builder()
+        FlowExecutionContext executionContext = FlowExecutionContext.builder()
                 .runId(runId)
                 .run(run)
                 .flowType(flow.getType())
@@ -176,7 +176,7 @@ public class FlowServiceImpl implements FlowService {
                 .command(runFlowCommand)
                 .build();
 
-        flowAsyncRunner.run(executionData);
+        flowAsyncRunner.run(executionContext);
         return runId;
     }
 
