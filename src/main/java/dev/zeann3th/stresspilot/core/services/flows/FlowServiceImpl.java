@@ -4,19 +4,14 @@ import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
-import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
-import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
-import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
-import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
+import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
-import dev.zeann3th.stresspilot.core.ports.store.EndpointStore;
-import dev.zeann3th.stresspilot.core.ports.store.FlowStepStore;
-import dev.zeann3th.stresspilot.core.ports.store.FlowStore;
-import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
+import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
@@ -29,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,6 +37,8 @@ public class FlowServiceImpl implements FlowService {
     private final FlowStepStore flowStepStore;
     private final ProjectStore projectStore;
     private final EndpointStore endpointStore;
+    private final EnvironmentVariableStore envVarStore;
+    private final RunStore runStore;
     private final JsonMapper jsonMapper;
     private final ActiveRunRegistry activeRunRegistry;
     private final FlowAsyncRunner flowAsyncRunner;
@@ -131,7 +129,7 @@ public class FlowServiceImpl implements FlowService {
     }
 
     @Override
-    @SuppressWarnings("java:S3776")
+    @Transactional
     public String runFlow(Long flowId, RunFlowCommand runFlowCommand) {
         FlowEntity flow = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
@@ -144,8 +142,41 @@ public class FlowServiceImpl implements FlowService {
         sortSteps(steps);
         validateStartStep(steps);
 
+        ProjectEntity project = projectStore.findById(flow.getProjectId())
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
+
+        Map<String, Object> baseEnv = envVarStore
+                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
+                .stream()
+                .collect(Collectors.toMap(
+                        EnvironmentVariableEntity::getKey,
+                        EnvironmentVariableEntity::getValue,
+                        (_, v2) -> v2, HashMap::new));
+        if (runFlowCommand.getVariables() != null) {
+            baseEnv.putAll(runFlowCommand.getVariables());
+        }
+
         String runId = String.valueOf(snowflakeId.nextId());
-        flowAsyncRunner.run(runId, flow, steps, runFlowCommand);
+        RunEntity run = runStore.save(RunEntity.builder()
+                .id(runId)
+                .flow(flow)
+                .status(RunStatus.RUNNING.name())
+                .threads(runFlowCommand.getThreads())
+                .duration(runFlowCommand.getTotalDuration())
+                .rampUpDuration(runFlowCommand.getRampUpDuration())
+                .startedAt(LocalDateTime.now())
+                .build());
+
+        FlowExecutionData executionData = FlowExecutionData.builder()
+                .runId(runId)
+                .run(run)
+                .flowType(flow.getType())
+                .steps(steps)
+                .baseEnvironment(baseEnv)
+                .command(runFlowCommand)
+                .build();
+
+        flowAsyncRunner.run(executionData);
         return runId;
     }
 
