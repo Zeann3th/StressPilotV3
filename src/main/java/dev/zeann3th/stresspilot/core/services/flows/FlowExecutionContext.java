@@ -7,7 +7,10 @@ import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionCon
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
+import lombok.AccessLevel;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,13 +22,19 @@ import java.util.concurrent.atomic.AtomicLong;
 @Builder(toBuilder = true)
 public class FlowExecutionContext {
 
-    // Shared / Base Data
-    private String runId;
-    private RunEntity run;
-    private String flowType;
-    private List<FlowStepEntity> steps;
-    private RunFlowCommand command;
-    private Map<String, Object> baseEnvironment;
+    // Shared / Base Data - Effectively Immutable for handlers
+    private final String runId;
+    private final RunEntity run;
+    private final String flowType;
+    
+    @Getter(AccessLevel.NONE)
+    private final List<FlowStepEntity> steps;
+    
+    private final RunFlowCommand command;
+    
+    @Getter(AccessLevel.NONE)
+    private final Map<String, Object> baseEnvironment;
+    
     private AtomicBoolean stopSignal;
     private long deadline;
 
@@ -36,6 +45,14 @@ public class FlowExecutionContext {
     @Builder.Default private final AtomicInteger iterationCount = new AtomicInteger(0);
     @Builder.Default private final AtomicLong requestCount = new AtomicLong(0);
     @Builder.Default private final AtomicLong failureCount = new AtomicLong(0);
+
+    public List<FlowStepEntity> getSteps() {
+        return steps != null ? Collections.unmodifiableList(steps) : Collections.emptyList();
+    }
+
+    public Map<String, Object> getBaseEnvironment() {
+        return baseEnvironment != null ? Collections.unmodifiableMap(baseEnvironment) : Collections.emptyMap();
+    }
 
     public boolean shouldStop() {
         return (stopSignal != null && stopSignal.get())
