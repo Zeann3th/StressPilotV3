@@ -2,23 +2,15 @@ package dev.zeann3th.stresspilot.core.services.flows;
 
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.*;
-import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
-import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
-import dev.zeann3th.stresspilot.core.ports.store.EnvironmentVariableStore;
-import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
-import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
-import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.ExtensionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -30,11 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public abstract class FlowExecutor implements ExtensionPoint {
 
-    @Autowired protected ProjectStore projectStore;
-    @Autowired protected EnvironmentVariableStore envVarStore;
-    @Autowired protected RunStore runStore;
     @Autowired protected ActiveRunRegistry activeRunRegistry;
-    @Autowired protected RequestLogService requestLogService;
     @Autowired protected FlowNodeHandlerFactory nodeHandlerFactory;
 
     public abstract String getType();
@@ -45,39 +33,19 @@ public abstract class FlowExecutor implements ExtensionPoint {
         return Integer.MAX_VALUE;
     }
 
-    public final String execute(String runId, FlowEntity flow, List<FlowStepEntity> steps, RunFlowCommand cmd) {
-        Map<String, FlowStepEntity> stepMap = steps.stream()
-                .collect(Collectors.toMap(FlowStepEntity::getId, s -> s));
+    public final String execute(FlowExecutionData data) {
+        String runId = data.getRunId();
+        RunEntity run = data.getRun();
+        RunFlowCommand cmd = data.getCommand();
 
-        RunEntity run = runStore.save(RunEntity.builder()
-                .id(runId)
-                .flow(flow)
-                .status(RunStatus.RUNNING.name())
-                .threads(cmd.getThreads())
-                .duration(cmd.getTotalDuration())
-                .rampUpDuration(cmd.getRampUpDuration())
-                .startedAt(LocalDateTime.now())
-                .build());
+        Map<String, FlowStepEntity> stepMap = data.getSteps().stream()
+                .collect(Collectors.toMap(FlowStepEntity::getId, s -> s));
 
         AtomicBoolean stopSignal = activeRunRegistry.registerRun(runId);
 
         log.info("Run {} started: flow={}, threads={}, duration={}s, rampUp={}s",
-                runId, flow.getName(), cmd.getThreads(),
+                runId, run.getFlow().getName(), cmd.getThreads(),
                 cmd.getTotalDuration(), cmd.getRampUpDuration());
-
-        ProjectEntity project = projectStore.findById(flow.getProjectId())
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
-
-        Map<String, Object> baseEnv = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
-                .stream()
-                .collect(Collectors.toMap(
-                        EnvironmentVariableEntity::getKey,
-                        EnvironmentVariableEntity::getValue,
-                        (_, v2) -> v2, HashMap::new));
-        if (cmd.getVariables() != null) {
-            baseEnv.putAll(cmd.getVariables());
-        }
 
         int threads = Math.clamp(cmd.getThreads(), 1, maxThreads());
         long totalMs = (long) cmd.getTotalDuration() * 1000;
@@ -95,7 +63,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 final int threadId = i;
                 final long initialDelayMs = i * rampDelay;
 
-                Map<String, Object> threadEnv = new HashMap<>(baseEnv);
+                Map<String, Object> threadEnv = new java.util.HashMap<>(data.getBaseEnvironment());
                 if (cmd.getCredentials() != null && !cmd.getCredentials().isEmpty()) {
                     threadEnv.putAll(cmd.getCredentials().get(i % cmd.getCredentials().size()));
                 }
@@ -124,22 +92,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
         } finally {
             afterWorkers(runId);
             activeRunRegistry.deregisterRun(runId);
-
-            boolean durationMet = System.currentTimeMillis() >= deadline;
-            String finalStatus = (stopSignal.get() && !durationMet)
-                    ? RunStatus.ABORTED.name()
-                    : RunStatus.COMPLETED.name();
-
-            int updated = runStore.finalizeRun(runId, finalStatus, LocalDateTime.now());
-            if (updated == 0) {
-                log.info("Run {} already finalized externally (likely ABORTED)", runId);
-            }
-
-            requestLogService.ensureFlushed();
-            log.info("Run {} finished: status={}", runId, finalStatus);
         }
 
-        return runId;
+        boolean durationMet = System.currentTimeMillis() >= deadline;
+        return (stopSignal.get() && !durationMet)
+                ? RunStatus.ABORTED.name()
+                : RunStatus.COMPLETED.name();
     }
 
     protected void beforeWorkers(String runId, RunFlowCommand cmd) { }
@@ -180,13 +138,8 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 .orElse(null);
     }
 
-    public void initInfra(ProjectStore ps, EnvironmentVariableStore evs, RunStore rs,
-            ActiveRunRegistry arr, RequestLogService rls, FlowNodeHandlerFactory nhf) {
-        this.projectStore = ps;
-        this.envVarStore = evs;
-        this.runStore = rs;
+    public void initInfra(ActiveRunRegistry arr, FlowNodeHandlerFactory nhf) {
         this.activeRunRegistry = arr;
-        this.requestLogService = rls;
         this.nodeHandlerFactory = nhf;
     }
 }
