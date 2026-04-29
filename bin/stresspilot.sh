@@ -20,13 +20,10 @@ if [[ -z "$JAR_FILE" ]]; then
     exit 1
 fi
 
-# Use fixed names for the cache and signature
-JSA_FILE="$APP_ROOT/target/app.jsa"
-# Fallback to root if target doesn't exist (e.g. in distribution)
-if [[ ! -d "$APP_ROOT/target" ]]; then
-    JSA_FILE="$APP_ROOT/app.jsa"
-fi
-SIG_FILE="${JSA_FILE%.jsa}.sig"
+JSA_DIR="$PILOT_HOME/core/scripts"
+mkdir -p "$JSA_DIR"
+JSA_FILE="$JSA_DIR/app.jsa"
+SIG_FILE="$JSA_DIR/app.sig"
 
 # Function to generate a signature of current environment
 get_sig() {

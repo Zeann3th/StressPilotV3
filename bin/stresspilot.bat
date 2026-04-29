@@ -34,13 +34,14 @@ if "%JAR_FILE%"=="" (
     exit /b 1
 )
 
-:: Use fixed names for the cache and signature
-if exist "%APP_ROOT%\target" (
-    set "JSA_FILE=%APP_ROOT%\target\app.jsa"
+if "%PILOT_HOME%"=="" (
+    set "JSA_DIR=%USERPROFILE%\.pilot\core\scripts"
 ) else (
-    set "JSA_FILE=%APP_ROOT%\app.jsa"
+    set "JSA_DIR=%PILOT_HOME%\core\scripts"
 )
-set "SIG_FILE=%JSA_FILE:.jsa=.sig%"
+if not exist "%JSA_DIR%" mkdir "%JSA_DIR%"
+set "JSA_FILE=%JSA_DIR%\app.jsa"
+set "SIG_FILE=%JSA_DIR%\app.sig"
 
 :: Generate Signature
 set "JAR_SIZE=0"
