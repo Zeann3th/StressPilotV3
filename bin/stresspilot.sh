@@ -7,6 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Resolve directories (matching Spring app logic)
+PILOT_HOME="${PILOT_HOME:-$HOME/.pilot}"
+PLUGINS_DIR="$PILOT_HOME/core/plugins"
+DRIVERS_DIR="$PILOT_HOME/core/drivers"
+
 # Search for the executable JAR
 JAR_FILE=$(ls "$APP_ROOT"/target/stresspilot-*-exec.jar 2>/dev/null | head -n 1 || ls "$APP_ROOT"/stresspilot-*-exec.jar 2>/dev/null | head -n 1 || true)
 
@@ -16,36 +21,46 @@ if [[ -z "$JAR_FILE" ]]; then
 fi
 
 JSA_FILE="${JAR_FILE%.jar}.jsa"
+SIG_FILE="${JAR_FILE%.jar}.sig"
 
-# 1. Staleness Check
-if [[ -f "$JSA_FILE" ]]; then
-    REGENERATE=false
-    
-    # Check if JAR is newer than JSA
-    if [[ "$JAR_FILE" -nt "$JSA_FILE" ]]; then
-        echo "Application update detected. Updating JVM cache..."
+# Function to generate a signature of current environment
+get_sig() {
+    # SIG = [JAR size] + [File count in plugins] + [Latest plugin mtime] + [File count in drivers] + [Latest driver mtime]
+    local jar_info=$(stat -c %s "$JAR_FILE" 2>/dev/null || stat -f %z "$JAR_FILE")
+    local plugins_info=$(ls -AR "$PLUGINS_DIR" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "none")
+    local drivers_info=$(ls -AR "$DRIVERS_DIR" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "none")
+    echo "${jar_info}-${plugins_info}-${drivers_info}"
+}
+
+CURRENT_SIG=$(get_sig)
+
+# 1. Check for changes
+REGENERATE=false
+if [[ ! -f "$JSA_FILE" || ! -f "$SIG_FILE" ]]; then
+    REGENERATE=true
+else
+    OLD_SIG=$(cat "$SIG_FILE")
+    if [[ "$CURRENT_SIG" != "$OLD_SIG" ]]; then
+        echo "Environment change detected (JAR, plugins, or drivers). Updating JVM cache..."
         REGENERATE=true
-    # Check if JVM rejects the archive (version mismatch, etc.)
     elif ! java -Xshare:on -XX:SharedArchiveFile="$JSA_FILE" -version >/dev/null 2>&1; then
         echo "JVM version mismatch or incompatible cache. Updating JVM cache..."
         REGENERATE=true
     fi
-    
-    if [[ "$REGENERATE" == "true" ]]; then
-        rm -f "$JSA_FILE"
-    fi
 fi
 
-# 2. Training (if JSA missing)
-if [[ ! -f "$JSA_FILE" ]]; then
-    echo "First run optimization: generating JVM cache. This will take a few seconds..."
+# 2. Training
+if [[ "$REGENERATE" == "true" ]]; then
+    echo "Optimizing startup for your environment. This will take a few seconds..."
+    rm -f "$JSA_FILE"
     # Captures the full Spring startup class load and then exits
     java -Dspring.context.exit=onRefresh -XX:ArchiveClassesAtExit="$JSA_FILE" -jar "$JAR_FILE" >/dev/null 2>&1 || true
     
-    if [[ ! -f "$JSA_FILE" ]]; then
-        echo "Warning: Failed to generate AppCDS cache. Starting normally..."
-    else
+    if [[ -f "$JSA_FILE" ]]; then
+        echo "$CURRENT_SIG" > "$SIG_FILE"
         echo "Optimization complete."
+    else
+        echo "Warning: Failed to generate AppCDS cache. Starting normally..."
     fi
 fi
 
