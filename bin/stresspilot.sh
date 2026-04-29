@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# StressPilot Multiplatform Launcher (Linux/macOS)
-# Automatically handles AppCDS (app.jsa) generation and usage.
+# StressPilot AppCDS Cache Generator (Linux/macOS)
+# Generates app.jsa for faster JVM startup. Run before launching the app.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -63,13 +63,7 @@ if [[ "$REGENERATE" == "true" ]]; then
         echo "$CURRENT_SIG" > "$SIG_FILE"
         echo "Optimization complete."
     else
-        echo "Warning: Failed to generate AppCDS cache. Starting normally..."
+        echo "Warning: Failed to generate AppCDS cache."
+        exit 1
     fi
-fi
-
-# 3. Execution
-if [[ -f "$JSA_FILE" ]]; then
-    exec java -XX:SharedArchiveFile="$JSA_FILE" -jar "$JAR_FILE" "$@"
-else
-    exec java -jar "$JAR_FILE" "$@"
 fi

@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: StressPilot Multiplatform Launcher (Windows)
-:: Automatically handles AppCDS (app.jsa) generation and usage.
+:: StressPilot AppCDS Cache Generator (Windows)
+:: Generates app.jsa for faster JVM startup. Run before launching the app.
 
 set "SCRIPT_DIR=%~dp0"
 set "APP_ROOT=%SCRIPT_DIR%.."
@@ -91,15 +91,9 @@ if "!REGENERATE!"=="true" (
         echo !CURRENT_SIG!>"%SIG_FILE%"
         echo Optimization complete.
     ) else (
-        echo Warning: Failed to generate AppCDS cache. Starting normally...
+        echo Warning: Failed to generate AppCDS cache.
+        exit /b 1
     )
-)
-
-:: 3. Execution
-if exist "%JSA_FILE%" (
-    java -XX:SharedArchiveFile="%JSA_FILE%" -jar "%JAR_FILE%" %*
-) else (
-    java -jar "%JAR_FILE%" %*
 )
 
 endlocal
