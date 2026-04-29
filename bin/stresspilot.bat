@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: StressPilot Multiplatform Launcher (Windows)
-:: Automatically handles AppCDS (.jsa) generation and usage.
+:: Automatically handles AppCDS (app.jsa) generation and usage.
 
 set "SCRIPT_DIR=%~dp0"
 set "APP_ROOT=%SCRIPT_DIR%.."
@@ -34,8 +34,13 @@ if "%JAR_FILE%"=="" (
     exit /b 1
 )
 
-set "JSA_FILE=%JAR_FILE:.jar=.jsa%"
-set "SIG_FILE=%JAR_FILE:.jar=.sig%"
+:: Use fixed names for the cache and signature
+if exist "%APP_ROOT%\target" (
+    set "JSA_FILE=%APP_ROOT%\target\app.jsa"
+) else (
+    set "JSA_FILE=%APP_ROOT%\app.jsa"
+)
+set "SIG_FILE=%JSA_FILE:.jsa=.sig%"
 
 :: Generate Signature
 set "JAR_SIZE=0"
@@ -64,7 +69,7 @@ if not exist "%JSA_FILE%" (
 ) else (
     set /p OLD_SIG=<"%SIG_FILE%"
     if "!CURRENT_SIG!" neq "!OLD_SIG!" (
-        echo Environment change detected (JAR, plugins, or drivers). Updating JVM cache...
+        echo Environment change detected. Updating JVM cache...
         set "REGENERATE=true"
     ) else (
         :: Check if JVM rejects the archive

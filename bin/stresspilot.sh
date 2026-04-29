@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # StressPilot Multiplatform Launcher (Linux/macOS)
-# Automatically handles AppCDS (.jsa) generation and usage.
+# Automatically handles AppCDS (app.jsa) generation and usage.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -20,12 +20,16 @@ if [[ -z "$JAR_FILE" ]]; then
     exit 1
 fi
 
-JSA_FILE="${JAR_FILE%.jar}.jsa"
-SIG_FILE="${JAR_FILE%.jar}.sig"
+# Use fixed names for the cache and signature
+JSA_FILE="$APP_ROOT/target/app.jsa"
+# Fallback to root if target doesn't exist (e.g. in distribution)
+if [[ ! -d "$APP_ROOT/target" ]]; then
+    JSA_FILE="$APP_ROOT/app.jsa"
+fi
+SIG_FILE="${JSA_FILE%.jsa}.sig"
 
 # Function to generate a signature of current environment
 get_sig() {
-    # SIG = [JAR size] + [File count in plugins] + [Latest plugin mtime] + [File count in drivers] + [Latest driver mtime]
     local jar_info=$(stat -c %s "$JAR_FILE" 2>/dev/null || stat -f %z "$JAR_FILE")
     local plugins_info=$(ls -AR "$PLUGINS_DIR" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "none")
     local drivers_info=$(ls -AR "$DRIVERS_DIR" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "none")
@@ -41,7 +45,7 @@ if [[ ! -f "$JSA_FILE" || ! -f "$SIG_FILE" ]]; then
 else
     OLD_SIG=$(cat "$SIG_FILE")
     if [[ "$CURRENT_SIG" != "$OLD_SIG" ]]; then
-        echo "Environment change detected (JAR, plugins, or drivers). Updating JVM cache..."
+        echo "Environment change detected. Updating JVM cache..."
         REGENERATE=true
     elif ! java -Xshare:on -XX:SharedArchiveFile="$JSA_FILE" -version >/dev/null 2>&1; then
         echo "JVM version mismatch or incompatible cache. Updating JVM cache..."
@@ -53,7 +57,6 @@ fi
 if [[ "$REGENERATE" == "true" ]]; then
     echo "Optimizing startup for your environment. This will take a few seconds..."
     rm -f "$JSA_FILE"
-    # Captures the full Spring startup class load and then exits
     java -Dspring.context.exit=onRefresh -XX:ArchiveClassesAtExit="$JSA_FILE" -jar "$JAR_FILE" >/dev/null 2>&1 || true
     
     if [[ -f "$JSA_FILE" ]]; then
