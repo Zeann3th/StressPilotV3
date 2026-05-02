@@ -10,5 +10,5 @@ public interface FlowNodeHandler extends ExtensionPoint {
 
     String getSupportedType();
 
-    String handle(FlowStepEntity step, Map<String, FlowStepEntity> stepMap, FlowExecutionContext context);
+    NodeHandlerResult handle(FlowStepEntity step, Map<String, FlowStepEntity> stepMap, FlowExecutionContext context);
 }
