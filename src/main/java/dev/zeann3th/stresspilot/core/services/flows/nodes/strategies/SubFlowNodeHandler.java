@@ -6,6 +6,8 @@ import dev.zeann3th.stresspilot.core.ports.store.FlowStepStore;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
+import dev.zeann3th.stresspilot.core.services.flows.FlowProcessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -23,6 +25,7 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
     private final FlowStepStore flowStepStore;
 
     private final ObjectProvider<FlowNodeHandlerFactory> nodeHandlerFactoryProvider;
+    private final ObjectProvider<FlowProcessor> flowProcessorProvider;
 
     @Override
     public String getSupportedType() {
@@ -30,18 +33,18 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
     }
 
     @Override
-    public String handle(FlowStepEntity step, Map<String, FlowStepEntity> parentStepMap, FlowExecutionContext context) {
+    public NodeHandlerResult handle(FlowStepEntity step, Map<String, FlowStepEntity> parentStepMap, FlowExecutionContext context) {
         Long subFlowId;
         try {
             subFlowId = Long.parseLong(step.getCondition());
         } catch (NumberFormatException _) {
             log.error("Invalid Sub-Flow ID in condition field: {}", step.getCondition());
-            return step.getNextIfFalse();
+            return NodeHandlerResult.of(step.getNextIfFalse());
         }
 
         List<FlowStepEntity> subSteps = flowStepStore.findAllByFlowIdWithEndpoint(subFlowId);
         if (subSteps.isEmpty()) {
-            return step.getNextIfTrue();
+            return NodeHandlerResult.of(step.getNextIfTrue());
         }
 
         Map<String, FlowStepEntity> subStepMap = subSteps.stream()
@@ -56,6 +59,7 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
         final int MAX_JUMPS = 10000;
 
         FlowNodeHandlerFactory nodeHandlerFactory = nodeHandlerFactoryProvider.getObject();
+        FlowProcessor flowProcessor = flowProcessorProvider.getObject();
 
         while (current != null) {
             if (context.shouldStop()) {
@@ -69,11 +73,19 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
 
             String type = current.getType().toUpperCase();
 
-            String nextId = nodeHandlerFactory.getHandler(type).handle(current, subStepMap, context);
+            // Pre-process
+            flowProcessor.process(current.getPreProcessor(), context.getVariables(),
+                    null, "pre-processor", context.getThreadId());
 
-            current = nextId != null ? subStepMap.get(nextId) : null;
+            NodeHandlerResult result = nodeHandlerFactory.getHandler(type).handle(current, subStepMap, context);
+
+            // Post-process
+            flowProcessor.process(current.getPostProcessor(), context.getVariables(),
+                    result.outputData(), "post-processor", context.getThreadId());
+
+            current = result.nextId() != null ? subStepMap.get(result.nextId()) : null;
         }
 
-        return step.getNextIfTrue();
+        return NodeHandlerResult.of(step.getNextIfTrue());
     }
 }

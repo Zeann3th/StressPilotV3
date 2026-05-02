@@ -2,9 +2,10 @@ package dev.zeann3th.stresspilot.infrastructure.configs.datasource;
 
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.infrastructure.utils.DriverShim;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -24,7 +25,7 @@ public class SqlDriverConfig {
 
     private String driversPath;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
         String appHome = System.getenv("PILOT_HOME");
         if (appHome == null || appHome.isEmpty()) {

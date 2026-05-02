@@ -6,10 +6,11 @@ import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.FlowStore;
 import dev.zeann3th.stresspilot.core.ports.store.ScheduleStore;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     private final FlowStore flowStore;
     private final JsonMapper jsonMapper;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
         log.info("Initializing scheduled jobs from database...");
         List<ScheduleEntity> enabledSchedules = scheduleStore.findAllByEnabledTrue();

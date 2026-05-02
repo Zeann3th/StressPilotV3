@@ -6,6 +6,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.ExtensionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
 
     @Autowired protected ActiveRunRegistry activeRunRegistry;
     @Autowired protected FlowNodeHandlerFactory nodeHandlerFactory;
+    @Autowired protected FlowProcessor flowProcessor;
 
     public abstract String getType();
 
@@ -128,8 +130,17 @@ public abstract class FlowExecutor implements ExtensionPoint {
 
             String type = current.getType().toUpperCase();
 
-            String nextId = nodeHandlerFactory.getHandler(type).handle(current, stepMap, ctx);
-            current = nextId != null ? stepMap.get(nextId) : null;
+            // Pre-process
+            flowProcessor.process(current.getPreProcessor(), ctx.getVariables(),
+                    null, "pre-processor", ctx.getThreadId());
+
+            NodeHandlerResult result = nodeHandlerFactory.getHandler(type).handle(current, stepMap, ctx);
+
+            // Post-process
+            flowProcessor.process(current.getPostProcessor(), ctx.getVariables(),
+                    result.outputData(), "post-processor", ctx.getThreadId());
+
+            current = result.nextId() != null ? stepMap.get(result.nextId()) : null;
         }
     }
 

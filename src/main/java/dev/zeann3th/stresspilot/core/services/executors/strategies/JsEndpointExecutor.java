@@ -10,12 +10,13 @@ import dev.zeann3th.stresspilot.core.services.executors.context.JsExecutionConte
 import dev.zeann3th.stresspilot.core.services.functions.FunctionService;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.*;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
     private Source udfSource;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
         engine = Engine.newBuilder("js")
                 .option("engine.WarnInterpreterOnly", "false")
@@ -78,6 +79,14 @@ public class JsEndpointExecutor implements EndpointExecutor {
             EndpointEntity endpointEntity,
             Map<String, Object> environment,
             ExecutionContext executionContext) {
+        if (engine == null) {
+            return ExecuteEndpointResponse.builder()
+                    .statusCode(503)
+                    .success(false)
+                    .responseTimeMs(0L)
+                    .message("JS engine is still initializing, retry in a moment")
+                    .build();
+        }
         long startTime = System.currentTimeMillis();
 
         String script = endpointEntity.getBody() != null ? endpointEntity.getBody() : "";
