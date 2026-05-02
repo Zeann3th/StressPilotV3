@@ -4,6 +4,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -26,10 +27,10 @@ public class BranchNodeHandler implements FlowNodeHandler {
     }
 
     @Override
-    public String handle(FlowStepEntity step, Map<String, FlowStepEntity> stepMap, FlowExecutionContext context) {
+    public NodeHandlerResult handle(FlowStepEntity step, Map<String, FlowStepEntity> stepMap, FlowExecutionContext context) {
         boolean result = evaluateCondition(step.getCondition(), context.getVariables());
         log.debug("Thread {} branch condition='{}' -> {}", context.getThreadId(), step.getCondition(), result);
-        return result ? step.getNextIfTrue() : step.getNextIfFalse();
+        return NodeHandlerResult.of(result ? step.getNextIfTrue() : step.getNextIfFalse());
     }
 
     public static boolean evaluateCondition(String condition, Map<String, Object> variables) {
