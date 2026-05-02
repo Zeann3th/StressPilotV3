@@ -80,7 +80,7 @@ public class FlowServiceImpl implements FlowService {
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
         Map<String, Object> safe = patch.entrySet().stream()
                 .filter(e -> !Set.of("id", "projectId", "project", "steps", "type").contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
         try {
             jsonMapper.updateValue(entity, safe);
             return flowStore.save(entity);
