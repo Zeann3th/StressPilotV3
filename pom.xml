@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<grpc.version>1.80.0</grpc.version>
+		<grpc.version>1.77.1</grpc.version>
 		<protobuf-java.version>4.34.1</protobuf-java.version>
 		<spring-grpc.version>1.0.2</spring-grpc.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
@@ -65,7 +65,6 @@
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-services</artifactId>
-			<version>${grpc.version}</version>
 		</dependency>
 
 		<dependency>
@@ -131,25 +130,17 @@
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-protobuf</artifactId>
-			<version>${grpc.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-stub</artifactId>
-			<version>${grpc.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java-util</artifactId>
 			<version>${protobuf-java.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-netty-shaded</artifactId>
-			<version>${grpc.version}</version>
 		</dependency>
 
 		<dependency>
