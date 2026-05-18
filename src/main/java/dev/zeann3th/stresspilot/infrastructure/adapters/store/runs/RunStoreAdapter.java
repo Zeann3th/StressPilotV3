@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.infrastructure.adapters.store.runs;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,11 @@ public class RunStoreAdapter implements RunStore {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int finalizeRun(String id, String status, LocalDateTime completedAt) {
         return runJpaRepository.finalizeRun(id, status, completedAt);
+    }
+
+    @Override
+    public List<RunEntity> findCompletedWithoutSnapshot(int limit) {
+        return runJpaRepository.findCompletedWithoutSnapshot(PageRequest.of(0, limit));
     }
 
 }

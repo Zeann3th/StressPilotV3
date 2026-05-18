@@ -20,4 +20,6 @@ public interface RunStore {
     void deleteById(String id);
 
     int finalizeRun(String id, String status, LocalDateTime completedAt);
+
+    List<RunEntity> findCompletedWithoutSnapshot(int limit);
 }
