@@ -73,6 +73,10 @@ application:
       topic: stresspilot.request-logs
       bootstrap-servers: localhost:9092
 
+  tasks:
+    run-snapshot:
+      cron: "0 0/10 * * * ?"
+
 management:
   endpoints:
     web:
