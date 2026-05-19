@@ -60,4 +60,10 @@ public class RunController {
     public void interruptRun(@PathVariable String runId) {
         runService.interruptRun(runId);
     }
+
+    @PostMapping("/{runId}/snapshot")
+    @Operation(summary = "Trigger Manual Snapshot", description = "Manually triggers a snapshot for a completed run.")
+    public dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity triggerSnapshot(@PathVariable String runId) {
+        return runService.createManualSnapshot(runId);
+    }
 }
