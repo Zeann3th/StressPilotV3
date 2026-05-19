@@ -156,3 +156,18 @@ CREATE TABLE schedules
     updated_at  DATETIME     NOT NULL,
     FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
 );
+
+CREATE TABLE runs_snapshot
+(
+    id               VARCHAR(20) PRIMARY KEY NOT NULL,
+    flow_id          INTEGER                 NOT NULL,
+    status           VARCHAR(10)             NOT NULL,
+    threads          INTEGER                 NOT NULL,
+    duration         INTEGER                 NOT NULL,
+    ramp_up_duration INTEGER                 NOT NULL,
+    started_at       TIMESTAMP               NOT NULL,
+    completed_at     TIMESTAMP               NOT NULL,
+    metrics          TEXT                    NOT NULL,
+    created_at       TIMESTAMP               NOT NULL,
+    CONSTRAINT FK_RUNS_SNAPSHOT_ON_FLOW FOREIGN KEY (flow_id) REFERENCES flows (id) ON DELETE CASCADE
+);
