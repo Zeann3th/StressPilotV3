@@ -66,4 +66,16 @@ public class RunController {
     public dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity triggerSnapshot(@PathVariable String runId) {
         return runService.createManualSnapshot(runId);
     }
+
+    @GetMapping("/snapshot/compare/{runIds}")
+    @Operation(summary = "Compare Snapshots", description = "Compares two snapshots using runId1..runId2 syntax.")
+    public List<dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity> compareSnapshots(@PathVariable String runIds) {
+        String[] ids = runIds.split("\\.\\.");
+        if (ids.length != 2) {
+            throw dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder.exception(
+                    dev.zeann3th.stresspilot.core.domain.enums.ErrorCode.ER0001,
+                    java.util.Map.of("reason", "Invalid comparison format. Use runId1..runId2"));
+        }
+        return runService.compareSnapshots(ids[0], ids[1]);
+    }
 }

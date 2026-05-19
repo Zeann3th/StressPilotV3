@@ -1,7 +1,9 @@
 package dev.zeann3th.stresspilot.core.services.runs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
+import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
@@ -13,7 +15,6 @@ import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunSnapshotStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -134,18 +135,27 @@ public class RunServiceImpl implements RunService {
     @Override
     @Transactional
     public RunSnapshotEntity createManualSnapshot(String runId) {
-        RunEntity run = runStore.findById(runId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
-
+        RunEntity run = runStore.findById(runId).orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
         if (!RunStatus.COMPLETED.name().equals(run.getStatus())) {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0001, Map.of("reason", "Only completed runs can be snapshotted"));
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001, Map.of(Constants.REASON, "Only completed runs can be snapshotted"));
         }
-
         if (runSnapshotStore.existsById(runId)) {
             throw CommandExceptionBuilder.exception(ErrorCode.ER0027);
         }
-
         return createSnapshot(run);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RunSnapshotEntity getRunSnapshot(String runId) {
+        return runSnapshotStore.findById(runId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RunSnapshotEntity> compareSnapshots(String runId1, String runId2) {
+        return List.of(getRunSnapshot(runId1), getRunSnapshot(runId2));
     }
 
     private RunSnapshotEntity createSnapshot(RunEntity run) {
@@ -173,7 +183,6 @@ public class RunServiceImpl implements RunService {
 
         Map<Long, List<Map<String, Object>>> finalMetrics = new HashMap<>();
 
-        // Ensure all endpoints present in the logs have 20 bins
         for (Long endpointId : groupedLogs.keySet()) {
             List<Map<String, Object>> bins = new ArrayList<>();
             Map<Integer, List<Long>> endpointBins = groupedLogs.get(endpointId);

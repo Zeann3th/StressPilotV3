@@ -5,6 +5,8 @@ import dev.zeann3th.stresspilot.core.ports.store.RunSnapshotStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 public class RunSnapshotStoreAdapter implements RunSnapshotStore {
@@ -18,5 +20,10 @@ public class RunSnapshotStoreAdapter implements RunSnapshotStore {
     @Override
     public boolean existsById(String id) {
         return runSnapshotJpaRepository.existsById(id);
+    }
+
+    @Override
+    public Optional<RunSnapshotEntity> findById(String id) {
+        return runSnapshotJpaRepository.findById(id);
     }
 }

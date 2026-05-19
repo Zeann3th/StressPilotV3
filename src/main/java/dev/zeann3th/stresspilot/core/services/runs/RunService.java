@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.runs;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -20,4 +21,8 @@ public interface RunService {
     void performSnapshotting();
 
     RunSnapshotEntity createManualSnapshot(String runId);
+
+    RunSnapshotEntity getRunSnapshot(String runId);
+
+    List<RunSnapshotEntity> compareSnapshots(String runId1, String runId2);
 }
