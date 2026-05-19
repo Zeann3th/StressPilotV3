@@ -22,6 +22,8 @@ public class Constants {
             "/api/v1/utilities/healthz",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/ws/**"
+            "/ws/**",
+            "/mcp/sse",
+            "/mcp/message"
     );
 }

@@ -10,6 +10,14 @@ spring:
     active: dev
   application:
     name: stresspilot
+  ai:
+    mcp:
+      server:
+        transport: SSE
+        sse:
+          path: /mcp/sse
+        message:
+          path: /mcp/message
   servlet:
     multipart:
       max-file-size: 20MB
