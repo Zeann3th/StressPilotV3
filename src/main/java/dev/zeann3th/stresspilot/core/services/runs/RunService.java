@@ -1,11 +1,10 @@
 package dev.zeann3th.stresspilot.core.services.runs;
 
-import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
+import java.util.List;
+
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.util.List;
 
 public interface RunService {
     List<RunEntity> getRunHistory(Long flowId);
