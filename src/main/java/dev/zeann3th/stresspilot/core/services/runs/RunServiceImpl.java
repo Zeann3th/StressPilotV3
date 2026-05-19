@@ -4,13 +4,16 @@ import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
+import dev.zeann3th.stresspilot.core.ports.store.RunSnapshotStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -33,6 +37,8 @@ public class RunServiceImpl implements RunService {
 
     private final RunStore runStore;
     private final RequestLogStore requestLogStore;
+    private final RunSnapshotStore runSnapshotStore;
+    private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -107,6 +113,106 @@ public class RunServiceImpl implements RunService {
         int updated = runStore.finalizeRun(runId, finalStatus, now);
         if (updated == 0) {
             log.warn("Run {} could not be finalized - already finished", runId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void performSnapshotting() {
+        List<RunEntity> runs = runStore.findCompletedWithoutSnapshot(10);
+        for (RunEntity run : runs) {
+            try {
+                if (!runSnapshotStore.existsById(run.getId())) {
+                    createSnapshot(run);
+                }
+            } catch (Exception e) {
+                log.error("Failed to auto-create snapshot for run {}: {}", run.getId(), e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public RunSnapshotEntity createManualSnapshot(String runId) {
+        RunEntity run = runStore.findById(runId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+
+        if (!RunStatus.COMPLETED.name().equals(run.getStatus())) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001, Map.of("reason", "Only completed runs can be snapshotted"));
+        }
+
+        if (runSnapshotStore.existsById(runId)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0027);
+        }
+
+        return createSnapshot(run);
+    }
+
+    private RunSnapshotEntity createSnapshot(RunEntity run) {
+        if (run.getStartedAt() == null || run.getCompletedAt() == null) {
+            log.warn("Run {} has missing timestamps, skipping snapshot", run.getId());
+            return null;
+        }
+
+        long totalDurationMs = Duration.between(run.getStartedAt(), run.getCompletedAt()).toMillis();
+        double binWidthMs = Math.max(1.0, totalDurationMs / 20.0);
+
+        Map<Long, Map<Integer, List<Long>>> groupedLogs = new HashMap<>();
+
+        requestLogStore.streamLogsByRunId(run.getId(), logEntity -> {
+            Long endpointId = logEntity.getEndpointId();
+            long offsetMs = Duration.between(run.getStartedAt(), logEntity.getCreatedAt()).toMillis();
+            int binIndex = (int) (offsetMs / binWidthMs);
+            if (binIndex < 0) binIndex = 0;
+            if (binIndex > 19) binIndex = 19;
+
+            groupedLogs.computeIfAbsent(endpointId, k -> new HashMap<>())
+                    .computeIfAbsent(binIndex, k -> new ArrayList<>())
+                    .add(logEntity.getResponseTime());
+        });
+
+        Map<Long, List<Map<String, Object>>> finalMetrics = new HashMap<>();
+
+        // Ensure all endpoints present in the logs have 20 bins
+        for (Long endpointId : groupedLogs.keySet()) {
+            List<Map<String, Object>> bins = new ArrayList<>();
+            Map<Integer, List<Long>> endpointBins = groupedLogs.get(endpointId);
+
+            for (int i = 0; i < 20; i++) {
+                List<Long> latencies = endpointBins.getOrDefault(i, Collections.emptyList());
+                double avg = latencies.isEmpty() ? 0.0 : latencies.stream().mapToLong(Long::longValue).average().orElse(0.0);
+                int count = latencies.size();
+
+                Map<String, Object> bin = new HashMap<>();
+                bin.put("bin_index", i);
+                bin.put("avg_response_time", avg);
+                bin.put("request_count", count);
+                bins.add(bin);
+            }
+            finalMetrics.put(endpointId, bins);
+        }
+
+        try {
+            String metricsJson = objectMapper.writeValueAsString(finalMetrics);
+
+            RunSnapshotEntity snapshot = RunSnapshotEntity.builder()
+                    .id(run.getId())
+                    .flowId(run.getFlowId())
+                    .status(run.getStatus())
+                    .threads(run.getThreads())
+                    .duration(run.getDuration())
+                    .rampUpDuration(run.getRampUpDuration())
+                    .startedAt(run.getStartedAt())
+                    .completedAt(run.getCompletedAt())
+                    .metrics(metricsJson)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            log.info("Saving snapshot for run {}", run.getId());
+            return runSnapshotStore.save(snapshot);
+        } catch (Exception e) {
+            log.error("Failed to create snapshot for run {}: {}", run.getId(), e.getMessage());
+            throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
         }
     }
 

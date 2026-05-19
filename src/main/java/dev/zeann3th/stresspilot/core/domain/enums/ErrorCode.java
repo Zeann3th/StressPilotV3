@@ -31,6 +31,7 @@ public enum ErrorCode {
     ER0024(ErrorType.FAILURE, "Failed to reload plugin: <reason>"),
     ER0025(ErrorType.FAILURE, "Function not found: <id>"),
     ER0026(ErrorType.FAILURE, "Failed to schedule job: <reason>"),
+    ER0027(ErrorType.FAILURE, "Run already snapshotted"),
     ER9999(ErrorType.FAILURE, "System is busy, please try again later"),;
 
     private final ErrorType errorType;
