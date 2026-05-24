@@ -1,7 +1,6 @@
 package dev.zeann3th.stresspilot.core.services.flows.strategies.distributed;
 
-import dev.zeann3th.stresspilot.infrastructure.configs.properties.DistributedFlowProperties;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
@@ -13,19 +12,32 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "application.distributed", name = "enabled", havingValue = "true")
 public class DistributedWorkerRegistry {
     private final StringRedisTemplate redisTemplate;
-    private final DistributedFlowProperties properties;
+    private final String keyPrefix;
+    private final String nodeId;
+    private final int workerTtlSeconds;
+
+    public DistributedWorkerRegistry(
+            StringRedisTemplate redisTemplate,
+            @Value("${application.distributed.key-prefix:stresspilot}") String keyPrefix,
+            @Value("${application.distributed.node-id:local}") String nodeId,
+            @Value("${application.distributed.worker-ttl-seconds:15}") int workerTtlSeconds
+    ) {
+        this.redisTemplate = redisTemplate;
+        this.keyPrefix = keyPrefix;
+        this.nodeId = nodeId;
+        this.workerTtlSeconds = workerTtlSeconds;
+    }
 
     public void heartbeat() {
-        heartbeat(properties.getNodeId());
+        heartbeat(nodeId);
     }
 
     public void heartbeat(String nodeId) {
         DistributedChannels channels = channels();
-        Duration ttl = Duration.ofSeconds(properties.getWorkerTtlSeconds());
+        Duration ttl = Duration.ofSeconds(workerTtlSeconds);
 
         redisTemplate.opsForValue().set(channels.workerKey(nodeId), nodeId, ttl);
         redisTemplate.convertAndSend(channels.workerHeartbeatChannel(), nodeId);
@@ -50,6 +62,6 @@ public class DistributedWorkerRegistry {
     }
 
     private DistributedChannels channels() {
-        return new DistributedChannels(properties.getKeyPrefix());
+        return new DistributedChannels(keyPrefix);
     }
 }

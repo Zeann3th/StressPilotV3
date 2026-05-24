@@ -14,5 +14,6 @@ class DistributedChannelsTest {
         assertThat(channels.stopChannel()).isEqualTo("stresspilot:distributed:stop");
         assertThat(channels.requestLogChannel()).isEqualTo("stresspilot:distributed:request-log");
         assertThat(channels.workerKey("node-1")).isEqualTo("stresspilot:workers:node-1");
+        assertThat(channels.runKey("run-1")).isEqualTo("stresspilot:runs:run-1");
     }
 }
