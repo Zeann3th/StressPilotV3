@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.core.services.flows.strategies.distributed;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
+import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -24,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 @ConditionalOnProperty(prefix = "application.distributed", name = "enabled", havingValue = "true")
 public class DistributedMasterLogSubscriber implements MessageListener {
     private final RequestLogService requestLogService;
+    private final RunStore runStore;
     private final String keyPrefix;
     private final JsonMapper jsonMapper;
     private final StringRedisTemplate redisTemplate;
@@ -31,23 +33,31 @@ public class DistributedMasterLogSubscriber implements MessageListener {
 
     public DistributedMasterLogSubscriber(
             RequestLogService requestLogService,
+            RunStore runStore,
             StringRedisTemplate redisTemplate,
             @Value("${application.distributed.key-prefix:stresspilot}") String keyPrefix
     ) {
-        this(requestLogService, redisTemplate, keyPrefix, new JsonMapper());
+        this(requestLogService, runStore, redisTemplate, keyPrefix, new JsonMapper());
     }
 
-    DistributedMasterLogSubscriber(RequestLogService requestLogService, String keyPrefix, JsonMapper jsonMapper) {
-        this(requestLogService, null, keyPrefix, jsonMapper);
+    DistributedMasterLogSubscriber(
+            RequestLogService requestLogService,
+            RunStore runStore,
+            String keyPrefix,
+            JsonMapper jsonMapper
+    ) {
+        this(requestLogService, runStore, null, keyPrefix, jsonMapper);
     }
 
     private DistributedMasterLogSubscriber(
             RequestLogService requestLogService,
+            RunStore runStore,
             StringRedisTemplate redisTemplate,
             String keyPrefix,
             JsonMapper jsonMapper
     ) {
         this.requestLogService = requestLogService;
+        this.runStore = runStore;
         this.redisTemplate = redisTemplate;
         this.keyPrefix = keyPrefix;
         this.jsonMapper = jsonMapper;
@@ -83,19 +93,24 @@ public class DistributedMasterLogSubscriber implements MessageListener {
             DistributedEventPublisher.RequestLogPayload payload = jsonMapper.readValue(
                     message,
                     DistributedEventPublisher.RequestLogPayload.class);
-            requestLogService.queueLog(toEntity(payload));
+            if (payload.runId() == null) {
+                return;
+            }
+            runStore.findById(payload.runId())
+                    .map(run -> toEntity(payload, run))
+                    .ifPresent(requestLogService::queueLog);
         } catch (Exception e) {
             log.warn("Failed to handle distributed request log: {}", e.getMessage());
         }
     }
 
-    private RequestLogEntity toEntity(DistributedEventPublisher.RequestLogPayload payload) {
+    private RequestLogEntity toEntity(DistributedEventPublisher.RequestLogPayload payload, RunEntity run) {
         EndpointEntity endpoint = payload.endpointId() != null
                 ? EndpointEntity.builder().id(payload.endpointId()).build()
                 : null;
 
         return RequestLogEntity.builder()
-                .run(RunEntity.builder().id(payload.runId()).build())
+                .run(run)
                 .endpoint(endpoint)
                 .statusCode(payload.statusCode())
                 .success(payload.success())
