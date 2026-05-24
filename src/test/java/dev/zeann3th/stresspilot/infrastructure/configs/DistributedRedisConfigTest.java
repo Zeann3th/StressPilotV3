@@ -4,6 +4,8 @@ import dev.zeann3th.stresspilot.infrastructure.configs.properties.DistributedFlo
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DistributedRedisConfigTest {
@@ -16,7 +18,21 @@ class DistributedRedisConfigTest {
 
         assertThat(properties.isEnabled()).isFalse();
         assertThat(properties.getKeyPrefix()).isEqualTo("stresspilot");
+        assertThat(properties.getNodeId()).isEqualTo(DistributedFlowProperties.resolveDefaultNodeId(System.getenv()));
+        assertThat(properties.getNodeId()).isNotBlank();
         assertThat(properties.getWorkerTtlSeconds()).isEqualTo(15);
+    }
+
+    @Test
+    void nodeIdDefaultFallsBackFromHostNameToComputerNameToLocal() {
+        assertThat(DistributedFlowProperties.resolveDefaultNodeId(Map.of(
+                "HOSTNAME", "stresspilot-host",
+                "COMPUTERNAME", "stresspilot-computer"
+        ))).isEqualTo("stresspilot-host");
+        assertThat(DistributedFlowProperties.resolveDefaultNodeId(Map.of(
+                "COMPUTERNAME", "stresspilot-computer"
+        ))).isEqualTo("stresspilot-computer");
+        assertThat(DistributedFlowProperties.resolveDefaultNodeId(Map.of())).isEqualTo("local");
     }
 
     @Test
