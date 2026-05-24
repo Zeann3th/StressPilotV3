@@ -78,7 +78,10 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .build();
         }
 
-        context.recordRequest(result.isSuccess());
+        boolean recordableEndpoint = !"JS".equalsIgnoreCase(endpoint.getType());
+        if (recordableEndpoint) {
+            context.recordRequest(result.isSuccess());
+        }
 
         Map<String, Object> endpointDebug = new LinkedHashMap<>();
         endpointDebug.put("id", endpoint.getId());
@@ -105,16 +108,18 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     result.getStatusCode(), result.isSuccess(), result.getMessage());
         }
 
-        requestLogService.queueLog(RequestLogEntity.builder()
-                .run(context.getRun())
-                .endpoint(endpoint)
-                .statusCode(result.getStatusCode())
-                .success(result.isSuccess())
-                .responseTime(result.getResponseTimeMs())
-                .request(requestDebug.toString())
-                .response(responseText)
-                .createdAt(LocalDateTime.now())
-                .build());
+        if (recordableEndpoint) {
+            requestLogService.queueLog(RequestLogEntity.builder()
+                    .run(context.getRun())
+                    .endpoint(endpoint)
+                    .statusCode(result.getStatusCode())
+                    .success(result.isSuccess())
+                    .responseTime(result.getResponseTimeMs())
+                    .request(requestDebug.toString())
+                    .response(responseText)
+                    .createdAt(LocalDateTime.now())
+                    .build());
+        }
 
         String nextId;
         if (strictLinear) {

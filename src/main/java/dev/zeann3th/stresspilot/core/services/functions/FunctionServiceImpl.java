@@ -5,9 +5,11 @@ import dev.zeann3th.stresspilot.core.domain.commands.function.UpdateFunctionComm
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.FunctionEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.events.UserDefinedFunctionsChangedEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.FunctionStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FunctionServiceImpl implements FunctionService {
     private final FunctionStore functionStore;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<FunctionEntity> getListFunction(String name, Pageable pageable) {
@@ -39,7 +42,9 @@ public class FunctionServiceImpl implements FunctionService {
                 .description(createFunctionCommand.getDescription())
                 .active(true)
                 .build();
-        return functionStore.save(entity);
+        FunctionEntity saved = functionStore.save(entity);
+        eventPublisher.publishEvent(UserDefinedFunctionsChangedEvent.now());
+        return saved;
     }
 
     @Override
@@ -48,7 +53,9 @@ public class FunctionServiceImpl implements FunctionService {
         if (updateFunctionCommand.getName() != null) entity.setName(updateFunctionCommand.getName());
         if (updateFunctionCommand.getBody() != null) entity.setBody(updateFunctionCommand.getBody());
         if (updateFunctionCommand.getDescription() != null) entity.setDescription(updateFunctionCommand.getDescription());
-        return functionStore.save(entity);
+        FunctionEntity saved = functionStore.save(entity);
+        eventPublisher.publishEvent(UserDefinedFunctionsChangedEvent.now());
+        return saved;
     }
 
     @Override
@@ -57,6 +64,7 @@ public class FunctionServiceImpl implements FunctionService {
             throw CommandExceptionBuilder.exception(ErrorCode.ER0025, Map.of(Constants.ID,functionId.toString()));
         }
         functionStore.deleteById(functionId);
+        eventPublisher.publishEvent(UserDefinedFunctionsChangedEvent.now());
     }
 
     @Override

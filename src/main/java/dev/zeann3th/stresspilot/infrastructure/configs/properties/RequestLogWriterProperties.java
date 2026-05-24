@@ -22,8 +22,12 @@ public class RequestLogWriterProperties {
         private String username;
         private String password;
         private String driverClassName;
+        private int queueCapacity = 200_000;
+        private long offerTimeoutMs = 200;
         private int batchSize = 1000;
         private long flushIntervalMs = 1000;
+        private int maxRetries = 3;
+        private long retryBaseDelayMs = 100;
     }
 
     @Data

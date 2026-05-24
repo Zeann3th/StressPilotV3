@@ -1,0 +1,52 @@
+server:
+  address: 127.0.0.1
+  port: 0
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.mcp.server.autoconfigure.McpWebMvcServerAutoConfiguration
+  application:
+    name: stresspilot-test
+  datasource:
+    url: jdbc:h2:mem:stresspilot_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=KEY,VALUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+  flyway:
+    enabled: true
+    locations:
+      - classpath:db/h2/migrations
+  quartz:
+    job-store-type: memory
+  ai:
+    mcp:
+      server:
+        enabled: false
+
+application:
+  mode: server
+  cors:
+    allowed-origins:
+      - "localhost:3000"
+  message:
+    datasource:
+      type: primary
+      batch-size: 100
+      flush-interval-ms: 50
+    websocket:
+      enabled: false
+    kafka:
+      enabled: false
+  tasks:
+    run-snapshot:
+      cron: "0 0/10 * * * ?"

@@ -73,7 +73,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         if (Boolean.TRUE.equals(saved.getEnabled())) {
             try {
                 scheduleJob(saved);
-            } catch (SchedulerException e) {
+            } catch (Exception e) {
                 throw CommandExceptionBuilder.exception(ErrorCode.ER0026, Map.of(Constants.REASON, e.getMessage()));
             }
         }

@@ -69,8 +69,15 @@ application:
   message:
     datasource:
       type: primary
+      queue-capacity: 200000
+      offer-timeout-ms: 200
       batch-size: 1000
       flush-interval-ms: 1000
+      max-retries: 3
+      retry-base-delay-ms: 100
+    sampling:
+      enabled: false
+      rate: 1.0
     websocket:
       enabled: true
       push-interval-ms: 500

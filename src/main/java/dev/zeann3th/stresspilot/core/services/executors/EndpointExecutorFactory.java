@@ -6,8 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.pf4j.PluginManager;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 @Component
@@ -34,9 +35,11 @@ public class EndpointExecutorFactory {
     }
 
     public List<String> listTypes() {
-            List<EndpointExecutor> extensions = pluginManager.getExtensions(EndpointExecutor.class);
-            return Stream.concat(executors.stream(), extensions.stream())
-                    .map(EndpointExecutor::getType)
-                    .collect(Collectors.toList());
+        List<EndpointExecutor> extensions = pluginManager.getExtensions(EndpointExecutor.class);
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        return Stream.concat(executors.stream(), extensions.stream())
+                .map(EndpointExecutor::getType)
+                .filter(type -> normalized.add(type.toUpperCase(Locale.ROOT)))
+                .toList();
     }
 }

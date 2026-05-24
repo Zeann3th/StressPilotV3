@@ -4,6 +4,7 @@ import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointRes
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FunctionEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.EndpointType;
+import dev.zeann3th.stresspilot.core.domain.events.UserDefinedFunctionsChangedEvent;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.services.executors.context.JsExecutionContext;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Slf4j(topic = "JsEndpointExecutor")
@@ -35,6 +37,8 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
     private Source udfSource;
 
+    private final AtomicBoolean udfDirty = new AtomicBoolean(true);
+
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         engine = Engine.newBuilder("js")
@@ -43,7 +47,12 @@ public class JsEndpointExecutor implements EndpointExecutor {
         loadUserDefinedFunctions();
     }
 
-    public void loadUserDefinedFunctions() {
+    @EventListener(UserDefinedFunctionsChangedEvent.class)
+    public void markUserDefinedFunctionsDirty() {
+        udfDirty.set(true);
+    }
+
+    public synchronized void loadUserDefinedFunctions() {
         List<FunctionEntity> functions = functionService.getAllFunctions();
         List<String> activeUdfs = functions.stream()
                 .filter(f -> f.getActive() != null && f.getActive())
@@ -60,6 +69,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
             udfSource = null;
             log.info("No active user-defined functions found");
         }
+        udfDirty.set(false);
     }
 
     @PreDestroy
@@ -92,6 +102,9 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String script = endpointEntity.getBody() != null ? endpointEntity.getBody() : "";
         script = DataUtils.replaceVariables(script, environment);
         script = MockDataUtils.interpolate(script);
+        if (udfDirty.get()) {
+            loadUserDefinedFunctions();
+        }
 
         JsExecutionContext jsState = executionContext.getState(JsExecutionContext.class, JsExecutionContext::new);
         String functionName = jsState.getFunctionName();
