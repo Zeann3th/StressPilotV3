@@ -1,11 +1,15 @@
 package dev.zeann3th.stresspilot.infrastructure.configs;
 
 import dev.zeann3th.stresspilot.infrastructure.configs.properties.DistributedFlowProperties;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,6 +53,39 @@ class DistributedRedisConfigTest {
                 .orElse(null);
 
         assertThat(redisHealthEnabled).isEqualTo(false);
+    }
+
+    @Test
+    void applicationYamlExcludesRedisAutoConfigurationByDefault() throws Exception {
+        List<Object> excludedAutoConfigurations = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yaml"))
+                .stream()
+                .map(propertySource -> propertySource.getProperty("spring.autoconfigure.exclude[0]"))
+                .filter(Objects::nonNull)
+                .toList();
+
+        assertThat(excludedAutoConfigurations)
+                .contains(DataRedisAutoConfiguration.class.getName());
+    }
+
+    @Test
+    void redisRuntimeBeansAreNotCreatedWhenDistributedModeIsDisabled() {
+        contextRunner
+                .withPropertyValues("application.distributed.enabled=false")
+                .run(context -> {
+                    assertThat(context).doesNotHaveBean(RedisConnectionFactory.class);
+                    assertThat(context).doesNotHaveBean(StringRedisTemplate.class);
+                });
+    }
+
+    @Test
+    void redisRuntimeBeansAreCreatedWhenDistributedModeIsEnabled() {
+        contextRunner
+                .withPropertyValues("application.distributed.enabled=true")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(RedisConnectionFactory.class);
+                    assertThat(context).hasSingleBean(StringRedisTemplate.class);
+                });
     }
 
     @Test

@@ -8,6 +8,9 @@ server:
 spring:
   profiles:
     active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
   application:
     name: stresspilot
   data:
