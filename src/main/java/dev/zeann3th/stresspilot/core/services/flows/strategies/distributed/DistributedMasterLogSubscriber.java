@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.core.services.RequestLogService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.Message;
@@ -31,6 +32,7 @@ public class DistributedMasterLogSubscriber implements MessageListener {
     private final StringRedisTemplate redisTemplate;
     private RedisMessageListenerContainer listenerContainer;
 
+    @Autowired
     public DistributedMasterLogSubscriber(
             RequestLogService requestLogService,
             RunStore runStore,

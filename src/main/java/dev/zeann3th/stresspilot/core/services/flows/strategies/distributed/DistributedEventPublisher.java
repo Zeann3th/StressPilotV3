@@ -4,6 +4,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ public class DistributedEventPublisher {
     private final String keyPrefix;
     private final JsonMapper jsonMapper;
 
+    @Autowired
     public DistributedEventPublisher(
             ObjectProvider<StringRedisTemplate> redisTemplateProvider,
             @Value("${application.distributed.key-prefix:stresspilot}") String keyPrefix
