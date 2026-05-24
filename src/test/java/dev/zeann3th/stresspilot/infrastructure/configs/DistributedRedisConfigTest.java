@@ -1,10 +1,13 @@
 package dev.zeann3th.stresspilot.infrastructure.configs;
 
 import dev.zeann3th.stresspilot.infrastructure.configs.properties.DistributedFlowProperties;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +36,19 @@ class DistributedRedisConfigTest {
                 "COMPUTERNAME", "stresspilot-computer"
         ))).isEqualTo("stresspilot-computer");
         assertThat(DistributedFlowProperties.resolveDefaultNodeId(Map.of())).isEqualTo("local");
+    }
+
+    @Test
+    void applicationYamlDisablesRedisHealthByDefault() throws Exception {
+        Object redisHealthEnabled = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yaml"))
+                .stream()
+                .map(propertySource -> propertySource.getProperty("management.health.redis.enabled"))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+
+        assertThat(redisHealthEnabled).isEqualTo(false);
     }
 
     @Test

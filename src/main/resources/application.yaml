@@ -105,6 +105,9 @@ application:
       cron: "0 0/10 * * * ?"
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       exposure:
