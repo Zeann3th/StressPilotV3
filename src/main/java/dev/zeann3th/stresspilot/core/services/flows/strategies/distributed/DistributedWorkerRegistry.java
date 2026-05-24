@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.flows.distributed;
+package dev.zeann3th.stresspilot.core.services.flows.strategies.distributed;
 
 import dev.zeann3th.stresspilot.infrastructure.configs.properties.DistributedFlowProperties;
 import lombok.RequiredArgsConstructor;

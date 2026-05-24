@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services.flows.distributed;
+package dev.zeann3th.stresspilot.core.services.flows.strategies.distributed;
 
 public record DistributedChannels(String prefix) {
     public String workerHeartbeatChannel() {
