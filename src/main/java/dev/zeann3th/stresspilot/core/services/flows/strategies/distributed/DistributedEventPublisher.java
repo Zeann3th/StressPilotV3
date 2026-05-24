@@ -58,8 +58,10 @@ public class DistributedEventPublisher {
                     new DistributedChannels(keyPrefix).workChannel(),
                     jsonMapper.writeValueAsString(payload));
         } catch (Exception e) {
-            log.warn("Failed to publish distributed workload for run {} to node {}: {}",
-                    payload.runId(), payload.targetNodeId(), e.getMessage());
+            throw new IllegalStateException(
+                    "Failed to publish distributed workload for run %s to node %s"
+                            .formatted(payload.runId(), payload.targetNodeId()),
+                    e);
         }
     }
 

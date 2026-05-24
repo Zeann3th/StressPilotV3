@@ -11,8 +11,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class DistributedEventPublisherTest {
     @Test
@@ -81,5 +83,46 @@ class DistributedEventPublisherTest {
         verify(redisTemplate).convertAndSend(
                 "stresspilot:distributed:work",
                 new JsonMapper().writeValueAsString(payload));
+    }
+
+    @Test
+    void publishWorkloadPropagatesPublishFailures() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        DistributedEventPublisher publisher = new DistributedEventPublisher(redisTemplate, "stresspilot", new JsonMapper());
+        DistributedEventPublisher.WorkloadPayload payload = workloadPayload();
+        when(redisTemplate.convertAndSend("stresspilot:distributed:work", new JsonMapper().writeValueAsString(payload)))
+                .thenThrow(new IllegalStateException("Redis down"));
+
+        assertThatThrownBy(() -> publisher.publishWorkload(payload))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to publish distributed workload for run run-1 to node worker-a");
+    }
+
+    private static DistributedEventPublisher.WorkloadPayload workloadPayload() {
+        LocalDateTime startedAt = LocalDateTime.of(2026, 5, 24, 21, 0);
+        return new DistributedEventPublisher.WorkloadPayload(
+                "DISTRIBUTED_WORKLOAD",
+                "run-1",
+                101L,
+                "worker-a",
+                3,
+                60,
+                5,
+                123456789L,
+                "DISTRIBUTED",
+                startedAt,
+                Map.of("region", "ap-southeast"),
+                List.of(Map.of("token", "secret")),
+                Map.of("host", "example.test"),
+                List.of(new DistributedEventPublisher.FlowStepPayload(
+                        "start",
+                        "START",
+                        null,
+                        null,
+                        null,
+                        null,
+                        "endpoint-1",
+                        null,
+                        null)));
     }
 }

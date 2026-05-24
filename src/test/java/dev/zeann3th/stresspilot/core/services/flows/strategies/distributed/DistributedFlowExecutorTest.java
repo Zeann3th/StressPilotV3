@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -89,6 +91,45 @@ class DistributedFlowExecutorTest {
         assertThat(captor.getAllValues())
                 .extracting(DistributedEventPublisher.WorkloadPayload::targetNodeId)
                 .containsExactly("worker-a", "worker-b");
+    }
+
+    @Test
+    void publisherFailureAbortsRunAndDeregistersRun() {
+        SetFixture fixture = SetFixture.withWorkers("worker-a", "worker-b");
+        RecordingActiveRunRegistry activeRunRegistry = new RecordingActiveRunRegistry();
+        doThrow(new IllegalStateException("Redis publish failed"))
+                .when(fixture.publisher)
+                .publishWorkload(any());
+        DistributedFlowExecutor executor = executorWith(fixture);
+        executor.initInfra(activeRunRegistry, null);
+
+        String result = executor.execute(context(5, 0));
+
+        assertThat(result).isEqualTo(RunStatus.ABORTED.name());
+        assertThat(activeRunRegistry.events).containsExactly("register:run-1", "deregister:run-1");
+        assertThat(activeRunRegistry.hasActiveRuns()).isFalse();
+    }
+
+    @Test
+    void doesNotPublishZeroThreadWorkloadsWhenWorkersExceedThreads() {
+        SetFixture fixture = SetFixture.withWorkers(
+                "worker-a", "worker-b", "worker-c", "worker-d", "worker-e",
+                "worker-f", "worker-g", "worker-h", "worker-i", "worker-j");
+        DistributedFlowExecutor executor = executorWith(fixture);
+        executor.initInfra(new RecordingActiveRunRegistry(), null);
+
+        String result = executor.execute(context(2, 0));
+
+        assertThat(result).isEqualTo(RunStatus.COMPLETED.name());
+        ArgumentCaptor<DistributedEventPublisher.WorkloadPayload> captor =
+                ArgumentCaptor.forClass(DistributedEventPublisher.WorkloadPayload.class);
+        verify(fixture.publisher, times(2)).publishWorkload(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(DistributedEventPublisher.WorkloadPayload::targetNodeId,
+                        DistributedEventPublisher.WorkloadPayload::assignedThreads)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("worker-a", 1),
+                        org.assertj.core.groups.Tuple.tuple("worker-b", 1));
     }
 
     private static DistributedFlowExecutor executorWith(SetFixture fixture) {

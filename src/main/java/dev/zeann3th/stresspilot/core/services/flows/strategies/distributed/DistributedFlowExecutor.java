@@ -76,12 +76,19 @@ public class DistributedFlowExecutor extends FlowExecutor {
                 return RunStatus.ABORTED.name();
             }
 
-            List<Integer> threadAssignments = splitThreads(threads, workers.size());
-            for (int i = 0; i < workers.size(); i++) {
-                eventPublisher.publishWorkload(DistributedEventPublisher.WorkloadPayload.from(
-                        baseContext,
-                        workers.get(i),
-                        threadAssignments.get(i)));
+            int assignedWorkerCount = Math.min(threads, workers.size());
+            List<String> assignedWorkers = workers.subList(0, assignedWorkerCount);
+            List<Integer> threadAssignments = splitThreads(threads, assignedWorkers.size());
+            try {
+                for (int i = 0; i < assignedWorkers.size(); i++) {
+                    eventPublisher.publishWorkload(DistributedEventPublisher.WorkloadPayload.from(
+                            baseContext,
+                            assignedWorkers.get(i),
+                            threadAssignments.get(i)));
+                }
+            } catch (RuntimeException e) {
+                log.warn("Distributed run {} aborted because workload dispatch failed: {}", runId, e.getMessage());
+                return RunStatus.ABORTED.name();
             }
 
             waitForDeadlineOrStop(stopSignal, deadline);
