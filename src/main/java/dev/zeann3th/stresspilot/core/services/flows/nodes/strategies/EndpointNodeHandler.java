@@ -15,6 +15,7 @@ import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorUtils;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
+import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
     private final EndpointExecutorFactory executorFactory;
     private final RequestLogService requestLogService;
     private final ConfigService configService;
+    private final DistributedEventPublisher distributedEventPublisher;
 
     @PostConstruct
     public void init() {
@@ -109,7 +111,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         }
 
         if (recordableEndpoint) {
-            requestLogService.queueLog(RequestLogEntity.builder()
+            RequestLogEntity log = RequestLogEntity.builder()
                     .run(context.getRun())
                     .endpoint(endpoint)
                     .statusCode(result.getStatusCode())
@@ -118,7 +120,12 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .request(requestDebug.toString())
                     .response(responseText)
                     .createdAt(LocalDateTime.now())
-                    .build());
+                    .build();
+            if (context.isDistributedWorker()) {
+                distributedEventPublisher.publishRequestLog(log);
+            } else {
+                requestLogService.queueLog(log);
+            }
         }
 
         String nextId;
