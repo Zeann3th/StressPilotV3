@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.flows.strategies.distributed;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
+import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j(topic = "[DistributedEventPublisher]")
 @Component
@@ -45,6 +48,21 @@ public class DistributedEventPublisher {
         }
     }
 
+    public void publishWorkload(WorkloadPayload payload) {
+        if (redisTemplate == null) {
+            throw new IllegalStateException("Distributed workload publishing requires Redis to be enabled");
+        }
+
+        try {
+            redisTemplate.convertAndSend(
+                    new DistributedChannels(keyPrefix).workChannel(),
+                    jsonMapper.writeValueAsString(payload));
+        } catch (Exception e) {
+            log.warn("Failed to publish distributed workload for run {} to node {}: {}",
+                    payload.runId(), payload.targetNodeId(), e.getMessage());
+        }
+    }
+
     public record RequestLogPayload(
             String runId,
             Long endpointId,
@@ -64,6 +82,96 @@ public class DistributedEventPublisher {
                     logEntity.getRequest(),
                     logEntity.getResponse(),
                     logEntity.getCreatedAt());
+        }
+    }
+
+    public record WorkloadPayload(
+            String marker,
+            String runId,
+            Long flowId,
+            String targetNodeId,
+            int assignedThreads,
+            int totalDuration,
+            int rampUpDuration,
+            long deadline,
+            String flowType,
+            LocalDateTime runStartedAt,
+            Map<String, Object> variables,
+            List<Map<String, Object>> credentials,
+            Map<String, Object> baseEnvironment,
+            List<FlowStepPayload> steps) {
+        public static WorkloadPayload from(FlowExecutionContext context, String targetNodeId, int assignedThreads) {
+            return new WorkloadPayload(
+                    "DISTRIBUTED_WORKLOAD",
+                    context.getRunId(),
+                    context.getRun().getFlowId(),
+                    targetNodeId,
+                    assignedThreads,
+                    context.getCommand().getTotalDuration(),
+                    context.getCommand().getRampUpDuration(),
+                    context.getDeadline(),
+                    context.getFlowType(),
+                    context.getRun().getStartedAt(),
+                    context.getCommand().getVariables(),
+                    context.getCommand().getCredentials(),
+                    context.getBaseEnvironment(),
+                    context.getSteps().stream().map(FlowStepPayload::from).toList());
+        }
+    }
+
+    public record FlowStepPayload(
+            String id,
+            String type,
+            Long endpointId,
+            EndpointPayload endpoint,
+            String preProcessor,
+            String postProcessor,
+            String nextIfTrue,
+            String nextIfFalse,
+            String condition) {
+        static FlowStepPayload from(dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity step) {
+            return new FlowStepPayload(
+                    step.getId(),
+                    step.getType(),
+                    step.getEndpointId(),
+                    step.getEndpoint() != null ? EndpointPayload.from(step.getEndpoint()) : null,
+                    step.getPreProcessor(),
+                    step.getPostProcessor(),
+                    step.getNextIfTrue(),
+                    step.getNextIfFalse(),
+                    step.getCondition());
+        }
+    }
+
+    public record EndpointPayload(
+            Long id,
+            String name,
+            String description,
+            String type,
+            String url,
+            String body,
+            String successCondition,
+            String httpMethod,
+            String httpHeaders,
+            String httpParameters,
+            String grpcServiceName,
+            String grpcMethodName,
+            String grpcStubPath) {
+        static EndpointPayload from(dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity endpoint) {
+            return new EndpointPayload(
+                    endpoint.getId(),
+                    endpoint.getName(),
+                    endpoint.getDescription(),
+                    endpoint.getType(),
+                    endpoint.getUrl(),
+                    endpoint.getBody(),
+                    endpoint.getSuccessCondition(),
+                    endpoint.getHttpMethod(),
+                    endpoint.getHttpHeaders(),
+                    endpoint.getHttpParameters(),
+                    endpoint.getGrpcServiceName(),
+                    endpoint.getGrpcMethodName(),
+                    endpoint.getGrpcStubPath());
         }
     }
 }

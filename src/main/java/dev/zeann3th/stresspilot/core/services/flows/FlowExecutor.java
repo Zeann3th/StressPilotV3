@@ -35,7 +35,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
         return Integer.MAX_VALUE;
     }
 
-    public final String execute(FlowExecutionContext baseContext) {
+    public String execute(FlowExecutionContext baseContext) {
         String runId = baseContext.getRunId();
         RunEntity run = baseContext.getRun();
         RunFlowCommand cmd = baseContext.getCommand();
