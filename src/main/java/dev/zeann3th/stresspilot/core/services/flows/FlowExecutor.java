@@ -51,8 +51,6 @@ public abstract class FlowExecutor implements ExtensionPoint {
 
         int threads = Math.clamp(cmd.getThreads(), 1, maxThreads());
         long totalMs = (long) cmd.getTotalDuration() * 1000;
-        long rampUpMs = (long) cmd.getRampUpDuration() * 1000;
-        long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
         long deadline = System.currentTimeMillis() + totalMs;
 
         baseContext.setStopSignal(stopSignal);
@@ -60,8 +58,32 @@ public abstract class FlowExecutor implements ExtensionPoint {
 
         beforeWorkers(runId, cmd);
 
+        try {
+            executeWorkers(baseContext, stepMap, threads);
+        } finally {
+            afterWorkers(runId);
+            activeRunRegistry.deregisterRun(runId);
+        }
+
+        boolean durationMet = System.currentTimeMillis() >= deadline;
+        return (stopSignal.get() && !durationMet)
+                ? RunStatus.ABORTED.name()
+                : RunStatus.COMPLETED.name();
+    }
+
+    protected final void executeWorkers(FlowExecutionContext baseContext,
+            Map<String, FlowStepEntity> stepMap,
+            int threads) {
+        if (threads <= 0) {
+            return;
+        }
+
+        RunFlowCommand cmd = baseContext.getCommand();
+        long rampUpMs = (long) cmd.getRampUpDuration() * 1000;
+        long rampDelay = threads > 1 ? rampUpMs / (threads - 1) : 0;
+
         try (ExecutorService pool = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("sp-worker-" + runId + "-", 0).factory())) {
+                Thread.ofVirtual().name("sp-worker-" + baseContext.getRunId() + "-", 0).factory())) {
 
             List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < threads; i++) {
@@ -95,16 +117,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
                     log.warn("Worker thread encountered error: {}", e.getMessage());
                 }
             }
-
-        } finally {
-            afterWorkers(runId);
-            activeRunRegistry.deregisterRun(runId);
         }
-
-        boolean durationMet = System.currentTimeMillis() >= deadline;
-        return (stopSignal.get() && !durationMet)
-                ? RunStatus.ABORTED.name()
-                : RunStatus.COMPLETED.name();
     }
 
     protected void beforeWorkers(String runId, RunFlowCommand cmd) { }

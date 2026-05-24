@@ -13,10 +13,12 @@ import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
+import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +45,7 @@ public class FlowServiceImpl implements FlowService {
     private final ActiveRunRegistry activeRunRegistry;
     private final FlowAsyncRunner flowAsyncRunner;
     private final SnowflakeId snowflakeId;
+    private final ObjectProvider<DistributedEventPublisher> distributedEventPublisherProvider;
 
     @Override
     @Transactional(readOnly = true)
@@ -120,6 +123,10 @@ public class FlowServiceImpl implements FlowService {
     @EventListener
     public void handleInterruptRunEvent(InterruptRunEvent event) {
         boolean stopped = activeRunRegistry.interruptRun(event.runId());
+        DistributedEventPublisher eventPublisher = distributedEventPublisherProvider.getIfAvailable();
+        if (eventPublisher != null) {
+            eventPublisher.publishStop(event.runId());
+        }
 
         if (stopped) {
             log.info("received abort signal. Killing threads for run {}", event.runId());

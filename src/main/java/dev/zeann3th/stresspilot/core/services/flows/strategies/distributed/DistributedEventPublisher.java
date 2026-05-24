@@ -67,6 +67,20 @@ public class DistributedEventPublisher {
         }
     }
 
+    public void publishStop(String runId) {
+        if (redisTemplate == null) {
+            throw new IllegalStateException("Distributed stop publishing requires Redis to be enabled");
+        }
+
+        try {
+            redisTemplate.convertAndSend(
+                    new DistributedChannels(keyPrefix).stopChannel(),
+                    jsonMapper.writeValueAsString(new StopPayload(runId)));
+        } catch (Exception e) {
+            log.warn("Failed to publish distributed stop for run {}: {}", runId, e.getMessage());
+        }
+    }
+
     public record RequestLogPayload(
             String runId,
             Long endpointId,
@@ -122,6 +136,8 @@ public class DistributedEventPublisher {
                     context.getSteps().stream().map(FlowStepPayload::from).toList());
         }
     }
+
+    public record StopPayload(String runId) { }
 
     public record FlowStepPayload(
             String id,

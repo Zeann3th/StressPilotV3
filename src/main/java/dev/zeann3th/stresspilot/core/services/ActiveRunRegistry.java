@@ -33,4 +33,9 @@ public class ActiveRunRegistry {
     public boolean hasActiveRuns() {
         return !activeRuns.isEmpty();
     }
+
+    public boolean stopSignal(String runId) {
+        AtomicBoolean stopSignal = activeRuns.get(runId);
+        return stopSignal != null && stopSignal.get();
+    }
 }
