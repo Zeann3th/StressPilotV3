@@ -62,6 +62,14 @@ spring:
 application:
   mode: desktop
 
+  distributed:
+    enabled: false
+    key-prefix: stresspilot
+    node-id: ${HOSTNAME:${COMPUTERNAME:local}}
+    worker-ttl-seconds: 15
+    worker-heartbeat-seconds: 5
+    worker-discovery-timeout-ms: 2000
+
   cors:
     allowed-origins:
       - "localhost:3000"
