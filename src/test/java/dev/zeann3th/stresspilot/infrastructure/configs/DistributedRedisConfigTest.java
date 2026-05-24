@@ -5,10 +5,13 @@ import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfigurat
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.Test;
+import redis.embedded.RedisServer;
 
+import java.net.ServerSocket;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,13 +82,43 @@ class DistributedRedisConfigTest {
     }
 
     @Test
-    void redisRuntimeBeansAreCreatedWhenDistributedModeIsEnabled() {
+    void redisStartupFailsWhenDistributedModeIsEnabledAndRedisIsUnreachable() {
         contextRunner
-                .withPropertyValues("application.distributed.enabled=true")
+                .withPropertyValues(
+                        "application.distributed.enabled=true",
+                        "spring.data.redis.host=127.0.0.1",
+                        "spring.data.redis.port=" + freePort())
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void redisStartupValidatesConnectionWhenDistributedModeIsEnabledAndRedisIsReachable() throws Exception {
+        int port = freePort();
+        RedisServer redisServer = RedisServer.newRedisServer()
+                .bind("127.0.0.1")
+                .port(port)
+                .build();
+
+        try {
+            redisServer.start();
+
+            contextRunner
+                .withPropertyValues(
+                        "application.distributed.enabled=true",
+                        "spring.data.redis.host=127.0.0.1",
+                        "spring.data.redis.port=" + port)
                 .run(context -> {
                     assertThat(context).hasSingleBean(RedisConnectionFactory.class);
                     assertThat(context).hasSingleBean(StringRedisTemplate.class);
+                    try (RedisConnection connection = context.getBean(StringRedisTemplate.class)
+                            .getConnectionFactory()
+                            .getConnection()) {
+                        assertThat(connection.ping()).isEqualTo("PONG");
+                    }
                 });
+        } finally {
+            redisServer.stop();
+        }
     }
 
     @Test
@@ -103,5 +136,14 @@ class DistributedRedisConfigTest {
                     assertThat(properties.getWorkerHeartbeatSeconds()).isEqualTo(5);
                     assertThat(properties.getWorkerDiscoveryTimeoutMs()).isEqualTo(2000);
                 });
+    }
+
+    private static int freePort() {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            socket.setReuseAddress(true);
+            return socket.getLocalPort();
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not allocate a free TCP port", e);
+        }
     }
 }

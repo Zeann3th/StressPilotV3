@@ -5,6 +5,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -30,5 +32,18 @@ public class DistributedRedisConfig {
     @Bean
     StringRedisTemplate stringRedisTemplate(LettuceConnectionFactory redisConnectionFactory) {
         return new StringRedisTemplate(redisConnectionFactory);
+    }
+
+    @Bean
+    RedisStartupValidator redisStartupValidator(RedisConnectionFactory redisConnectionFactory) {
+        return new RedisStartupValidator(redisConnectionFactory);
+    }
+
+    static final class RedisStartupValidator {
+        RedisStartupValidator(RedisConnectionFactory redisConnectionFactory) {
+            try (RedisConnection connection = redisConnectionFactory.getConnection()) {
+                connection.ping();
+            }
+        }
     }
 }
