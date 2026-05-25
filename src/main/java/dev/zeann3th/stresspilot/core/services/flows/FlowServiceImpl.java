@@ -124,8 +124,12 @@ public class FlowServiceImpl implements FlowService {
     public void handleInterruptRunEvent(InterruptRunEvent event) {
         boolean stopped = activeRunRegistry.interruptRun(event.runId());
         DistributedEventPublisher eventPublisher = distributedEventPublisherProvider.getIfAvailable();
-        if (eventPublisher != null) {
-            eventPublisher.publishStop(event.runId());
+        if (eventPublisher != null && eventPublisher.isAvailable()) {
+            try {
+                eventPublisher.publishStop(event.runId());
+            } catch (RuntimeException ex) {
+                log.warn("failed to publish distributed stop for run {}: {}", event.runId(), ex.getMessage());
+            }
         }
 
         if (stopped) {

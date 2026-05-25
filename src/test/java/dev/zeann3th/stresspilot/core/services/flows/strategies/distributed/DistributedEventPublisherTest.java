@@ -18,6 +18,23 @@ import static org.mockito.Mockito.when;
 
 class DistributedEventPublisherTest {
     @Test
+    void isAvailableReturnsFalseWhenRedisTemplateIsMissing() {
+        DistributedEventPublisher publisher = new DistributedEventPublisher(null, "stresspilot", new JsonMapper());
+
+        org.assertj.core.api.Assertions.assertThat(publisher.isAvailable()).isFalse();
+    }
+
+    @Test
+    void isAvailableReturnsTrueWhenRedisTemplateExists() {
+        DistributedEventPublisher publisher = new DistributedEventPublisher(
+                mock(StringRedisTemplate.class),
+                "stresspilot",
+                new JsonMapper());
+
+        org.assertj.core.api.Assertions.assertThat(publisher.isAvailable()).isTrue();
+    }
+
+    @Test
     void publishRequestLogSendsScalarPayloadToRequestLogChannel() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
         DistributedEventPublisher publisher = new DistributedEventPublisher(redisTemplate, "stresspilot", new JsonMapper());

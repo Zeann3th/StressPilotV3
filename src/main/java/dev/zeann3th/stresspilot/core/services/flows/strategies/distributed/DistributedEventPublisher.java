@@ -35,6 +35,10 @@ public class DistributedEventPublisher {
         this.jsonMapper = jsonMapper;
     }
 
+    public boolean isAvailable() {
+        return redisTemplate != null;
+    }
+
     public void publishRequestLog(RequestLogEntity logEntity) {
         if (redisTemplate == null) {
             throw new IllegalStateException("Distributed request log publishing requires Redis to be enabled");
