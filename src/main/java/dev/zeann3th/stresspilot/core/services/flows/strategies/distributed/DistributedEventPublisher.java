@@ -75,7 +75,7 @@ public class DistributedEventPublisher {
         try {
             redisTemplate.convertAndSend(
                     new DistributedChannels(keyPrefix).stopChannel(),
-                    jsonMapper.writeValueAsString(new StopPayload(runId)));
+                    runId);
         } catch (Exception e) {
             log.warn("Failed to publish distributed stop for run {}: {}", runId, e.getMessage());
         }
@@ -136,8 +136,6 @@ public class DistributedEventPublisher {
                     context.getSteps().stream().map(FlowStepPayload::from).toList());
         }
     }
-
-    public record StopPayload(String runId) { }
 
     public record FlowStepPayload(
             String id,

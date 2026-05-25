@@ -86,6 +86,16 @@ class DistributedEventPublisherTest {
     }
 
     @Test
+    void publishStopSendsRunIdToStopChannel() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        DistributedEventPublisher publisher = new DistributedEventPublisher(redisTemplate, "stresspilot", new JsonMapper());
+
+        publisher.publishStop("run-1");
+
+        verify(redisTemplate).convertAndSend("stresspilot:distributed:stop", "run-1");
+    }
+
+    @Test
     void publishWorkloadPropagatesPublishFailures() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
         DistributedEventPublisher publisher = new DistributedEventPublisher(redisTemplate, "stresspilot", new JsonMapper());

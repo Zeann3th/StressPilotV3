@@ -106,7 +106,7 @@ class DistributedWorkerSubscriberTest {
                 jsonMapper,
                 _ -> {});
 
-        subscriber.handleStopMessage(jsonMapper.writeValueAsString(new DistributedEventPublisher.StopPayload("run-1")));
+        subscriber.handleStopMessage("run-1");
 
         assertThat(registry.events).containsExactly("register:run-1", "interrupt:run-1");
         assertThat(registry.stopSignal("run-1")).isTrue();

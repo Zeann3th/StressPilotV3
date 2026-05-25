@@ -140,16 +140,11 @@ public class DistributedWorkerSubscriber implements MessageListener {
     }
 
     void handleStopMessage(String message) {
-        try {
-            DistributedEventPublisher.StopPayload payload = jsonMapper.readValue(
-                    message,
-                    DistributedEventPublisher.StopPayload.class);
-            if (payload.runId() != null) {
-                activeRunRegistry.interruptRun(payload.runId());
-            }
-        } catch (Exception e) {
-            log.warn("Failed to handle distributed stop: {}", e.getMessage());
+        if (message == null || message.isBlank()) {
+            return;
         }
+
+        activeRunRegistry.interruptRun(message);
     }
 
     private FlowExecutionContext toContext(
