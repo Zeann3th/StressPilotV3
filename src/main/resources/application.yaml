@@ -8,8 +8,15 @@ server:
 spring:
   profiles:
     active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
   application:
     name: stresspilot
+  data:
+    redis:
+      repositories:
+        enabled: false
   ai:
     mcp:
       server:
@@ -62,6 +69,14 @@ spring:
 application:
   mode: desktop
 
+  distributed:
+    enabled: false
+    key-prefix: stresspilot
+    node-id: ${HOSTNAME:${COMPUTERNAME:local}}
+    worker-ttl-seconds: 15
+    worker-heartbeat-seconds: 5
+    worker-discovery-timeout-ms: 2000
+
   cors:
     allowed-origins:
       - "localhost:3000"
@@ -93,6 +108,9 @@ application:
       cron: "0 0/10 * * * ?"
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       exposure:

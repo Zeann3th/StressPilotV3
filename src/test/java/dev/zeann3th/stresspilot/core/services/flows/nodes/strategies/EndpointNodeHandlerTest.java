@@ -12,6 +12,7 @@ import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutor;
 import dev.zeann3th.stresspilot.core.services.executors.EndpointExecutorFactory;
 import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
+import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +34,7 @@ class EndpointNodeHandlerTest {
         fixture.handler.handle(fixture.step, Map.of(), fixture.context);
 
         verify(fixture.requestLogService, never()).queueLog(any());
+        verify(fixture.distributedEventPublisher, never()).publishRequestLog(any());
         assertThat(fixture.context.getRequestCount()).isZero();
         assertThat(fixture.context.getFailureCount()).isZero();
     }
@@ -44,18 +46,40 @@ class EndpointNodeHandlerTest {
         fixture.handler.handle(fixture.step, Map.of(), fixture.context);
 
         verify(fixture.requestLogService).queueLog(any());
+        verify(fixture.distributedEventPublisher, never()).publishRequestLog(any());
+        assertThat(fixture.context.getRequestCount()).isEqualTo(1);
+        assertThat(fixture.context.getFailureCount()).isZero();
+    }
+
+    @Test
+    void distributedWorkerNonJsEndpointExecutionPublishesRequestLogInsteadOfQueueingLocally() {
+        HandlerFixture fixture = fixtureFor(EndpointType.HTTP.name(), true);
+
+        fixture.handler.handle(fixture.step, Map.of(), fixture.context);
+
+        verify(fixture.requestLogService, never()).queueLog(any());
+        verify(fixture.distributedEventPublisher).publishRequestLog(any());
         assertThat(fixture.context.getRequestCount()).isEqualTo(1);
         assertThat(fixture.context.getFailureCount()).isZero();
     }
 
     private HandlerFixture fixtureFor(String endpointType) {
+        return fixtureFor(endpointType, false);
+    }
+
+    private HandlerFixture fixtureFor(String endpointType, boolean distributedWorker) {
         EndpointExecutorFactory executorFactory = mock(EndpointExecutorFactory.class);
         RequestLogService requestLogService = mock(RequestLogService.class);
+        DistributedEventPublisher distributedEventPublisher = mock(DistributedEventPublisher.class);
         ConfigService configService = mock(ConfigService.class);
         EndpointExecutor executor = new SuccessfulExecutor(endpointType);
         when(executorFactory.getExecutor(endpointType)).thenReturn(executor);
 
-        EndpointNodeHandler handler = new EndpointNodeHandler(executorFactory, requestLogService, configService);
+        EndpointNodeHandler handler = new EndpointNodeHandler(
+                executorFactory,
+                requestLogService,
+                configService,
+                distributedEventPublisher);
         EndpointEntity endpoint = EndpointEntity.builder()
                 .id(11L)
                 .name(endpointType + " endpoint")
@@ -70,14 +94,16 @@ class EndpointNodeHandlerTest {
                 .runId("run-js-log-test")
                 .run(RunEntity.builder().id("run-js-log-test").build())
                 .variables(new ConcurrentHashMap<>())
+                .distributedWorker(distributedWorker)
                 .build();
 
-        return new HandlerFixture(handler, requestLogService, step, context);
+        return new HandlerFixture(handler, requestLogService, distributedEventPublisher, step, context);
     }
 
     private record HandlerFixture(
             EndpointNodeHandler handler,
             RequestLogService requestLogService,
+            DistributedEventPublisher distributedEventPublisher,
             FlowStepEntity step,
             FlowExecutionContext context) {
     }
