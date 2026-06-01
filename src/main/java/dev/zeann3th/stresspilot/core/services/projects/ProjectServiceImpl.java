@@ -10,6 +10,7 @@ import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.*;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.enums.FlowStepType;
+import dev.zeann3th.stresspilot.core.domain.enums.FlowType;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.parsers.ProjectParser;
@@ -57,13 +58,19 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional
     public ProjectEntity createProject(CreateProjectCommand createProjectCommand) {
-        EnvironmentEntity env = environmentStore.save(EnvironmentEntity.builder().build());
+        EnvironmentEntity env = environmentStore.save(EnvironmentEntity.builder()
+                .name("Default")
+                .build());
         ProjectEntity project = ProjectEntity.builder()
                 .name(createProjectCommand.getName())
                 .description(createProjectCommand.getDescription())
-                .environment(env)
+                .legacyEnvironmentId(env.getId())
+                .activeEnvironment(env)
                 .build();
-        return projectStore.save(project);
+        ProjectEntity savedProject = projectStore.save(project);
+        env.setProject(savedProject);
+        environmentStore.save(env);
+        return savedProject;
     }
 
     @Override
@@ -73,6 +80,43 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
         Optional.ofNullable(updateProjectCommand.getName()).ifPresent(project::setName);
         Optional.ofNullable(updateProjectCommand.getDescription()).ifPresent(project::setDescription);
+        return projectStore.save(project);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnvironmentEntity> getProjectEnvironments(Long projectId) {
+        if (!projectStore.existsById(projectId)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0002);
+        }
+        return environmentStore.findAllByProjectId(projectId);
+    }
+
+    @Override
+    @Transactional
+    public EnvironmentEntity createProjectEnvironment(Long projectId, String name) {
+        ProjectEntity project = projectStore.findById(projectId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
+        String environmentName = name == null || name.isBlank() ? "Environment" : name.trim();
+        return environmentStore.save(EnvironmentEntity.builder()
+                .name(environmentName)
+                .project(project)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public ProjectEntity switchActiveEnvironment(Long projectId, Long environmentId) {
+        ProjectEntity project = projectStore.findById(projectId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
+        EnvironmentEntity environment = environmentStore.findById(environmentId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0016,
+                        Map.of(Constants.ID, environmentId)));
+        if (environment.getProject() == null || !Objects.equals(environment.getProject().getId(), projectId)) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0016,
+                    Map.of(Constants.ID, environmentId));
+        }
+        project.setActiveEnvironment(environment);
         return projectStore.save(project);
     }
 
@@ -115,18 +159,52 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private ProjectEntity persistProject(ImportProjectCommand cmd) {
-        EnvironmentEntity env = environmentStore.save(EnvironmentEntity.builder().build());
+        EnvironmentEntity env = environmentStore.save(EnvironmentEntity.builder()
+                .name("Default")
+                .build());
         ProjectEntity project = projectStore.save(ProjectEntity.builder()
                 .name(cmd.getName())
                 .description(cmd.getDescription())
-                .environment(env)
+                .legacyEnvironmentId(env.getId())
+                .activeEnvironment(env)
                 .build());
+        env.setProject(project);
+        environmentStore.save(env);
 
-        persistEnvironment(cmd.getEnvironment(), env);
+        persistEnvironments(cmd, project, env);
         Map<String, EndpointEntity> endpointById = persistEndpoints(cmd.getEndpoints(), project);
         persistFlows(cmd.getFlows(), project, endpointById);
 
         return project;
+    }
+
+    private void persistEnvironments(ImportProjectCommand cmd, ProjectEntity project, EnvironmentEntity defaultEnv) {
+        List<ImportProjectCommand.Environment> environments = cmd.getEnvironments();
+        if (environments == null || environments.isEmpty()) {
+            persistEnvironment(cmd.getEnvironment(), defaultEnv);
+            return;
+        }
+
+        EnvironmentEntity active = defaultEnv;
+        for (int i = 0; i < environments.size(); i++) {
+            ImportProjectCommand.Environment envCommand = environments.get(i);
+            EnvironmentEntity env = i == 0
+                    ? defaultEnv
+                    : environmentStore.save(EnvironmentEntity.builder()
+                    .name(envCommand.getName() == null ? "Environment" : envCommand.getName())
+                    .project(project)
+                    .build());
+            env.setName(envCommand.getName() == null ? "Environment" : envCommand.getName());
+            env.setProject(project);
+            environmentStore.save(env);
+            persistEnvironment(envCommand.getVariables(), env);
+            if (Boolean.TRUE.equals(envCommand.getActive())) {
+                active = env;
+            }
+        }
+
+        project.setActiveEnvironment(active);
+        projectStore.save(project);
     }
 
     private void persistEnvironment(List<ImportProjectCommand.EnvVar> envVars, EnvironmentEntity env) {
@@ -179,58 +257,82 @@ public class ProjectServiceImpl implements ProjectService {
         Map<String, FlowEntity> flowByName = new LinkedHashMap<>();
         Map<String, Long> flowNameToId = new HashMap<>();
         for (ImportProjectCommand.Flow f : flows) {
-            FlowEntity flow = flowStore.save(FlowEntity.builder()
-                    .project(project)
-                    .name(f.getName())
-                    .description(f.getDescription())
-                    .build());
-            flowByName.put(f.getName(), flow);
-            flowNameToId.put(f.getName(), flow.getId());
+            try {
+                if (f.getSteps() == null || f.getSteps().isEmpty()) {
+                    log.warn("Skipping imported flow '{}' because it has no steps", f.getName());
+                    continue;
+                }
+                String flowType = f.getType() != null ? f.getType() : FlowType.DEFAULT.name();
+                if (Arrays.stream(FlowType.values()).noneMatch(type -> type.name().equalsIgnoreCase(flowType))) {
+                    log.warn("Skipping imported flow '{}' because flow type '{}' is unavailable", f.getName(), flowType);
+                    continue;
+                }
+                FlowEntity flow = flowStore.save(FlowEntity.builder()
+                        .project(project)
+                        .name(f.getName())
+                        .description(f.getDescription())
+                        .type(flowType.toUpperCase())
+                        .build());
+                flowByName.put(f.getName(), flow);
+                flowNameToId.put(f.getName(), flow.getId());
+            } catch (RuntimeException ex) {
+                log.warn("Skipping imported flow '{}': {}", f.getName(), ex.getMessage());
+            }
         }
 
         for (ImportProjectCommand.Flow f : flows) {
             FlowEntity flow = flowByName.get(f.getName());
+            if (flow == null) continue;
             List<ImportProjectCommand.Step> steps = f.getSteps() == null ? List.of() : f.getSteps();
 
-            Map<String, String> stepNameToUuid = new HashMap<>();
-            for (ImportProjectCommand.Step s : steps) {
-                if (s.getName() != null) {
-                    stepNameToUuid.put(s.getName(), UUID.randomUUID().toString());
-                }
-            }
-
-            List<FlowStepEntity> stepEntities = new ArrayList<>();
-            for (ImportProjectCommand.Step s : steps) {
-                String uuid = stepNameToUuid.getOrDefault(s.getName(), UUID.randomUUID().toString());
-
-                EndpointEntity endpointRef = s.getEndpoint() != null
-                        ? endpointById.get(s.getEndpoint()) : null;
-
-                String nextIfTrue = s.getNextIfTrue() != null
-                        ? stepNameToUuid.get(s.getNextIfTrue()) : null;
-                String nextIfFalse = s.getNextIfFalse() != null
-                        ? stepNameToUuid.get(s.getNextIfFalse()) : null;
-
-                String condition = s.getCondition();
-                if (FlowStepType.SUBFLOW.name().equalsIgnoreCase(s.getType()) && condition != null
-                        && flowNameToId.containsKey(condition)) {
-                    condition = String.valueOf(flowNameToId.get(condition));
+            try {
+                Map<String, String> stepNameToUuid = new HashMap<>();
+                for (ImportProjectCommand.Step s : steps) {
+                    if (s.getName() != null) {
+                        stepNameToUuid.put(s.getName(), UUID.randomUUID().toString());
+                    }
                 }
 
-                stepEntities.add(FlowStepEntity.builder()
-                        .id(uuid)
-                        .flow(flow)
-                        .type(s.getType())
-                        .endpoint(endpointRef)
-                        .preProcessor(writeMap(s.getPreProcess()))
-                        .postProcessor(writeMap(s.getPostProcess()))
-                        .nextIfTrue(nextIfTrue)
-                        .nextIfFalse(nextIfFalse)
-                        .condition(condition)
-                        .build());
+                List<FlowStepEntity> stepEntities = new ArrayList<>();
+                for (ImportProjectCommand.Step s : steps) {
+                    String uuid = stepNameToUuid.getOrDefault(s.getName(), UUID.randomUUID().toString());
+
+                    EndpointEntity endpointRef = s.getEndpoint() != null
+                            ? endpointById.get(s.getEndpoint()) : null;
+                    if (s.getEndpoint() != null && endpointRef == null) {
+                        throw new IllegalArgumentException("endpoint reference not found: " + s.getEndpoint());
+                    }
+
+                    String nextIfTrue = s.getNextIfTrue() != null
+                            ? stepNameToUuid.get(s.getNextIfTrue()) : null;
+                    String nextIfFalse = s.getNextIfFalse() != null
+                            ? stepNameToUuid.get(s.getNextIfFalse()) : null;
+
+                    String condition = s.getCondition();
+                    if (FlowStepType.SUBFLOW.name().equalsIgnoreCase(s.getType()) && condition != null
+                            && flowNameToId.containsKey(condition)) {
+                        condition = String.valueOf(flowNameToId.get(condition));
+                    }
+
+                    stepEntities.add(FlowStepEntity.builder()
+                            .id(uuid)
+                            .flow(flow)
+                            .type(s.getType())
+                            .endpoint(endpointRef)
+                            .preProcessor(writeMap(s.getPreProcess()))
+                            .postProcessor(writeMap(s.getPostProcess()))
+                            .nextIfTrue(nextIfTrue)
+                            .nextIfFalse(nextIfFalse)
+                            .condition(condition)
+                            .build());
+                }
+                if (!stepEntities.isEmpty())
+                    flowStepStore.saveAll(stepEntities);
+            } catch (RuntimeException ex) {
+                log.warn("Skipping imported flow '{}': {}", f.getName(), ex.getMessage());
+                flowStepStore.deleteAllByFlowId(flow.getId());
+                flowStore.deleteById(flow.getId());
             }
-            if (!stepEntities.isEmpty())
-                flowStepStore.saveAll(stepEntities);
         }
     }
 
@@ -238,8 +340,7 @@ public class ProjectServiceImpl implements ProjectService {
         ProjectEntity project = projectStore.findById(projectId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
-        List<EnvironmentVariableEntity> envVars = envVarStore.findAllByEnvironmentId(
-                project.getEnvironmentId());
+        List<EnvironmentEntity> environments = environmentStore.findAllByProjectId(projectId);
         List<EndpointEntity> endpoints = endpointStore.findAllByProjectId(projectId);
         List<FlowEntity> flows = flowStore.findAllByProjectId(projectId);
 
@@ -311,14 +412,23 @@ public class ProjectServiceImpl implements ProjectService {
                         .build());
             }
 
-            flowCommands.add(new ImportProjectCommand.Flow(f.getName(), f.getDescription(), stepCommands));
+            flowCommands.add(new ImportProjectCommand.Flow(
+                    f.getName(),
+                    f.getDescription(),
+                    f.getType(),
+                    stepCommands));
         }
 
         return ImportProjectCommand.builder()
                 .name(project.getName())
                 .description(project.getDescription())
-                .environment(envVars.stream()
-                        .map(v -> new ImportProjectCommand.EnvVar(v.getKey(), v.getValue(), v.getActive()))
+                .environments(environments.stream()
+                        .map(env -> new ImportProjectCommand.Environment(
+                                env.getName(),
+                                Objects.equals(env.getId(), project.getActiveEnvironmentId()),
+                                envVarStore.findAllByEnvironmentId(env.getId()).stream()
+                                        .map(v -> new ImportProjectCommand.EnvVar(v.getKey(), v.getValue(), v.getActive()))
+                                        .toList()))
                         .toList())
                 .endpoints(epCommands)
                 .flows(flowCommands)

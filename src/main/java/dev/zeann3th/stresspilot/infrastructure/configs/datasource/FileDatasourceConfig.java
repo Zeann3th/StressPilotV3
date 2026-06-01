@@ -10,9 +10,8 @@ import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCusto
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.flywaydb.core.Flyway;
 
 import javax.sql.DataSource;
 import java.nio.file.Files;
@@ -64,15 +63,19 @@ public class FileDatasourceConfig {
                 stmt.execute("PRAGMA busy_timeout = 10000;");
                 stmt.execute("PRAGMA foreign_keys = ON;");
 
-                if (!dbExists) {
-                    log.info("Database not found, initializing at {}", dbPath);
-                    ScriptUtils.executeSqlScript(conn, new ClassPathResource("db/sqlite/migrations/V1__init.sql"));
-                    log.info("Database initialized successfully");
-                } else {
+                if (dbExists) {
                     stmt.execute("SELECT count(*) FROM sqlite_master;");
                     log.info("Database key verified at {}", dbPath);
                 }
             }
+
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .locations("classpath:db/sqlite/migrations")
+                    .baselineOnMigrate(dbExists)
+                    .baselineVersion("1")
+                    .load()
+                    .migrate();
 
             log.info("Data source configured at: {}", dbPath);
             return dataSource;

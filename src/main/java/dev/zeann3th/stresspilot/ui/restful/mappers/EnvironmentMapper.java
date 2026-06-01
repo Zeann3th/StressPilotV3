@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.ui.restful.mappers;
 
 import dev.zeann3th.stresspilot.core.domain.commands.environment.UpdateEnvironmentVariablesCommand;
+import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentVariableEntity;
 import dev.zeann3th.stresspilot.infrastructure.configs.mappers.MapstructConfig;
 import dev.zeann3th.stresspilot.ui.restful.dtos.environment.*;
@@ -10,6 +11,9 @@ import org.mapstruct.*;
 public interface EnvironmentMapper {
 
     EnvironmentVariableResponseDTO toResponse(EnvironmentVariableEntity entity);
+
+    @Mapping(target = "projectId", source = "project.id")
+    EnvironmentResponseDTO toResponse(EnvironmentEntity entity);
 
     UpdateEnvironmentVariablesCommand toUpdateCommand(UpdateEnvironmentVariablesRequestDTO request);
 

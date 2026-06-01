@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +21,11 @@ public class EnvironmentStoreAdapter implements EnvironmentStore {
     @Override
     public Optional<EnvironmentEntity> findById(Long id) {
         return environmentJpaRepository.findById(id);
+    }
+
+    @Override
+    public List<EnvironmentEntity> findAllByProjectId(Long projectId) {
+        return environmentJpaRepository.findAllByProjectIdOrderByCreatedAtAsc(projectId);
     }
 
     @Override

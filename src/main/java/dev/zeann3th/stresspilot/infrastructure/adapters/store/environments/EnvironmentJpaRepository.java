@@ -4,6 +4,9 @@ import dev.zeann3th.stresspilot.core.domain.entities.EnvironmentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface EnvironmentJpaRepository extends JpaRepository<EnvironmentEntity, Long> {
+    List<EnvironmentEntity> findAllByProjectIdOrderByCreatedAtAsc(Long projectId);
 }

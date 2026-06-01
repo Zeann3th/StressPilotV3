@@ -21,6 +21,15 @@ public class EnvironmentEntity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    @JsonIgnoreProperties({ "activeEnvironment", "endpoints", "flows" })
+    @ToString.Exclude
+    private ProjectEntity project;
+
     @Builder.Default
     @OneToMany(mappedBy = "environment", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("environment")

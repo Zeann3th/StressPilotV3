@@ -156,8 +156,16 @@ public class FlowServiceImpl implements FlowService {
         ProjectEntity project = projectStore.findById(flow.getProjectId())
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
 
+        Long resolvedEnvironmentId = runFlowCommand.getEnvironmentId() != null
+                ? runFlowCommand.getEnvironmentId()
+                : project.getActiveEnvironmentId();
+        if (resolvedEnvironmentId == null) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0016,
+                    Map.of(Constants.ID, "active"));
+        }
+
         Map<String, Object> baseEnv = envVarStore
-                .findAllByEnvironmentIdAndActiveTrue(project.getEnvironmentId())
+                .findAllByEnvironmentIdAndActiveTrue(resolvedEnvironmentId)
                 .stream()
                 .collect(Collectors.toMap(
                         EnvironmentVariableEntity::getKey,

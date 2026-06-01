@@ -2,10 +2,14 @@ package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.entities.ProjectEntity;
 import dev.zeann3th.stresspilot.core.services.projects.ProjectService;
+import dev.zeann3th.stresspilot.ui.restful.dtos.environment.CreateEnvironmentRequestDTO;
+import dev.zeann3th.stresspilot.ui.restful.dtos.environment.EnvironmentResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.CreateProjectRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.ProjectResponseDTO;
+import dev.zeann3th.stresspilot.ui.restful.dtos.project.SwitchActiveEnvironmentRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.project.UpdateProjectRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
+import dev.zeann3th.stresspilot.ui.restful.mappers.EnvironmentMapper;
 import dev.zeann3th.stresspilot.ui.restful.mappers.ProjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,6 +33,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final ProjectMapper projectMapper;
+    private final EnvironmentMapper environmentMapper;
 
     @GetMapping
     @ResponseWrapper
@@ -61,6 +66,33 @@ public class ProjectController {
             @RequestBody UpdateProjectRequestDTO request) {
         var command = projectMapper.toUpdateCommand(request);
         ProjectEntity resp = projectService.updateProject(projectId, command);
+        return projectMapper.toResponse(resp);
+    }
+
+    @GetMapping("/{projectId}/environments")
+    @ResponseWrapper
+    public java.util.List<EnvironmentResponseDTO> getProjectEnvironments(@PathVariable Long projectId) {
+        return projectService.getProjectEnvironments(projectId).stream()
+                .map(environmentMapper::toResponse)
+                .toList();
+    }
+
+    @PostMapping("/{projectId}/environments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseWrapper
+    public EnvironmentResponseDTO createProjectEnvironment(
+            @PathVariable Long projectId,
+            @RequestBody CreateEnvironmentRequestDTO request) {
+        return environmentMapper.toResponse(
+                projectService.createProjectEnvironment(projectId, request != null ? request.getName() : null));
+    }
+
+    @PatchMapping("/{projectId}/active-environment")
+    @ResponseWrapper
+    public ProjectResponseDTO switchActiveEnvironment(
+            @PathVariable Long projectId,
+            @RequestBody SwitchActiveEnvironmentRequestDTO request) {
+        ProjectEntity resp = projectService.switchActiveEnvironment(projectId, request.getEnvironmentId());
         return projectMapper.toResponse(resp);
     }
 

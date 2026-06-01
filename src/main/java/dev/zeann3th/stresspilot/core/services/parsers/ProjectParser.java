@@ -29,16 +29,29 @@ public class ProjectParser {
 
         Map<String, Object> project = getMap(root, "project");
         List<Map<String, Object>> envNodes = getList(root, "environment");
+        List<Map<String, Object>> environmentNodes = getList(root, "environments");
         List<Map<String, Object>> endpointNodes = getList(root, "endpoints");
         List<Map<String, Object>> flowNodes = getList(root, "flows");
 
         List<ImportProjectCommand.EnvVar> envVars = new ArrayList<>();
         for (Map<String, Object> env : envNodes) {
-            envVars.add(new ImportProjectCommand.EnvVar(
-                    getString(env, "name"),
-                    getString(env, VALUE),
-                    getBoolean(env, "active", true)
+            envVars.add(buildEnvVar(env));
+        }
+
+        List<ImportProjectCommand.Environment> environments = new ArrayList<>();
+        for (Map<String, Object> env : environmentNodes) {
+            List<ImportProjectCommand.EnvVar> vars = new ArrayList<>();
+            for (Map<String, Object> variable : getList(env, "variables")) {
+                vars.add(buildEnvVar(variable));
+            }
+            environments.add(new ImportProjectCommand.Environment(
+                    getString(env, "name", "Environment"),
+                    getBoolean(env, "active", false),
+                    vars
             ));
+        }
+        if (environments.isEmpty() && !envVars.isEmpty()) {
+            environments.add(new ImportProjectCommand.Environment("Default", true, envVars));
         }
 
         List<ImportProjectCommand.Endpoint> endpoints = new ArrayList<>();
@@ -55,6 +68,7 @@ public class ProjectParser {
                 .name(getString(project, "name"))
                 .description(getString(project, DESCRIPTION))
                 .environment(envVars)
+                .environments(environments)
                 .endpoints(endpoints)
                 .flows(flows)
                 .build();
@@ -71,7 +85,33 @@ public class ProjectParser {
         }
         stresspilot.put("project", project);
 
-        if (command.getEnvironment() != null && !command.getEnvironment().isEmpty()) {
+        if (command.getEnvironments() != null && !command.getEnvironments().isEmpty()) {
+            List<Map<String, Object>> envList = new ArrayList<>();
+            for (ImportProjectCommand.Environment env : command.getEnvironments()) {
+                Map<String, Object> envMap = new LinkedHashMap<>();
+                envMap.put("name", env.getName());
+                if (env.getActive() != null && env.getActive()) {
+                    envMap.put("active", true);
+                }
+                List<Map<String, Object>> variables = new ArrayList<>();
+                if (env.getVariables() != null) {
+                    for (ImportProjectCommand.EnvVar v : env.getVariables()) {
+                        Map<String, Object> varMap = new LinkedHashMap<>();
+                        varMap.put("name", v.getName());
+                        varMap.put(VALUE, v.getValue());
+                        if (v.getActive() != null && !v.getActive()) {
+                            varMap.put("active", false);
+                        }
+                        variables.add(varMap);
+                    }
+                }
+                if (!variables.isEmpty()) {
+                    envMap.put("variables", variables);
+                }
+                envList.add(envMap);
+            }
+            stresspilot.put("environments", envList);
+        } else if (command.getEnvironment() != null && !command.getEnvironment().isEmpty()) {
             List<Map<String, Object>> envList = new ArrayList<>();
             for (ImportProjectCommand.EnvVar v : command.getEnvironment()) {
                 Map<String, Object> envMap = new LinkedHashMap<>();
@@ -152,7 +192,19 @@ public class ProjectParser {
         for (Map<String, Object> stepNode : stepNodes) {
             steps.add(buildStep(stepNode));
         }
-        return new ImportProjectCommand.Flow(getString(flowNode, "name"), getString(flowNode, DESCRIPTION), steps);
+        return new ImportProjectCommand.Flow(
+                getString(flowNode, "name"),
+                getString(flowNode, DESCRIPTION),
+                getString(flowNode, "type", "DEFAULT").toUpperCase(),
+                steps);
+    }
+
+    private ImportProjectCommand.EnvVar buildEnvVar(Map<String, Object> env) {
+        return new ImportProjectCommand.EnvVar(
+                getString(env, "name"),
+                getString(env, VALUE),
+                getBoolean(env, "active", true)
+        );
     }
 
     private ImportProjectCommand.Step buildStep(Map<String, Object> stepNode) {
@@ -228,6 +280,7 @@ public class ProjectParser {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("name", flow.getName());
         putIfNotNull(map, DESCRIPTION, flow.getDescription());
+        putIfNotNull(map, "type", flow.getType());
 
         if (flow.getSteps() != null && !flow.getSteps().isEmpty()) {
             List<Map<String, Object>> stepList = new ArrayList<>();

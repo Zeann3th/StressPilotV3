@@ -11,4 +11,5 @@ public class ProjectResponseDTO extends BaseDTO {
     private String name;
     private String description;
     private Long environmentId;
+    private Long activeEnvironmentId;
 }

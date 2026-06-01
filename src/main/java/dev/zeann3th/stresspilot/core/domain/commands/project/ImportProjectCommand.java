@@ -14,8 +14,18 @@ public class ImportProjectCommand {
     private String name;
     private String description;
     private List<EnvVar> environment;
+    private List<Environment> environments;
     private List<Endpoint> endpoints;
     private List<Flow> flows;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Environment {
+        private String name;
+        private Boolean active;
+        private List<EnvVar> variables;
+    }
 
     @Data
     @NoArgsConstructor
@@ -52,6 +62,7 @@ public class ImportProjectCommand {
     public static class Flow {
         private String name;
         private String description;
+        private String type;
         private List<Step> steps;
     }
 
