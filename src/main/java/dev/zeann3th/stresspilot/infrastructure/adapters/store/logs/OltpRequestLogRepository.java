@@ -28,7 +28,7 @@ public interface OltpRequestLogRepository extends JpaRepository<RequestLogEntity
     @Query("""
         SELECT
             COUNT(l.id),
-            SUM(CASE WHEN l.success = true OR (l.statusCode >= 200 AND l.statusCode < 300) THEN 1L ELSE 0L END),
+            SUM(CASE WHEN l.success = true THEN 1L ELSE 0L END),
             AVG(CAST(l.responseTime AS double)),
             MIN(l.createdAt),
             MAX(l.createdAt)

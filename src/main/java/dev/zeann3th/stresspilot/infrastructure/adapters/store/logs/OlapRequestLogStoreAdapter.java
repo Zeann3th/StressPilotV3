@@ -101,7 +101,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
         String summarySql = """
             SELECT 
               count() as total_requests, 
-              countIf(is_success = 1 OR (status_code >= 200 AND status_code < 300)) as success_count, 
+              countIf(is_success = 1) as success_count, 
               avg(response_time) as avg_response, 
               quantile(0.90)(response_time) as p90, 
               quantile(0.95)(response_time) as p95, 
