@@ -36,6 +36,7 @@ class DistributedMasterLogSubscriberTest {
                 500,
                 false,
                 99L,
+                "123456789012345678",
                 "request-debug",
                 "response-body",
                 createdAt);
@@ -50,6 +51,7 @@ class DistributedMasterLogSubscriberTest {
         assertThat(log.getStatusCode()).isEqualTo(500);
         assertThat(log.getSuccess()).isFalse();
         assertThat(log.getResponseTime()).isEqualTo(99L);
+        assertThat(log.getCorrelationId()).isEqualTo("123456789012345678");
         assertThat(log.getRequest()).isEqualTo("request-debug");
         assertThat(log.getResponse()).isEqualTo("response-body");
         assertThat(log.getCreatedAt()).isEqualTo(createdAt);
@@ -71,6 +73,7 @@ class DistributedMasterLogSubscriberTest {
                 200,
                 true,
                 15L,
+                "123456789012345679",
                 "request-debug",
                 "response-body",
                 LocalDateTime.of(2026, 5, 24, 21, 15));
