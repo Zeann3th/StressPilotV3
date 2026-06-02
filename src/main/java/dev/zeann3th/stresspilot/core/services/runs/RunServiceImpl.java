@@ -30,12 +30,17 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @SuppressWarnings("java:S3776")
 public class RunServiceImpl implements RunService {
+    private static final Pattern ACTIVE_THREADS_PATTERN =
+            Pattern.compile("__stresspilot_active_threads=(\\d+)");
+
 
     private final RunStore runStore;
     private final RequestLogStore requestLogStore;
@@ -236,9 +241,18 @@ public class RunServiceImpl implements RunService {
                 .endpointName(name)
                 .statusCode(requestLogEntity.getStatusCode())
                 .responseTime(requestLogEntity.getResponseTime())
+                .activeThreads(extractActiveThreads(requestLogEntity.getRequest()))
                 .request(requestLogEntity.getRequest())
                 .response(requestLogEntity.getResponse())
                 .createdAt(requestLogEntity.getCreatedAt())
                 .build();
+    }
+
+    private Integer extractActiveThreads(String request) {
+        if (request == null) {
+            return null;
+        }
+        Matcher matcher = ACTIVE_THREADS_PATTERN.matcher(request);
+        return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
     }
 }

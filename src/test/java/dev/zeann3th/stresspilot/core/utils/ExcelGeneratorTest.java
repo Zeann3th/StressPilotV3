@@ -68,19 +68,24 @@ class ExcelGeneratorTest {
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
             XSSFSheet summary = workbook.getSheet("Summary");
             XSSFSheet endpoints = workbook.getSheet("Endpoint Aggregates");
+            XSSFSheet charts = workbook.getSheet("Charts");
 
             assertThat(summary).isNotNull();
             assertThat(endpoints).isNotNull();
+            assertThat(charts).isNotNull();
+            assertThat(workbook.getSheetIndex(charts)).isEqualTo(3);
             assertThat(summary.getRow(0).getCell(0).getStringCellValue()).isEqualTo("Run ID");
+            assertThat(summary.getRow(9).getCell(0).getStringCellValue()).isEqualTo("RPS");
             assertThat(endpoints.getRow(0).getCell(0).getStringCellValue()).isEqualTo("Endpoint ID");
-            assertThat(endpoints.getRow(0).getCell(6).getStringCellValue()).isEqualTo("TPS");
+            assertThat(endpoints.getRow(0).getCell(6).getStringCellValue()).isEqualTo("RPS");
+            assertThat(charts.getRow(0).getCell(0).getStringCellValue()).isEqualTo("StressPilot Run Dashboard");
 
-            assertThat(chartCount(summary)).isEqualTo(2);
-            assertThat(chartCount(endpoints)).isEqualTo(2);
-            assertThat(lineChartCount(summary)).isEqualTo(2);
-            assertThat(lineChartCount(endpoints)).isEqualTo(2);
-            assertThat(allLineSeriesAreSmoothAndMarkerless(summary)).isTrue();
-            assertThat(allLineSeriesAreSmoothAndMarkerless(endpoints)).isTrue();
+            assertThat(chartCount(summary)).isEqualTo(1);
+            assertThat(pieChartCount(summary)).isEqualTo(1);
+            assertThat(chartCount(endpoints)).isZero();
+            assertThat(chartCount(charts)).isEqualTo(7);
+            assertThat(lineChartCount(charts)).isEqualTo(7);
+            assertThat(allLineSeriesAreSmoothAndMarkerless(charts)).isTrue();
         }
     }
 
@@ -91,6 +96,7 @@ class ExcelGeneratorTest {
             .endpointName(endpointName)
             .statusCode(200)
             .responseTime(responseTime)
+            .activeThreads(2)
             .request("{}")
             .response("{}")
             .createdAt(createdAt)
@@ -109,6 +115,16 @@ class ExcelGeneratorTest {
         }
         return drawing.getCharts().stream()
             .mapToInt(chart -> chart.getCTChart().getPlotArea().sizeOfLineChartArray())
+            .sum();
+    }
+
+    private int pieChartCount(XSSFSheet sheet) {
+        XSSFDrawing drawing = sheet.getDrawingPatriarch();
+        if (drawing == null) {
+            return 0;
+        }
+        return drawing.getCharts().stream()
+            .mapToInt(chart -> chart.getCTChart().getPlotArea().sizeOfPieChartArray())
             .sum();
     }
 
