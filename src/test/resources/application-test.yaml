@@ -47,6 +47,3 @@ application:
       enabled: false
     kafka:
       enabled: false
-  tasks:
-    run-snapshot:
-      cron: "0 0/10 * * * ?"

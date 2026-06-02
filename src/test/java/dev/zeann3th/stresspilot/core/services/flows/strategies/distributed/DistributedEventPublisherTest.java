@@ -46,6 +46,7 @@ class DistributedEventPublisherTest {
                 .statusCode(201)
                 .success(true)
                 .responseTime(42L)
+                .correlationId("123456789012345678")
                 .request("request-debug")
                 .response("response-body")
                 .createdAt(createdAt)
@@ -57,6 +58,7 @@ class DistributedEventPublisherTest {
                 201,
                 true,
                 42L,
+                "123456789012345678",
                 "request-debug",
                 "response-body",
                 createdAt);

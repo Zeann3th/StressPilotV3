@@ -91,6 +91,7 @@ public class DistributedEventPublisher {
             Integer statusCode,
             Boolean success,
             Long responseTime,
+            String correlationId,
             String request,
             String response,
             LocalDateTime createdAt) {
@@ -101,6 +102,7 @@ public class DistributedEventPublisher {
                     logEntity.getStatusCode(),
                     logEntity.getSuccess(),
                     logEntity.getResponseTime(),
+                    logEntity.getCorrelationId(),
                     logEntity.getRequest(),
                     logEntity.getResponse(),
                     logEntity.getCreatedAt());

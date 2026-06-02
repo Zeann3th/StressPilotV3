@@ -7,6 +7,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
+import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.ExtensionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
     @Autowired protected ActiveRunRegistry activeRunRegistry;
     @Autowired protected FlowNodeHandlerFactory nodeHandlerFactory;
     @Autowired protected FlowProcessor flowProcessor;
+    @Autowired protected SnowflakeId snowflakeId;
 
     public abstract String getType();
 
@@ -135,6 +137,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
     protected final void executeIteration(FlowStepEntity startStep,
             Map<String, FlowStepEntity> stepMap,
             FlowExecutionContext ctx) {
+        ctx.setCorrelationId(String.valueOf(snowflakeId.nextId()));
         FlowStepEntity current = startStep;
         int jumpCount = 0;
         final int MAX_JUMPS = 10000;
@@ -173,5 +176,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
     public void initInfra(ActiveRunRegistry arr, FlowNodeHandlerFactory nhf) {
         this.activeRunRegistry = arr;
         this.nodeHandlerFactory = nhf;
+    }
+
+    public void initInfra(ActiveRunRegistry arr, FlowNodeHandlerFactory nhf, FlowProcessor processor, SnowflakeId idGenerator) {
+        this.activeRunRegistry = arr;
+        this.nodeHandlerFactory = nhf;
+        this.flowProcessor = processor;
+        this.snowflakeId = idGenerator;
     }
 }

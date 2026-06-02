@@ -117,6 +117,7 @@ public class DistributedMasterLogSubscriber implements MessageListener {
                 .statusCode(payload.statusCode())
                 .success(payload.success())
                 .responseTime(payload.responseTime())
+                .correlationId(payload.correlationId())
                 .request(payload.request())
                 .response(payload.response())
                 .createdAt(payload.createdAt())

@@ -4,6 +4,7 @@ import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
 import lombok.RequiredArgsConstructor;
 import org.pf4j.PluginManager;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,8 @@ public class FlowExecutorFactory {
     private final PluginManager pluginManager;
     private final ActiveRunRegistry activeRunRegistry;
     private final FlowNodeHandlerFactory nodeHandlerFactory;
+    private final FlowProcessor flowProcessor;
+    private final SnowflakeId snowflakeId;
 
     public FlowExecutor getStrategy(String type) {
         Optional<FlowExecutor> internal = strategies.stream()
@@ -35,7 +38,7 @@ public class FlowExecutorFactory {
                 .filter(strategy -> strategy.supports(type))
                 .findFirst()
                 .map(ext -> {
-                    ext.initInfra(activeRunRegistry, nodeHandlerFactory);
+                    ext.initInfra(activeRunRegistry, nodeHandlerFactory, flowProcessor, snowflakeId);
                     return ext;
                 })
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0020,

@@ -1,7 +1,6 @@
 package dev.zeann3th.stresspilot.infrastructure.adapters.store.runs;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,8 +28,4 @@ public interface RunJpaRepository extends JpaRepository<RunEntity, String> {
     int finalizeRun(@Param("id") String id,
                     @Param("status") String status,
                     @Param("completedAt") LocalDateTime completedAt);
-
-    @Query("SELECT r FROM RunEntity r WHERE r.status = 'COMPLETED' AND NOT EXISTS " +
-            "(SELECT 1 FROM RunSnapshotEntity s WHERE s.id = r.id) ORDER BY r.completedAt ASC")
-    List<RunEntity> findCompletedWithoutSnapshot(Pageable pageable);
 }

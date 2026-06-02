@@ -39,6 +39,9 @@ public class RequestLogEntity {
     @Column(name = "response_time", nullable = false)
     private Long responseTime;
 
+    @Column(name = "correlation_id", length = 20)
+    private String correlationId;
+
     @Column(name = "request", columnDefinition = "TEXT")
     private String request;
 

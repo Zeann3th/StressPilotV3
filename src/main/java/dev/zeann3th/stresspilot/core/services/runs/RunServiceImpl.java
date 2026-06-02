@@ -5,19 +5,19 @@ import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
-import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
-import dev.zeann3th.stresspilot.core.ports.store.RunSnapshotStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
+import dev.zeann3th.stresspilot.core.utils.HtmlReportGenerator;
+import dev.zeann3th.stresspilot.core.utils.RunComparisonExcelGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.ObjectMapper;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpHeaders;
@@ -44,8 +44,6 @@ public class RunServiceImpl implements RunService {
 
     private final RunStore runStore;
     private final RequestLogStore requestLogStore;
-    private final RunSnapshotStore runSnapshotStore;
-    private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -69,7 +67,7 @@ public class RunServiceImpl implements RunService {
 
     @Override
     @Transactional(readOnly = true)
-    public void exportRun(String runId, HttpServletResponse response) {
+    public void exportRun(String runId, RunExportType type, HttpServletResponse response) {
         RunEntity run = runStore.findById(runId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
 
@@ -81,26 +79,110 @@ public class RunServiceImpl implements RunService {
 
         try {
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".xlsx";
+            if (type == RunExportType.HTML) {
+                exportHtml(runId, response, report, now);
+            } else {
+                exportExcel(runId, response, report, now);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to export run report for runId={}: {}", runId, e.getMessage(), e);
+            throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
+        }
+    }
+
+    private void exportExcel(String runId, HttpServletResponse response, RunReport report, String now) throws Exception {
+        String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".xlsx";
+        String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
+
+        ExcelGenerator excel = new ExcelGenerator();
+
+        excel.writeSummarySheets(report);
+
+        excel.startDetailedSheet();
+
+        requestLogStore.streamLogsByRunId(runId, entity -> excel.appendDetailRow(mapToDto(entity)));
+
+        excel.export(response);
+    }
+
+    private void exportHtml(String runId, HttpServletResponse response, RunReport report, String now) throws Exception {
+        String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".html";
+        String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
+
+        response.setContentType("text/html;charset=UTF-8");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
+
+        HtmlReportGenerator html = new HtmlReportGenerator(report);
+        int expectedLogCount = report.getTotalRequests() != null ? report.getTotalRequests() : 0;
+        html.startDetailedLogs(expectedLogCount);
+        requestLogStore.streamLogsByRunId(runId, entity -> html.appendLog(mapToDto(entity)));
+        html.writeTo(response.getOutputStream());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void exportRunComparison(String runId1, String runId2, HttpServletResponse response) {
+        RunEntity run1 = getExportableRun(runId1);
+        RunEntity run2 = getExportableRun(runId2);
+        validateComparable(run1, run2);
+
+        RunReport report1 = requestLogStore.calculateRunReport(runId1, run1);
+        RunReport report2 = requestLogStore.calculateRunReport(runId2, run2);
+
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String rawFileName = "[Stress Pilot] _comparison_report_" + runId1 + "_vs_" + runId2 + "_" + now + ".xlsx";
             String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
 
-            ExcelGenerator excel = new ExcelGenerator();
-
-            excel.writeSummarySheets(report);
-
-            excel.startDetailedSheet();
-
-            requestLogStore.streamLogsByRunId(runId, entity -> excel.appendDetailRow(mapToDto(entity)));
-
+            RunComparisonExcelGenerator excel = new RunComparisonExcelGenerator(report1, report2);
+            excel.writeComparisonSheets();
+            excel.startRunDetailSheet("Run A Logs");
+            requestLogStore.streamLogsByRunId(runId1, entity -> excel.appendRunDetailRow(mapToDto(entity)));
+            excel.startRunDetailSheet("Run B Logs");
+            requestLogStore.streamLogsByRunId(runId2, entity -> excel.appendRunDetailRow(mapToDto(entity)));
             excel.export(response);
-
         } catch (Exception e) {
-            log.error("Failed to export run report for runId={}: {}", runId, e.getMessage(), e);
+            log.error("Failed to export comparison report for runId1={}, runId2={}: {}", runId1, runId2, e.getMessage(), e);
             throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
+        }
+    }
+
+    private RunEntity getExportableRun(String runId) {
+        RunEntity run = runStore.findById(runId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
+        if (RunStatus.RUNNING.name().equals(run.getStatus())) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0023);
+        }
+        return run;
+    }
+
+    private void validateComparable(RunEntity run1, RunEntity run2) {
+        List<String> mismatches = new ArrayList<>();
+        if (!Objects.equals(run1.getFlowId(), run2.getFlowId())) {
+            mismatches.add("flow_id %s vs %s".formatted(run1.getFlowId(), run2.getFlowId()));
+        }
+        if (!Objects.equals(run1.getThreads(), run2.getThreads())) {
+            mismatches.add("threads %s vs %s".formatted(run1.getThreads(), run2.getThreads()));
+        }
+        if (!Objects.equals(run1.getDuration(), run2.getDuration())) {
+            mismatches.add("duration %s vs %s".formatted(run1.getDuration(), run2.getDuration()));
+        }
+        if (!Objects.equals(run1.getRampUpDuration(), run2.getRampUpDuration())) {
+            mismatches.add("ramp_up_duration %s vs %s".formatted(run1.getRampUpDuration(), run2.getRampUpDuration()));
+        }
+        if (!mismatches.isEmpty()) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001,
+                    Map.of(Constants.REASON, "Runs are not comparable: " + String.join(", ", mismatches)));
         }
     }
 
@@ -123,114 +205,6 @@ public class RunServiceImpl implements RunService {
         }
     }
 
-    @Override
-    @Transactional
-    public void performSnapshotting() {
-        List<RunEntity> runs = runStore.findCompletedWithoutSnapshot(10);
-        for (RunEntity run : runs) {
-            try {
-                if (!runSnapshotStore.existsById(run.getId())) {
-                    createSnapshot(run);
-                }
-            } catch (Exception e) {
-                log.error("Failed to auto-create snapshot for run {}: {}", run.getId(), e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    @Transactional
-    public RunSnapshotEntity createManualSnapshot(String runId) {
-        RunEntity run = runStore.findById(runId).orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
-        if (!RunStatus.COMPLETED.name().equals(run.getStatus())) {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0001, Map.of(Constants.REASON, "Only completed runs can be snapshotted"));
-        }
-        if (runSnapshotStore.existsById(runId)) {
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0027);
-        }
-        return createSnapshot(run);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public RunSnapshotEntity getRunSnapshot(String runId) {
-        return runSnapshotStore.findById(runId)
-                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<RunSnapshotEntity> compareSnapshots(String runId1, String runId2) {
-        return List.of(getRunSnapshot(runId1), getRunSnapshot(runId2));
-    }
-
-    private RunSnapshotEntity createSnapshot(RunEntity run) {
-        if (run.getStartedAt() == null || run.getCompletedAt() == null) {
-            log.warn("Run {} has missing timestamps, skipping snapshot", run.getId());
-            return null;
-        }
-
-        long totalDurationMs = Duration.between(run.getStartedAt(), run.getCompletedAt()).toMillis();
-        double binWidthMs = Math.max(1.0, totalDurationMs / 20.0);
-
-        Map<Long, Map<Integer, List<Long>>> groupedLogs = new HashMap<>();
-
-        requestLogStore.streamLogsByRunId(run.getId(), logEntity -> {
-            Long endpointId = logEntity.getEndpointId();
-            long offsetMs = Duration.between(run.getStartedAt(), logEntity.getCreatedAt()).toMillis();
-            int binIndex = (int) (offsetMs / binWidthMs);
-            if (binIndex < 0) binIndex = 0;
-            if (binIndex > 19) binIndex = 19;
-
-            groupedLogs.computeIfAbsent(endpointId, k -> new HashMap<>())
-                    .computeIfAbsent(binIndex, k -> new ArrayList<>())
-                    .add(logEntity.getResponseTime());
-        });
-
-        Map<Long, List<Map<String, Object>>> finalMetrics = new HashMap<>();
-
-        for (Long endpointId : groupedLogs.keySet()) {
-            List<Map<String, Object>> bins = new ArrayList<>();
-            Map<Integer, List<Long>> endpointBins = groupedLogs.get(endpointId);
-
-            for (int i = 0; i < 20; i++) {
-                List<Long> latencies = endpointBins.getOrDefault(i, Collections.emptyList());
-                double avg = latencies.isEmpty() ? 0.0 : latencies.stream().mapToLong(Long::longValue).average().orElse(0.0);
-                int count = latencies.size();
-
-                Map<String, Object> bin = new HashMap<>();
-                bin.put("bin_index", i);
-                bin.put("avg_response_time", avg);
-                bin.put("request_count", count);
-                bins.add(bin);
-            }
-            finalMetrics.put(endpointId, bins);
-        }
-
-        try {
-            String metricsJson = objectMapper.writeValueAsString(finalMetrics);
-
-            RunSnapshotEntity snapshot = RunSnapshotEntity.builder()
-                    .id(run.getId())
-                    .flowId(run.getFlowId())
-                    .status(run.getStatus())
-                    .threads(run.getThreads())
-                    .duration(run.getDuration())
-                    .rampUpDuration(run.getRampUpDuration())
-                    .startedAt(run.getStartedAt())
-                    .completedAt(run.getCompletedAt())
-                    .metrics(metricsJson)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            log.info("Saving snapshot for run {}", run.getId());
-            return runSnapshotStore.save(snapshot);
-        } catch (Exception e) {
-            log.error("Failed to create snapshot for run {}: {}", run.getId(), e.getMessage());
-            throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
-        }
-    }
-
     private RequestLog mapToDto(RequestLogEntity requestLogEntity) {
         Long id = requestLogEntity.getEndpointId();
         String name = (requestLogEntity.getEndpoint() != null) ? requestLogEntity.getEndpoint().getName() : null;
@@ -241,6 +215,7 @@ public class RunServiceImpl implements RunService {
                 .endpointName(name)
                 .statusCode(requestLogEntity.getStatusCode())
                 .responseTime(requestLogEntity.getResponseTime())
+                .correlationId(requestLogEntity.getCorrelationId())
                 .activeThreads(extractActiveThreads(requestLogEntity.getRequest()))
                 .request(requestLogEntity.getRequest())
                 .response(requestLogEntity.getResponse())
