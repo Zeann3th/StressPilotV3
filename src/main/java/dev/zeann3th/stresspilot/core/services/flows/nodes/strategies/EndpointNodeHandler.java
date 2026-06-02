@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -46,11 +46,12 @@ public class EndpointNodeHandler implements FlowNodeHandler {
 
     @PostConstruct
     public void init() {
-        this.strictLinear = Boolean.parseBoolean(
-                configService.getValue(ConfigKey.FLOW_ENDPOINT_STRICT_LINEAR.name()
-                ).orElse("false")
-        );
-        log.info("Endpoint strict linear routing initialized as: {}", this.strictLinear);
+        String key = ConfigKey.FLOW_ENDPOINT_STRICT_LINEAR.name();
+        Optional<String> configuredValue = configService.getValue(key);
+        String rawValue = configuredValue.orElse("false");
+        this.strictLinear = Boolean.parseBoolean(rawValue);
+        log.info("Endpoint strict linear config loaded: key={}, rawValue={}, defaulted={}, enabled={}",
+                key, rawValue, configuredValue.isEmpty(), this.strictLinear);
     }
 
     @Override
