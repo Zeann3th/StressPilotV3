@@ -4,6 +4,7 @@ import java.util.List;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
+import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import jakarta.servlet.http.HttpServletResponse;
 
 public interface RunService {
@@ -13,7 +14,7 @@ public interface RunService {
 
     RunEntity getLastRun(Long flowId);
 
-    void exportRun(String runId, HttpServletResponse response);
+    void exportRun(String runId, RunExportType type, HttpServletResponse response);
 
     void interruptRun(String runId);
 

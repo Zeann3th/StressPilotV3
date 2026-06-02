@@ -7,6 +7,7 @@ import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunSnapshotEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
+import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
@@ -14,6 +15,7 @@ import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunSnapshotStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
+import dev.zeann3th.stresspilot.core.utils.HtmlReportGenerator;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +71,7 @@ public class RunServiceImpl implements RunService {
 
     @Override
     @Transactional(readOnly = true)
-    public void exportRun(String runId, HttpServletResponse response) {
+    public void exportRun(String runId, RunExportType type, HttpServletResponse response) {
         RunEntity run = runStore.findById(runId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0010));
 
@@ -81,27 +83,50 @@ public class RunServiceImpl implements RunService {
 
         try {
             String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".xlsx";
-            String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
-
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
-
-            ExcelGenerator excel = new ExcelGenerator();
-
-            excel.writeSummarySheets(report);
-
-            excel.startDetailedSheet();
-
-            requestLogStore.streamLogsByRunId(runId, entity -> excel.appendDetailRow(mapToDto(entity)));
-
-            excel.export(response);
+            if (type == RunExportType.HTML) {
+                exportHtml(runId, response, report, now);
+            } else {
+                exportExcel(runId, response, report, now);
+            }
 
         } catch (Exception e) {
             log.error("Failed to export run report for runId={}: {}", runId, e.getMessage(), e);
             throw CommandExceptionBuilder.exception(ErrorCode.ER9999);
         }
+    }
+
+    private void exportExcel(String runId, HttpServletResponse response, RunReport report, String now) throws Exception {
+        String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".xlsx";
+        String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
+
+        ExcelGenerator excel = new ExcelGenerator();
+
+        excel.writeSummarySheets(report);
+
+        excel.startDetailedSheet();
+
+        requestLogStore.streamLogsByRunId(runId, entity -> excel.appendDetailRow(mapToDto(entity)));
+
+        excel.export(response);
+    }
+
+    private void exportHtml(String runId, HttpServletResponse response, RunReport report, String now) throws Exception {
+        String rawFileName = "[Stress Pilot] _report_of_run_" + runId + "_" + now + ".html";
+        String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8);
+
+        response.setContentType("text/html;charset=UTF-8");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
+
+        HtmlReportGenerator html = new HtmlReportGenerator(report);
+        int expectedLogCount = report.getTotalRequests() != null ? report.getTotalRequests() : 0;
+        html.startDetailedLogs(expectedLogCount);
+        requestLogStore.streamLogsByRunId(runId, entity -> html.appendLog(mapToDto(entity)));
+        html.writeTo(response.getOutputStream());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.ui.restful;
 
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
+import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
 import dev.zeann3th.stresspilot.ui.restful.dtos.run.RunResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
@@ -46,13 +47,14 @@ public class RunController {
     }
 
     @GetMapping("/{runId}/export")
-    @Operation(summary = "Export Run Report", description = "Downloads the run report as an Excel file.", responses = {
-            @ApiResponse(responseCode = "200", description = "Excel file downloaded successfully", content = @Content(mediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", schema = @Schema(type = "string", format = "binary")))
+    @Operation(summary = "Export Run Report", description = "Downloads the run report as XLSX or HTML. Defaults to XLSX.", responses = {
+            @ApiResponse(responseCode = "200", description = "Report downloaded successfully", content = @Content(mediaType = "application/octet-stream", schema = @Schema(type = "string", format = "binary")))
     })
     public void exportRun(
             @PathVariable String runId,
+            @RequestParam(value = "type", defaultValue = "XLSX") String type,
             HttpServletResponse response) {
-        runService.exportRun(runId, response);
+        runService.exportRun(runId, RunExportType.fromRequest(type), response);
     }
 
     @DeleteMapping("/{runId}")
