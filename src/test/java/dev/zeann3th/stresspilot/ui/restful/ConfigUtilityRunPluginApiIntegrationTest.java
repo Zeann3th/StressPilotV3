@@ -62,7 +62,7 @@ class ConfigUtilityRunPluginApiIntegrationTest extends AbstractApiIntegrationTes
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value("ER0010"));
 
-        mockMvc.perform(get("/api/v1/runs/snapshot/compare/bad-format"))
+        mockMvc.perform(get("/api/v1/runs/compare/bad-format/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value("ER0001"));
 
