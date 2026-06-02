@@ -5,6 +5,8 @@ import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.services.flows.FlowService;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.CreateFlowRequestDTO;
+import dev.zeann3th.stresspilot.ui.restful.dtos.flow.DryRunStepRequestDTO;
+import dev.zeann3th.stresspilot.ui.restful.dtos.flow.DryRunStepResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowStepRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowStepResponseDTO;
@@ -98,6 +100,14 @@ public class FlowController {
         var command = flowMapper.toRunCommand(runFlowRequestDTO);
         command.setCredentials(credentials);
         return flowService.runFlow(flowId, command);
+    }
+
+    @PostMapping("/{flowId}/dry-run-step")
+    public DryRunStepResponseDTO dryRunStep(
+            @PathVariable Long flowId,
+            @RequestBody DryRunStepRequestDTO requestDTO) {
+        var command = flowMapper.toDryRunCommand(requestDTO);
+        return flowMapper.toDryRunResponse(flowService.dryRunStep(flowId, command));
     }
 
     private List<Map<String, Object>> parseCredentialsFile(MultipartFile file) {

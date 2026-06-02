@@ -1,6 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.flows;
 
 import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepResult;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
@@ -24,4 +26,6 @@ public interface FlowService {
     FlowEntity configureFlow(Long flowId, List<FlowStepCommand> steps);
 
     String runFlow(Long flowId, RunFlowCommand runFlowCommand);
+
+    DryRunStepResult dryRunStep(Long flowId, DryRunStepCommand command);
 }

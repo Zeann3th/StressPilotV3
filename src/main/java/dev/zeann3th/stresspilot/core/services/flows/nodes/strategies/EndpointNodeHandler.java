@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.flows.nodes.strategies;
 
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
+import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
 import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
@@ -127,10 +128,14 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .response(responseText)
                     .createdAt(LocalDateTime.now())
                     .build();
-            if (context.isDistributedWorker()) {
-                distributedEventPublisher.publishRequestLog(log);
+            if (context.isPersistRequestLogs()) {
+                if (context.isDistributedWorker()) {
+                    distributedEventPublisher.publishRequestLog(log);
+                } else {
+                    requestLogService.queueLog(log);
+                }
             } else {
-                requestLogService.queueLog(log);
+                context.recordDryRunRequestLog(toDryRunLog(log, endpoint));
             }
         }
 
@@ -146,5 +151,19 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         }
         
         return new NodeHandlerResult(nextId, result.getData());
+    }
+
+    private RequestLog toDryRunLog(RequestLogEntity log, EndpointEntity endpoint) {
+        return RequestLog.builder()
+                .endpointId(endpoint.getId())
+                .endpointName(endpoint.getName())
+                .statusCode(log.getStatusCode())
+                .success(log.getSuccess())
+                .responseTime(log.getResponseTime())
+                .correlationId(log.getCorrelationId())
+                .request(log.getRequest())
+                .response(log.getResponse())
+                .createdAt(log.getCreatedAt())
+                .build();
     }
 }

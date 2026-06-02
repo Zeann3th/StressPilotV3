@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.core.services.flows;
 
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
@@ -14,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +50,8 @@ public class FlowExecutionContext {
     @Builder.Default private final AtomicInteger activeThreadCount = new AtomicInteger(0);
     @Builder.Default private int totalThreads = 1;
     @Builder.Default private boolean distributedWorker = false;
+    @Builder.Default private boolean persistRequestLogs = true;
+    @Builder.Default private List<RequestLog> dryRunRequestLogs = new CopyOnWriteArrayList<>();
     private String correlationId;
 
     public List<FlowStepEntity> getSteps() {
@@ -75,6 +79,10 @@ public class FlowExecutionContext {
     public void recordRequest(boolean success) {
         requestCount.incrementAndGet();
         if (!success) failureCount.incrementAndGet();
+    }
+
+    public void recordDryRunRequestLog(RequestLog log) {
+        dryRunRequestLogs.add(log);
     }
 
     public long getRequestCount() {

@@ -20,6 +20,10 @@ public interface FlowMapper {
 
     RunFlowCommand toRunCommand(RunFlowRequestDTO request);
 
+    DryRunStepCommand toDryRunCommand(DryRunStepRequestDTO request);
+
+    DryRunStepResponseDTO toDryRunResponse(DryRunStepResult result);
+
     FlowStepCommand toStepCommand(FlowStepRequestDTO request);
 
     List<FlowStepCommand> toStepCommands(List<FlowStepRequestDTO> requests);

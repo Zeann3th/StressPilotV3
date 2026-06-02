@@ -79,6 +79,7 @@ class ExcelGeneratorTest {
             assertThat(endpoints.getRow(0).getCell(0).getStringCellValue()).isEqualTo("Endpoint ID");
             assertThat(endpoints.getRow(0).getCell(6).getStringCellValue()).isEqualTo("RPS");
             assertThat(charts.getRow(0).getCell(0).getStringCellValue()).isEqualTo("StressPilot Run Dashboard");
+            assertThat(workbook.getSheet("Detailed Logs").getRow(1).getCell(1).getStringCellValue()).isEqualTo("corr-1");
 
             assertThat(chartCount(summary)).isEqualTo(1);
             assertThat(pieChartCount(summary)).isEqualTo(1);
@@ -96,6 +97,7 @@ class ExcelGeneratorTest {
             .endpointName(endpointName)
             .statusCode(200)
             .responseTime(responseTime)
+            .correlationId("corr-" + id)
             .activeThreads(2)
             .request("{}")
             .response("{}")

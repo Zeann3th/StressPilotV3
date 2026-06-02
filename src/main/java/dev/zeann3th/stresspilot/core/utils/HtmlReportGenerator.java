@@ -175,9 +175,10 @@ public class HtmlReportGenerator {
 
     private void appendLogTable(StringBuilder html) {
         html.append("<h2>Detailed Logs <span class=\"muted\">(sampled up to 300 rows across the run)</span></h2>");
-        html.append("<table><tr><th>ID</th><th>Endpoint ID</th><th>Endpoint Name</th><th>Status</th><th>Response Time (ms)</th><th>Request</th><th>Response</th><th>Timestamp</th></tr>");
+        html.append("<table><tr><th>ID</th><th>Correlation ID</th><th>Endpoint ID</th><th>Endpoint Name</th><th>Status</th><th>Response Time (ms)</th><th>Request</th><th>Response</th><th>Timestamp</th></tr>");
         for (RequestLog log : sampledLogs) {
-            html.append("<tr><td>").append(valueOrZero(log.getId())).append("</td><td>").append(valueOrZero(log.getEndpointId()))
+            html.append("<tr><td>").append(valueOrZero(log.getId())).append("</td><td>").append(escape(log.getCorrelationId()))
+                .append("</td><td>").append(valueOrZero(log.getEndpointId()))
                 .append("</td><td>").append(escape(log.getEndpointName())).append("</td><td>").append(valueOrZero(log.getStatusCode()))
                 .append("</td><td>").append(valueOrZero(log.getResponseTime())).append("</td><td><pre>").append(escape(trim(log.getRequest())))
                 .append("</pre></td><td><pre>").append(escape(trim(log.getResponse()))).append("</pre></td><td>")

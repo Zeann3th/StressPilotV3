@@ -63,6 +63,22 @@ class EndpointNodeHandlerTest {
         assertThat(fixture.context.getFailureCount()).isZero();
     }
 
+    @Test
+    void dryRunNonJsEndpointExecutionDoesNotQueueOrPublishRequestLog() {
+        HandlerFixture fixture = fixtureFor(EndpointType.HTTP.name());
+        fixture.context.setPersistRequestLogs(false);
+
+        fixture.handler.handle(fixture.step, Map.of(), fixture.context);
+
+        verify(fixture.requestLogService, never()).queueLog(any());
+        verify(fixture.distributedEventPublisher, never()).publishRequestLog(any());
+        assertThat(fixture.context.getRequestCount()).isEqualTo(1);
+        assertThat(fixture.context.getFailureCount()).isZero();
+        assertThat(fixture.context.getDryRunRequestLogs()).hasSize(1);
+        assertThat(fixture.context.getDryRunRequestLogs().getFirst().getRequest()).contains("variables_snapshot");
+        assertThat(fixture.context.getDryRunRequestLogs().getFirst().getResponse()).isEqualTo("ok");
+    }
+
     private HandlerFixture fixtureFor(String endpointType) {
         return fixtureFor(endpointType, false);
     }

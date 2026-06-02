@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.core.ports.store.FlowStore;
 import dev.zeann3th.stresspilot.core.ports.store.ProjectStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
 import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,8 @@ class FlowServiceImplDistributedStopTest {
                 activeRunRegistry,
                 mock(FlowAsyncRunner.class),
                 mock(SnowflakeId.class),
-                publisherProvider);
+                publisherProvider,
+                mock(FlowProcessor.class),
+                mock(FlowNodeHandlerFactory.class));
     }
 }

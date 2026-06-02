@@ -1,6 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.flows;
 
 import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepResult;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
@@ -13,6 +15,9 @@ import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
 import dev.zeann3th.stresspilot.core.ports.store.*;
 import dev.zeann3th.stresspilot.core.services.ActiveRunRegistry;
+import dev.zeann3th.stresspilot.core.services.executors.context.BaseExecutionContext;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandlerFactory;
+import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
 import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import dev.zeann3th.stresspilot.core.utils.DataUtils;
 import dev.zeann3th.stresspilot.core.utils.SnowflakeId;
@@ -28,6 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j(topic = "[FlowService]")
@@ -46,6 +52,8 @@ public class FlowServiceImpl implements FlowService {
     private final FlowAsyncRunner flowAsyncRunner;
     private final SnowflakeId snowflakeId;
     private final ObjectProvider<DistributedEventPublisher> distributedEventPublisherProvider;
+    private final FlowProcessor flowProcessor;
+    private final FlowNodeHandlerFactory nodeHandlerFactory;
 
     @Override
     @Transactional(readOnly = true)
@@ -197,6 +205,86 @@ public class FlowServiceImpl implements FlowService {
 
         flowAsyncRunner.run(executionContext);
         return runId;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DryRunStepResult dryRunStep(Long flowId, DryRunStepCommand command) {
+        FlowEntity flow = flowStore.findById(flowId)
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
+
+        List<FlowStepEntity> steps = flowStepStore.findAllByFlowIdWithEndpoint(flowId);
+        if (steps.isEmpty()) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
+                    Map.of(Constants.REASON, "Flow has no configured steps"));
+        }
+
+        Map<String, FlowStepEntity> stepMap = steps.stream()
+                .collect(Collectors.toMap(FlowStepEntity::getId, Function.identity()));
+        FlowStepEntity selected = stepMap.get(command.getStepId());
+        if (selected == null) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
+                    Map.of(Constants.REASON, "Step " + command.getStepId() + " was not found in flow"));
+        }
+
+        Map<String, Object> variables = resolveDryRunVariables(flow, command);
+        String correlationId = String.valueOf(snowflakeId.nextId());
+        FlowExecutionContext context = FlowExecutionContext.builder()
+                .runId("dry-run-" + correlationId)
+                .run(null)
+                .flowType(flow.getType())
+                .steps(steps)
+                .baseEnvironment(variables)
+                .variables(new java.util.concurrent.ConcurrentHashMap<>(variables))
+                .executionContext(new BaseExecutionContext())
+                .persistRequestLogs(false)
+                .build();
+        context.setCorrelationId(correlationId);
+
+        flowProcessor.process(selected.getPreProcessor(), context.getVariables(),
+                null, "dry-run pre-processor", 0);
+        NodeHandlerResult result = nodeHandlerFactory.getHandler(selected.getType().toUpperCase())
+                .handle(selected, stepMap, context);
+        flowProcessor.process(selected.getPostProcessor(), context.getVariables(),
+                result.outputData(), "dry-run post-processor", 0);
+
+        return DryRunStepResult.builder()
+                .stepId(selected.getId())
+                .stepType(selected.getType())
+                .nextStepId(result.nextId())
+                .correlationId(correlationId)
+                .persisted(false)
+                .outputData(result.outputData())
+                .variables(new LinkedHashMap<>(context.getVariables()))
+                .requestLogs(List.copyOf(context.getDryRunRequestLogs()))
+                .build();
+    }
+
+    private Map<String, Object> resolveDryRunVariables(FlowEntity flow, DryRunStepCommand command) {
+        ProjectEntity project = projectStore.findById(flow.getProjectId())
+                .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
+        Long resolvedEnvironmentId = command.getEnvironmentId() != null
+                ? command.getEnvironmentId()
+                : project.getActiveEnvironmentId();
+        if (resolvedEnvironmentId == null) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0016,
+                    Map.of(Constants.ID, "active"));
+        }
+
+        Map<String, Object> variables = envVarStore
+                .findAllByEnvironmentIdAndActiveTrue(resolvedEnvironmentId)
+                .stream()
+                .collect(Collectors.toMap(
+                        EnvironmentVariableEntity::getKey,
+                        EnvironmentVariableEntity::getValue,
+                        (_, v2) -> v2, LinkedHashMap::new));
+        if (command.getVariables() != null) {
+            variables.putAll(command.getVariables());
+        }
+        if (command.getTemporaryVariables() != null) {
+            variables.putAll(command.getTemporaryVariables());
+        }
+        return variables;
     }
 
     private List<FlowStepEntity> stepsFromCommands(FlowEntity flow, List<FlowStepCommand> cmds) {

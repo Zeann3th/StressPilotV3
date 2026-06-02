@@ -50,6 +50,7 @@ class HtmlReportGeneratorTest {
                 .endpointName("GET /api/orders")
                 .statusCode(200)
                 .responseTime(100L + i)
+                .correlationId("corr-" + (i + 1))
                 .activeThreads(i % 20)
                 .request("request-" + (i + 1))
                 .response("response-" + (i + 1))
@@ -69,6 +70,7 @@ class HtmlReportGeneratorTest {
         assertThat(html).contains("Response Bandwidth Over Time");
         assertThat(html).contains("Request Summary");
         assertThat(logSection).contains("request-1");
+        assertThat(logSection).contains("corr-1");
         assertThat(logSection).contains("request-499");
         assertThat(logSection).contains("request-1000");
         assertThat(countOccurrences(logSection, "<tr><td>")).isEqualTo(300);
