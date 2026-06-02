@@ -45,6 +45,8 @@ public class FlowExecutionContext {
     @Builder.Default private final AtomicInteger iterationCount = new AtomicInteger(0);
     @Builder.Default private final AtomicLong requestCount = new AtomicLong(0);
     @Builder.Default private final AtomicLong failureCount = new AtomicLong(0);
+    @Builder.Default private final AtomicInteger activeThreadCount = new AtomicInteger(0);
+    @Builder.Default private int totalThreads = 1;
     @Builder.Default private boolean distributedWorker = false;
 
     public List<FlowStepEntity> getSteps() {

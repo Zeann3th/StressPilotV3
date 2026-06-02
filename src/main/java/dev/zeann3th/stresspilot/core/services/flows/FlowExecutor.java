@@ -77,6 +77,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
         if (threads <= 0) {
             return;
         }
+        baseContext.setTotalThreads(threads);
 
         RunFlowCommand cmd = baseContext.getCommand();
         long rampUpMs = (long) cmd.getRampUpDuration() * 1000;
@@ -106,7 +107,12 @@ public abstract class FlowExecutor implements ExtensionPoint {
                             return;
                         }
                     }
-                    executeWorker(threadContext, stepMap);
+                    baseContext.getActiveThreadCount().incrementAndGet();
+                    try {
+                        executeWorker(threadContext, stepMap);
+                    } finally {
+                        baseContext.getActiveThreadCount().decrementAndGet();
+                    }
                 }));
             }
 

@@ -102,7 +102,11 @@ public class EndpointNodeHandler implements FlowNodeHandler {
 
         Map<String, Object> requestDebug = new LinkedHashMap<>();
         requestDebug.put("endpoint", endpointDebug);
-        requestDebug.put("variables_snapshot", new HashMap<>(context.getVariables()));
+        Map<String, Object> variablesSnapshot = new HashMap<>(context.getVariables());
+        variablesSnapshot.put("__stresspilot_thread_id", context.getThreadId());
+        variablesSnapshot.put("__stresspilot_total_threads", context.getTotalThreads());
+        variablesSnapshot.put("__stresspilot_active_threads", context.getActiveThreadCount().get());
+        requestDebug.put("variables_snapshot", variablesSnapshot);
 
         String responseText = result.getRawResponse();
         if (responseText == null || responseText.isBlank()) {
