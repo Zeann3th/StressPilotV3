@@ -17,6 +17,8 @@ import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.FlowNodeHandler;
 import dev.zeann3th.stresspilot.core.services.flows.nodes.NodeHandlerResult;
 import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
+import dev.zeann3th.stresspilot.core.utils.DataUtils;
+import dev.zeann3th.stresspilot.core.utils.MockDataUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,12 +27,15 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Slf4j(topic = "[EndpointNodeHandler]")
 @Component
 @RequiredArgsConstructor
 @SuppressWarnings("java:S3776")
 public class EndpointNodeHandler implements FlowNodeHandler {
+
+    private static final Pattern PATH_VAR_PATTERN = Pattern.compile("(?<=/):(\\w+)");
 
     private boolean strictLinear;
 
@@ -86,29 +91,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
             context.recordRequest(result.isSuccess());
         }
 
-        Map<String, Object> endpointDebug = new LinkedHashMap<>();
-        endpointDebug.put("id", endpoint.getId());
-        endpointDebug.put("name", endpoint.getName());
-        endpointDebug.put("type", endpoint.getType());
-        endpointDebug.put("url", endpoint.getUrl());
-        if ("HTTP".equalsIgnoreCase(endpoint.getType())) {
-            endpointDebug.put("method", endpoint.getHttpMethod());
-            endpointDebug.put("headers", endpoint.getHttpHeaders());
-            endpointDebug.put("parameters", endpoint.getHttpParameters());
-        } else if ("GRPC".equalsIgnoreCase(endpoint.getType())) {
-            endpointDebug.put("service", endpoint.getGrpcServiceName());
-            endpointDebug.put("method", endpoint.getGrpcMethodName());
-        }
-        endpointDebug.put("body", endpoint.getBody());
-
-        Map<String, Object> requestDebug = new LinkedHashMap<>();
-        requestDebug.put("endpoint", endpointDebug);
-        Map<String, Object> variablesSnapshot = new HashMap<>(context.getVariables());
-        variablesSnapshot.put("__stresspilot_thread_id", context.getThreadId());
-        variablesSnapshot.put("__stresspilot_total_threads", context.getTotalThreads());
-        variablesSnapshot.put("__stresspilot_active_threads", context.getActiveThreadCount().get());
-        variablesSnapshot.put("__stresspilot_correlation_id", context.getCorrelationId());
-        requestDebug.put("variables_snapshot", variablesSnapshot);
+        String requestText = formatRequest(endpoint, context.getVariables());
 
         String responseText = result.getRawResponse();
         if (responseText == null || responseText.isBlank()) {
@@ -124,7 +107,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .success(result.isSuccess())
                     .responseTime(result.getResponseTimeMs())
                     .correlationId(context.getCorrelationId())
-                    .request(requestDebug.toString())
+                    .request(requestText)
                     .response(responseText)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -151,6 +134,58 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         }
         
         return new NodeHandlerResult(nextId, result.getData());
+    }
+
+    private String formatRequest(EndpointEntity endpoint, Map<String, Object> variables) {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("endpointId", endpoint.getId());
+        request.put("endpointName", endpoint.getName());
+        request.put("type", endpoint.getType());
+
+        if ("HTTP".equalsIgnoreCase(endpoint.getType())) {
+            request.put("method", endpoint.getHttpMethod());
+            request.put("url", interpolateUrl(endpoint.getUrl(), variables));
+            request.put("headers", interpolate(endpoint.getHttpHeaders(), variables));
+            request.put("parameters", interpolate(endpoint.getHttpParameters(), variables));
+            request.put("body", interpolate(endpoint.getBody(), variables));
+        } else if ("GRPC".equalsIgnoreCase(endpoint.getType())) {
+            request.put("target", interpolate(endpoint.getUrl(), variables));
+            request.put("service", endpoint.getGrpcServiceName());
+            request.put("method", endpoint.getGrpcMethodName());
+            request.put("body", interpolate(endpoint.getBody(), variables));
+        } else if ("JDBC".equalsIgnoreCase(endpoint.getType())) {
+            request.put("url", interpolate(endpoint.getUrl(), variables));
+            request.put("query", interpolate(endpoint.getBody(), variables));
+        } else {
+            request.put("url", interpolate(endpoint.getUrl(), variables));
+            request.put("body", interpolate(endpoint.getBody(), variables));
+        }
+
+        return DataUtils.parseObjToJson(request);
+    }
+
+    private String interpolateUrl(String raw, Map<String, Object> variables) {
+        String value = interpolate(raw, variables);
+        if (value == null || !value.contains(":")) {
+            return value;
+        }
+        return PATH_VAR_PATTERN.matcher(value).replaceAll(match -> {
+            String key = match.group(1);
+            Object replacement = variables != null ? variables.get(key) : null;
+            return replacement != null ? replacement.toString() : match.group(0);
+        });
+    }
+
+    private String interpolate(String raw, Map<String, Object> variables) {
+        if (raw == null) return null;
+        String value = raw;
+        if (value.contains("{{")) {
+            value = DataUtils.replaceVariables(value, variables);
+        }
+        if (value.contains("@{")) {
+            value = MockDataUtils.interpolate(value);
+        }
+        return value;
     }
 
     private RequestLog toDryRunLog(RequestLogEntity log, EndpointEntity endpoint) {
