@@ -266,6 +266,7 @@ public class RunServiceImpl implements RunService {
                 .endpointName(name)
                 .statusCode(requestLogEntity.getStatusCode())
                 .responseTime(requestLogEntity.getResponseTime())
+                .correlationId(requestLogEntity.getCorrelationId())
                 .activeThreads(extractActiveThreads(requestLogEntity.getRequest()))
                 .request(requestLogEntity.getRequest())
                 .response(requestLogEntity.getResponse())

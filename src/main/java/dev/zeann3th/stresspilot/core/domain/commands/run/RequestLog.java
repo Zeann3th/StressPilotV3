@@ -18,6 +18,7 @@ public class RequestLog {
     private Integer statusCode;
     private Boolean success;
     private Long responseTime;
+    private String correlationId;
     private Integer activeThreads;
     private String request;
     private String response;

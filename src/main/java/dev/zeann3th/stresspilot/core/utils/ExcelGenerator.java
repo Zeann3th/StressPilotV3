@@ -62,7 +62,7 @@ public class ExcelGenerator {
     private int chartDataRowIdx = 0;
     private RunReport report;
 
-    private final int[] maxColumnWidths = new int[8];
+    private final int[] maxColumnWidths = new int[9];
     private final TreeMap<LocalDateTime, TimeBucket> overallTimeBuckets = new TreeMap<>();
     private final Map<Long, TreeMap<LocalDateTime, TimeBucket>> endpointTimeBuckets = new LinkedHashMap<>();
     private final Map<Long, String> endpointNamesById = new LinkedHashMap<>();
@@ -151,7 +151,7 @@ public class ExcelGenerator {
         detailsSheet.setDisplayGridlines(false);
         detailsRowIdx = 0;
 
-        String[] headers = {"ID", "Endpoint ID", "Endpoint Name", "Status", "Response Time (ms)", "Request", "Response", "Timestamp"};
+        String[] headers = {"ID", "Correlation ID", "Endpoint ID", "Endpoint Name", "Status", "Response Time (ms)", "Request", "Response", "Timestamp"};
         Row headerRow = detailsSheet.createRow(detailsRowIdx++);
 
         for (int i = 0; i < headers.length; i++) {
@@ -159,8 +159,8 @@ public class ExcelGenerator {
             maxColumnWidths[i] = headers[i].length() + 2;
         }
 
-        detailsSheet.setColumnWidth(5, 80 * 256);
         detailsSheet.setColumnWidth(6, 80 * 256);
+        detailsSheet.setColumnWidth(7, 80 * 256);
     }
 
     public void appendDetailRow(RequestLog logDto) {
@@ -174,36 +174,41 @@ public class ExcelGenerator {
         createCell(dataRow, 0, logDto.getId(), standardStyle);
         trackWidth(0, String.valueOf(logDto.getId()));
 
-        // Col 1: Endpoint ID
-        createCell(dataRow, 1, logDto.getEndpointId(), standardStyle);
-        trackWidth(1, String.valueOf(logDto.getEndpointId()));
+        // Col 1: Correlation ID
+        String correlationId = logDto.getCorrelationId() != null ? logDto.getCorrelationId() : "";
+        createCell(dataRow, 1, correlationId, standardStyle);
+        trackWidth(1, correlationId);
 
-        // Col 2: Endpoint Name
+        // Col 2: Endpoint ID
+        createCell(dataRow, 2, logDto.getEndpointId(), standardStyle);
+        trackWidth(2, String.valueOf(logDto.getEndpointId()));
+
+        // Col 3: Endpoint Name
         String epName = logDto.getEndpointName() != null ? logDto.getEndpointName() : "";
-        createCell(dataRow, 2, epName, standardStyle);
-        trackWidth(2, epName);
+        createCell(dataRow, 3, epName, standardStyle);
+        trackWidth(3, epName);
 
-        // Col 3: Status
-        createCell(dataRow, 3, logDto.getStatusCode(), standardStyle);
-        trackWidth(3, String.valueOf(logDto.getStatusCode()));
+        // Col 4: Status
+        createCell(dataRow, 4, logDto.getStatusCode(), standardStyle);
+        trackWidth(4, String.valueOf(logDto.getStatusCode()));
 
-        // Col 4: Response Time
-        createCell(dataRow, 4, logDto.getResponseTime(), numberStyle);
-        trackWidth(4, String.valueOf(logDto.getResponseTime()));
+        // Col 5: Response Time
+        createCell(dataRow, 5, logDto.getResponseTime(), numberStyle);
+        trackWidth(5, String.valueOf(logDto.getResponseTime()));
 
-        // Col 5: Request
-        createCell(dataRow, 5, truncateText(logDto.getRequest()), wrapStyle);
+        // Col 6: Request
+        createCell(dataRow, 6, truncateText(logDto.getRequest()), wrapStyle);
 
-        // Col 6: Response
-        createCell(dataRow, 6, truncateText(logDto.getResponse()), wrapStyle);
+        // Col 7: Response
+        createCell(dataRow, 7, truncateText(logDto.getResponse()), wrapStyle);
 
-        // Col 7: Timestamp
+        // Col 8: Timestamp
         if (logDto.getCreatedAt() != null) {
             String ts = logDto.getCreatedAt().format(DATE_FORMATTER);
-            createCell(dataRow, 7, ts, standardStyle);
-            trackWidth(7, ts);
+            createCell(dataRow, 8, ts, standardStyle);
+            trackWidth(8, ts);
         } else {
-            createCell(dataRow, 7, "", standardStyle);
+            createCell(dataRow, 8, "", standardStyle);
         }
 
         collectTimeSeriesPoint(logDto);
@@ -231,7 +236,8 @@ public class ExcelGenerator {
             detailsSheet.setColumnWidth(2, maxColumnWidths[2] * 256);
             detailsSheet.setColumnWidth(3, maxColumnWidths[3] * 256);
             detailsSheet.setColumnWidth(4, maxColumnWidths[4] * 256);
-            detailsSheet.setColumnWidth(7, maxColumnWidths[7] * 256);
+            detailsSheet.setColumnWidth(5, maxColumnWidths[5] * 256);
+            detailsSheet.setColumnWidth(8, maxColumnWidths[8] * 256);
         }
         addSummaryPieChart();
         addTimeSeriesCharts();

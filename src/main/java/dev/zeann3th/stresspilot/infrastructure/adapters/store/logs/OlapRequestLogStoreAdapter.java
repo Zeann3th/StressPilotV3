@@ -43,8 +43,8 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
 
         String sql = """
             INSERT INTO request_logs 
-            (id, run_id, endpoint_id, status_code, is_success, response_time, request, response, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, run_id, endpoint_id, status_code, is_success, response_time, correlation_id, request, response, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.batchUpdate(sql, list, 1000, (PreparedStatement ps, RequestLogEntity entity) -> {
@@ -54,16 +54,17 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
             ps.setObject(4, entity.getStatusCode(), java.sql.Types.INTEGER);
             ps.setObject(5, entity.getSuccess() != null ? (entity.getSuccess() ? 1 : 0) : null, java.sql.Types.INTEGER);
             ps.setObject(6, entity.getResponseTime(), java.sql.Types.BIGINT);
-            ps.setString(7, entity.getRequest());
-            ps.setString(8, entity.getResponse());
-            ps.setTimestamp(9, entity.getCreatedAt() != null ? Timestamp.valueOf(entity.getCreatedAt()) : new Timestamp(System.currentTimeMillis()));
+            ps.setString(7, entity.getCorrelationId());
+            ps.setString(8, entity.getRequest());
+            ps.setString(9, entity.getResponse());
+            ps.setTimestamp(10, entity.getCreatedAt() != null ? Timestamp.valueOf(entity.getCreatedAt()) : new Timestamp(System.currentTimeMillis()));
         });
         return list;
     }
 
     @Override
     public void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer) {
-        String sql = "SELECT id, endpoint_id, status_code, is_success, response_time, request, response, created_at FROM request_logs WHERE run_id = ?";
+        String sql = "SELECT id, endpoint_id, status_code, is_success, response_time, correlation_id, request, response, created_at FROM request_logs WHERE run_id = ?";
 
         jdbcTemplate.query(sql, rs -> {
             RequestLogEntity log = new RequestLogEntity();
@@ -86,6 +87,7 @@ public class OlapRequestLogStoreAdapter implements RequestLogStore {
             log.setResponseTime(rs.getLong("response_time"));
             if (rs.wasNull()) log.setResponseTime(null);
 
+            log.setCorrelationId(rs.getString("correlation_id"));
             log.setRequest(rs.getString("request"));
             log.setResponse(rs.getString("response"));
 

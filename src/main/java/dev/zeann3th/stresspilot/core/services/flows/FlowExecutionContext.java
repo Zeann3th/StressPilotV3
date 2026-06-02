@@ -48,6 +48,7 @@ public class FlowExecutionContext {
     @Builder.Default private final AtomicInteger activeThreadCount = new AtomicInteger(0);
     @Builder.Default private int totalThreads = 1;
     @Builder.Default private boolean distributedWorker = false;
+    private String correlationId;
 
     public List<FlowStepEntity> getSteps() {
         return steps != null ? Collections.unmodifiableList(steps) : Collections.emptyList();

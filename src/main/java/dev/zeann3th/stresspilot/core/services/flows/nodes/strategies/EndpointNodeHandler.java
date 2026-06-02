@@ -106,6 +106,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         variablesSnapshot.put("__stresspilot_thread_id", context.getThreadId());
         variablesSnapshot.put("__stresspilot_total_threads", context.getTotalThreads());
         variablesSnapshot.put("__stresspilot_active_threads", context.getActiveThreadCount().get());
+        variablesSnapshot.put("__stresspilot_correlation_id", context.getCorrelationId());
         requestDebug.put("variables_snapshot", variablesSnapshot);
 
         String responseText = result.getRawResponse();
@@ -121,6 +122,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .statusCode(result.getStatusCode())
                     .success(result.isSuccess())
                     .responseTime(result.getResponseTimeMs())
+                    .correlationId(context.getCorrelationId())
                     .request(requestDebug.toString())
                     .response(responseText)
                     .createdAt(LocalDateTime.now())
