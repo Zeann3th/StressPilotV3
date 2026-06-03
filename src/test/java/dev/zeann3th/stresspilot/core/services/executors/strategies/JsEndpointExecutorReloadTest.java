@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.core.services.functions.FunctionService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,6 +18,41 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class JsEndpointExecutorReloadTest {
+
+    @Test
+    void setVarUpdatesEnvironmentVisibleToEnvGetAndCaller() {
+        FunctionService functionService = mock(FunctionService.class);
+        when(functionService.getAllFunctions()).thenReturn(List.of());
+        JsEndpointExecutor executor = new JsEndpointExecutor(functionService);
+        executor.init();
+
+        EndpointEntity endpoint = EndpointEntity.builder()
+                .type(EndpointType.JS.name())
+                .body("""
+                        setVar("userEmail", "seeduser001@example.com");
+                        setVar("problemPage", 17);
+                        return {
+                          success: true,
+                          userEmail: env.get("userEmail"),
+                          problemPage: env.get("problemPage")
+                        };
+                        """)
+                .build();
+        Map<String, Object> environment = new HashMap<>();
+
+        var response = executor.execute(endpoint, environment, new BaseExecutionContext());
+
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(environment)
+                .containsEntry("userEmail", "seeduser001@example.com")
+                .containsEntry("problemPage", 17);
+        assertThat(response.getData()).isEqualTo(Map.of(
+                "success", true,
+                "userEmail", "seeduser001@example.com",
+                "problemPage", 17));
+
+        executor.destroy();
+    }
 
     @Test
     void reloadsUserDefinedFunctionsOnlyAfterTheyAreMarkedDirty() {

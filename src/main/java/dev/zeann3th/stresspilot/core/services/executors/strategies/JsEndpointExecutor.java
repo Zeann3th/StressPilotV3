@@ -145,7 +145,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                 Object[] jsArgs = (functionArgs != null) ? functionArgs.toArray() : new Object[0];
                 result = fn.execute(jsArgs);
             } else {
-                result = context.eval("js", script);
+                result = evalEndpointScript(context, script);
             }
 
             String rawResponse;
@@ -191,6 +191,24 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .message("JS Execution Error: " + e.getMessage())
                     .build();
         }
+    }
+
+    private Value evalEndpointScript(Context context, String script) {
+        try {
+            return context.eval("js", script);
+        } catch (PolyglotException e) {
+            if (!isIllegalTopLevelReturn(e)) {
+                throw e;
+            }
+            return context.eval("js", "(function(){\n" + script + "\n})()");
+        }
+    }
+
+    private boolean isIllegalTopLevelReturn(PolyglotException e) {
+        String message = e.getMessage();
+        return e.isSyntaxError()
+                && message != null
+                && message.toLowerCase().contains("return");
     }
 
     private Object safeUnwrap(Value v) {
