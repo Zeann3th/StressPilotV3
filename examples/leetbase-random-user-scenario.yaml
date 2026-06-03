@@ -1,0 +1,412 @@
+stresspilot:
+  project:
+    name: LeetBase Seeded Random User Journey
+    description: Randomized seeded-user LeetBase flow covering sign in, problem discovery, submission, leaderboards, and optional solution publishing.
+  environments:
+    - name: Local Docker
+      active: true
+      variables:
+        - name: baseUrl
+          value: http://localhost:7554
+        - name: seedPassword
+          value: password123
+        - name: language
+          value: javascript
+  endpoints:
+    - id: init_run
+      name: Init randomized seeded user and problem pick
+      type: JS
+      body: |
+        const runId = "@{uuid}@";
+        const userNumber = 1 + Math.floor(Math.random() * 99);
+        const padded = String(userNumber).padStart(3, "0");
+        const problemPage = 1 + Math.floor(Math.random() * 40);
+        const shouldSubmitAccepted = Math.random() < 0.72;
+        const voteAction = Math.random() < 0.82 ? "upvote" : "downvote";
+        const generatedName = "@{faker(name.full_name)}@";
+        const generatedHandle = "@{lower(faker(internet.username))}@";
+        const discussionSuffix = "@{faker(company.buzzword)}@";
+
+        setVar("runId", runId);
+        setVar("userEmail", `seeduser${padded}@example.com`);
+        setVar("userName", `seeduser${padded}`);
+        setVar("problemPage", problemPage);
+        setVar("shouldSubmitAccepted", shouldSubmitAccepted);
+        setVar("voteAction", voteAction);
+        setVar("generatedNameJson", JSON.stringify(`${generatedName} ${runId.slice(0, 6)}`));
+        setVar("generatedAvatar", `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(generatedHandle)}-${runId}`);
+        setVar("discussionTitleJson", JSON.stringify(`Seed run ${runId.slice(0, 8)}: ${discussionSuffix} solution notes`));
+        setVar("discussionContentJson", JSON.stringify(`Load-test generated solution note for run ${runId}. The user solved a random seeded problem and published a short explanation with faker generated text.`));
+        return {
+          success: true,
+          runId,
+          userEmail: env.get("userEmail"),
+          problemPage,
+          shouldSubmitAccepted,
+          voteAction
+        };
+
+    - id: login
+      name: Sign in seeded user
+      type: HTTP
+      url: "{{ baseUrl }}/v1/auth/login"
+      method: POST
+      headers:
+        Content-Type: application/json
+        Cache-Control: no-cache
+      body: |
+        {
+          "email": "{{ userEmail }}",
+          "password": "{{ seedPassword }}"
+        }
+      success_condition: statusCode == 200
+
+    - id: profile
+      name: Load signed-in profile
+      type: HTTP
+      url: "{{ baseUrl }}/v1/users/profile"
+      method: GET
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: update_profile
+      name: Update profile with faker data
+      type: HTTP
+      url: "{{ baseUrl }}/v1/users/:userId"
+      method: PATCH
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        x-csrf-token: "{{ csrfToken }}"
+        Content-Type: application/json
+        Cache-Control: no-cache
+      body: |
+        {
+          "name": {{ generatedNameJson }},
+          "avatar": "{{ generatedAvatar }}"
+        }
+      success_condition: statusCode == 200
+
+    - id: browse_random_problem_page
+      name: Browse one random seeded problem
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems?limit=1&page={{ problemPage }}"
+      method: GET
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: problem_detail
+      name: Open selected problem detail
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems/:problemId"
+      method: GET
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: function_declaration
+      name: Load selected problem JavaScript declaration
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems/:problemId/functions?language={{ language }}"
+      method: GET
+      headers:
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: build_submission
+      name: Build accepted or wrong JavaScript solution
+      type: JS
+      body: |
+        const title = String(env.get("problemTitle") || "");
+        const shouldPass = env.get("shouldSubmitAccepted") === true || String(env.get("shouldSubmitAccepted")) === "true";
+        const accepted = {
+          "Two Sum": "function twoSum(nums, target) { const seen = new Map(); for (let i = 0; i < nums.length; i++) { const need = target - nums[i]; if (seen.has(need)) return [seen.get(need), i]; seen.set(nums[i], i); } return []; }",
+          "Valid Parentheses": "function isValid(s) { const st = []; const pairs = {')':'(', ']':'[', '}':'{'}; for (const c of s) { if ('([{'.includes(c)) st.push(c); else if (st.pop() !== pairs[c]) return false; } return st.length === 0; }",
+          "Merge Two Sorted Arrays": "function mergeSorted(a, b) { const out = []; let i = 0, j = 0; while (i < a.length || j < b.length) { if (j >= b.length || (i < a.length && a[i] <= b[j])) out.push(a[i++]); else out.push(b[j++]); } return out; }",
+          "Maximum Subarray": "function maxSubArray(nums) { let best = nums[0], cur = nums[0]; for (let i = 1; i < nums.length; i++) { cur = Math.max(nums[i], cur + nums[i]); best = Math.max(best, cur); } return best; }",
+          "Climbing Stairs": "function climbStairs(n) { let a = 1, b = 1; for (let i = 0; i < n; i++) [a, b] = [b, a + b]; return a; }",
+          "Binary Search": "function search(nums, target) { let l = 0, r = nums.length - 1; while (l <= r) { const m = (l + r) >> 1; if (nums[m] === target) return m; if (nums[m] < target) l = m + 1; else r = m - 1; } return -1; }",
+          "Rotate Array": "function rotate(nums, k) { k %= nums.length; return nums.slice(-k).concat(nums.slice(0, -k)); }",
+          "Palindrome Number": "function isPalindrome(x) { const s = String(x); return s === s.split('').reverse().join(''); }",
+          "Reverse String": "function reverseString(s) { return s.split('').reverse().join(''); }",
+          "First Unique Character": "function firstUniqChar(s) { const counts = {}; for (const c of s) counts[c] = (counts[c] || 0) + 1; for (let i = 0; i < s.length; i++) if (counts[s[i]] === 1) return i; return -1; }",
+          "Contains Duplicate": "function containsDuplicate(nums) { return new Set(nums).size !== nums.length; }",
+          "Move Zeroes": "function moveZeroes(nums) { const nz = nums.filter(n => n !== 0); return nz.concat(Array(nums.length - nz.length).fill(0)); }",
+          "Best Time to Buy and Sell Stock": "function maxProfit(prices) { let min = Infinity, best = 0; for (const p of prices) { min = Math.min(min, p); best = Math.max(best, p - min); } return best; }",
+          "Single Number": "function singleNumber(nums) { return nums.reduce((a, b) => a ^ b, 0); }",
+          "Majority Element": "function majorityElement(nums) { let cand, count = 0; for (const n of nums) { if (count === 0) cand = n; count += n === cand ? 1 : -1; } return cand; }",
+          "Fizz Buzz": "function fizzBuzz(n) { return Array.from({ length: n }, (_, i) => { const x = i + 1; return x % 15 === 0 ? 'FizzBuzz' : x % 3 === 0 ? 'Fizz' : x % 5 === 0 ? 'Buzz' : String(x); }); }",
+          "Missing Number": "function missingNumber(nums) { return nums.length * (nums.length + 1) / 2 - nums.reduce((a, b) => a + b, 0); }",
+          "Plus One": "function plusOne(digits) { const out = digits.slice(); for (let i = out.length - 1; i >= 0; i--) { if (out[i] < 9) { out[i]++; return out; } out[i] = 0; } out.unshift(1); return out; }",
+          "Group Anagrams": "function groupAnagrams(strs) { const m = new Map(); for (const s of strs) { const k = s.split('').sort().join(''); if (!m.has(k)) m.set(k, []); m.get(k).push(s); } return [...m.values()]; }",
+          "Product of Array Except Self": "function productExceptSelf(nums) { const out = Array(nums.length).fill(1); let p = 1; for (let i = 0; i < nums.length; i++) { out[i] = p; p *= nums[i]; } p = 1; for (let i = nums.length - 1; i >= 0; i--) { out[i] *= p; p *= nums[i]; } return out; }",
+          "Top K Frequent Elements": "function topKFrequent(nums, k) { const c = new Map(); for (const n of nums) c.set(n, (c.get(n) || 0) + 1); return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, k).map(e => e[0]); }",
+          "Longest Consecutive Sequence": "function longestConsecutive(nums) { const s = new Set(nums); let best = 0; for (const n of s) if (!s.has(n - 1)) { let x = n; while (s.has(x)) x++; best = Math.max(best, x - n); } return best; }",
+          "Valid Anagram": "function isAnagram(s, t) { return s.split('').sort().join('') === t.split('').sort().join(''); }",
+          "Longest Palindrome": "function longestPalindrome(s) { const c = {}; let len = 0, odd = false; for (const ch of s) c[ch] = (c[ch] || 0) + 1; for (const n of Object.values(c)) { len += Math.floor(n / 2) * 2; if (n % 2) odd = true; } return len + (odd ? 1 : 0); }",
+          "Integer Square Root": "function mySqrt(x) { return Math.floor(Math.sqrt(x)); }",
+          "Search Insert Position": "function searchInsert(nums, target) { let l = 0, r = nums.length; while (l < r) { const m = (l + r) >> 1; if (nums[m] < target) l = m + 1; else r = m; } return l; }",
+          "Coin Change": "function coinChange(coins, amount) { const dp = Array(amount + 1).fill(Infinity); dp[0] = 0; for (let a = 1; a <= amount; a++) for (const c of coins) if (a >= c) dp[a] = Math.min(dp[a], dp[a - c] + 1); return dp[amount] === Infinity ? -1 : dp[amount]; }",
+          "House Robber": "function rob(nums) { let a = 0, b = 0; for (const n of nums) [a, b] = [b, Math.max(b, a + n)]; return b; }",
+          "Number of Islands": "function numIslands(grid) { const g = grid.map(r => r.slice()); let count = 0; const dfs = (i,j) => { if (!g[i] || g[i][j] !== '1') return; g[i][j] = '0'; dfs(i+1,j); dfs(i-1,j); dfs(i,j+1); dfs(i,j-1); }; for (let i=0;i<g.length;i++) for (let j=0;j<g[i].length;j++) if (g[i][j] === '1') { count++; dfs(i,j); } return count; }",
+          "Merge Intervals": "function merge(intervals) { intervals.sort((a,b) => a[0]-b[0]); const out=[]; for (const iv of intervals) { if (!out.length || out[out.length-1][1] < iv[0]) out.push(iv.slice()); else out[out.length-1][1] = Math.max(out[out.length-1][1], iv[1]); } return out; }",
+          "Kth Largest Element": "function findKthLargest(nums, k) { return nums.sort((a,b)=>b-a)[k-1]; }",
+          "Word Break": "function wordBreak(s, wordDict) { const set = new Set(wordDict), dp = Array(s.length + 1).fill(false); dp[0] = true; for (let i = 1; i <= s.length; i++) for (let j = 0; j < i; j++) if (dp[j] && set.has(s.slice(j, i))) dp[i] = true; return dp[s.length]; }",
+          "Course Schedule": "function canFinish(numCourses, prerequisites) { const g=Array.from({length:numCourses},()=>[]), indeg=Array(numCourses).fill(0); for (const [a,b] of prerequisites){g[b].push(a);indeg[a]++;} const q=[]; indeg.forEach((d,i)=>{if(!d)q.push(i)}); let seen=0; while(q.length){const n=q.shift();seen++; for(const x of g[n]) if(--indeg[x]===0) q.push(x);} return seen===numCourses; }",
+          "LRU Cache Operations": "function runLRU(capacity, operations) { const m = new Map(), out = []; for (const op of operations) { if (op[0] === 'put') { if (m.has(op[1])) m.delete(op[1]); m.set(op[1], op[2]); if (m.size > capacity) m.delete(m.keys().next().value); out.push(null); } else { if (!m.has(op[1])) out.push(-1); else { const v = m.get(op[1]); m.delete(op[1]); m.set(op[1], v); out.push(v); } } } return out; }",
+          "Trapping Rain Water": "function trap(height) { let l=0,r=height.length-1,lm=0,rm=0,ans=0; while(l<r){ if(height[l]<height[r]){lm=Math.max(lm,height[l]); ans+=lm-height[l++];} else {rm=Math.max(rm,height[r]); ans+=rm-height[r--];}} return ans; }",
+          "Median of Two Sorted Arrays": "function findMedianSortedArrays(nums1, nums2) { const a = nums1.concat(nums2).sort((x,y)=>x-y); const m = Math.floor(a.length/2); return a.length % 2 ? a[m] : (a[m-1]+a[m])/2; }",
+          "Minimum Window Substring": "function minWindow(s, t) { const need={}; for(const c of t) need[c]=(need[c]||0)+1; let miss=t.length,l=0,best=''; for(let r=0;r<s.length;r++){ if(need[s[r]]-- >0) miss--; while(miss===0){ if(!best||r-l+1<best.length) best=s.slice(l,r+1); if(++need[s[l++]]>0) miss++; }} return best; }",
+          "Serialize Tree Levels": "function levelOrderValues(values) { if (!values.length || values[0] == null) return []; const out=[], q=[[0,0]]; while(q.length){ const [i,d]=q.shift(); if(values[i]==null) continue; if(!out[d]) out[d]=[]; out[d].push(values[i]); q.push([2*i+1,d+1],[2*i+2,d+1]); } return out; }",
+          "Edit Distance": "function minDistance(word1, word2) { const m=word1.length,n=word2.length,dp=Array.from({length:m+1},()=>Array(n+1).fill(0)); for(let i=0;i<=m;i++)dp[i][0]=i; for(let j=0;j<=n;j++)dp[0][j]=j; for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=word1[i-1]===word2[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]); return dp[m][n]; }",
+          "Subarray Sum Equals K": "function subarraySum(nums, k) { const m = new Map([[0,1]]); let sum=0, ans=0; for(const n of nums){ sum+=n; ans+=m.get(sum-k)||0; m.set(sum,(m.get(sum)||0)+1); } return ans; }"
+        };
+        const firstWord = title.split(/\s+/)[0] || "solution";
+        const wrong = `function ${firstWord.replace(/[^A-Za-z0-9_]/g, "") || "solution"}() { return null; }`;
+        const code = shouldPass && accepted[title] ? accepted[title] : wrong;
+        const solutionContent = `### ${title} solution\n\nGenerated run ${env.get("runId")} used ${shouldPass ? "an accepted" : "a deliberately failing"} JavaScript submission.`;
+
+        setVar("submissionCodeJson", JSON.stringify(code));
+        setVar("solutionContentJson", JSON.stringify(solutionContent));
+        setVar("submissionIntent", shouldPass && accepted[title] ? "accepted" : "wrong");
+        return { success: true, title, submissionIntent: env.get("submissionIntent") };
+
+    - id: submit_solution
+      name: Submit selected work
+      type: HTTP
+      url: "{{ baseUrl }}/v1/submissions"
+      method: POST
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        x-csrf-token: "{{ csrfToken }}"
+        Content-Type: application/json
+        Cache-Control: no-cache
+      body: |
+        {
+          "problemId": "{{ problemId }}",
+          "language": "{{ language }}",
+          "code": {{ submissionCodeJson }}
+        }
+      success_condition: statusCode == 200
+
+    - id: submission_history
+      name: Load personal submission history
+      type: HTTP
+      url: "{{ baseUrl }}/v1/submissions?problemId={{ problemId }}&language={{ language }}&limit=5&page=1"
+      method: GET
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: add_todo
+      name: Add selected problem to todo list
+      type: HTTP
+      url: "{{ baseUrl }}/v1/users/todos"
+      method: POST
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        x-csrf-token: "{{ csrfToken }}"
+        Content-Type: application/json
+        Cache-Control: no-cache
+      body: |
+        {
+          "problems": ["{{ problemId }}"]
+        }
+      success_condition: statusCode == 200 || statusCode == 201
+
+    - id: create_solution_discussion
+      name: Publish accepted solution discussion
+      type: HTTP
+      url: "{{ baseUrl }}/v1/discussions"
+      method: POST
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        x-csrf-token: "{{ csrfToken }}"
+        Content-Type: application/json
+        Cache-Control: no-cache
+      body: |
+        {
+          "title": {{ discussionTitleJson }},
+          "content": {{ solutionContentJson }},
+          "tags": ["solution", "{{ language }}", "{{ problemDifficulty }}"],
+          "solution": {
+            "problem": "{{ problemId }}",
+            "language": "{{ language }}"
+          }
+        }
+      success_condition: statusCode == 201
+
+    - id: list_problem_solutions
+      name: Read selected problem solutions
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems/:problemId/solutions?language={{ language }}&limit=5&page=1"
+      method: GET
+      headers:
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: leaderboard
+      name: View selected problem leaderboard
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems/:problemId/leaderboards?language={{ language }}&limit=10"
+      method: GET
+      headers:
+        Authorization: Bearer {{ accessToken }}
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: dailies
+      name: Browse daily problem calendar
+      type: HTTP
+      url: "{{ baseUrl }}/v1/problems/dailies?month=6&year=2026"
+      method: GET
+      headers:
+        Cache-Control: no-cache
+      success_condition: statusCode == 200
+
+    - id: logout
+      name: Sign out
+      type: HTTP
+      url: "{{ baseUrl }}/v1/auth/logout"
+      method: GET
+      headers:
+        Cache-Control: no-cache
+
+  flows:
+    - name: Random seeded user solves or attempts problem
+      description: Signs in as a random seeded user, picks one random seeded problem, submits randomized JavaScript, publishes a solution only when accepted, then checks leaderboards.
+      type: DEFAULT
+      steps:
+        - name: start
+          type: START
+          next_if_true: init
+
+        - name: init
+          type: ENDPOINT
+          endpoint: init_run
+          next_if_true: sign_in
+
+        - name: sign_in
+          type: ENDPOINT
+          endpoint: login
+          post_process:
+            extract:
+              - name: accessToken
+                value: accessToken
+              - name: csrfToken
+                value: csrfToken
+          next_if_true: load_profile
+
+        - name: load_profile
+          type: ENDPOINT
+          endpoint: profile
+          post_process:
+            extract:
+              - name: userId
+                value: _id
+          next_if_true: update_profile
+
+        - name: update_profile
+          type: ENDPOINT
+          endpoint: update_profile
+          next_if_true: browse_random_problem
+
+        - name: browse_random_problem
+          type: ENDPOINT
+          endpoint: browse_random_problem_page
+          post_process:
+            extract:
+              - name: problemId
+                value: data.0._id
+              - name: problemTitle
+                value: data.0.title
+              - name: problemDifficulty
+                value: data.0.difficulty
+              - name: primaryTopic
+                value: data.0.tags.0
+          next_if_true: open_problem
+
+        - name: open_problem
+          type: ENDPOINT
+          endpoint: problem_detail
+          next_if_true: load_function
+
+        - name: load_function
+          type: ENDPOINT
+          endpoint: function_declaration
+          post_process:
+            extract:
+              - name: functionDeclaration
+                value: function
+          next_if_true: build_submission
+
+        - name: build_submission
+          type: ENDPOINT
+          endpoint: build_submission
+          next_if_true: submit
+
+        - name: submit
+          type: ENDPOINT
+          endpoint: submit_solution
+          post_process:
+            extract:
+              - name: submissionId
+                value: _id
+              - name: submissionStatus
+                value: status
+              - name: runtimeMs
+                value: runtime
+          next_if_true: accepted_branch
+          next_if_false: history_after_failed_http
+
+        - name: accepted_branch
+          type: BRANCH
+          condition: "submissionStatus == 'ACCEPTED'"
+          next_if_true: publish_solution
+          next_if_false: history_after_wrong_answer
+
+        - name: publish_solution
+          type: ENDPOINT
+          endpoint: create_solution_discussion
+          next_if_true: list_solutions
+          next_if_false: list_solutions
+
+        - name: list_solutions
+          type: ENDPOINT
+          endpoint: list_problem_solutions
+          next_if_true: view_leaderboard
+
+        - name: view_leaderboard
+          type: ENDPOINT
+          endpoint: leaderboard
+          next_if_true: add_to_todo
+
+        - name: add_to_todo
+          type: ENDPOINT
+          endpoint: add_todo
+          next_if_true: browse_dailies
+          next_if_false: browse_dailies
+
+        - name: history_after_wrong_answer
+          type: ENDPOINT
+          endpoint: submission_history
+          next_if_true: view_leaderboard
+
+        - name: history_after_failed_http
+          type: ENDPOINT
+          endpoint: submission_history
+          next_if_true: browse_dailies
+
+        - name: browse_dailies
+          type: ENDPOINT
+          endpoint: dailies
+          next_if_true: sign_out
+
+        - name: sign_out
+          type: ENDPOINT
+          endpoint: logout

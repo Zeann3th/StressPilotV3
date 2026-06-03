@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="LeetBase Random Seeded User Journey" enabled="true">
+      <stringProp name="TestPlan.comments">Seeded LeetBase journey: login, profile, random problem, submit, optional solution publish, leaderboard, daily problems, logout.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="BASE_URL" elementType="Argument">
+            <stringProp name="Argument.name">BASE_URL</stringProp>
+            <stringProp name="Argument.value">http://localhost:7554</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SEED_PASSWORD" elementType="Argument">
+            <stringProp name="Argument.name">SEED_PASSWORD</stringProp>
+            <stringProp name="Argument.value">password123</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="LANGUAGE" elementType="Argument">
+            <stringProp name="Argument.name">LANGUAGE</stringProp>
+            <stringProp name="Argument.value">javascript</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Seeded users" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${__P(LOOPS,5)}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(THREADS,5)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(RAMP_SECONDS,10)}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="LeetBase randomized journey" enabled="true">
+          <stringProp name="cacheKey">leetbase-randomized-journey</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.net.HttpURLConnection
+import java.net.URLEncoder
+
+def baseUrl = vars.get("BASE_URL") ?: "http://localhost:7554"
+def password = vars.get("SEED_PASSWORD") ?: "password123"
+def language = vars.get("LANGUAGE") ?: "javascript"
+def random = new Random()
+def slurper = new JsonSlurper()
+def cookieJar = [:]
+def accessToken = ""
+def csrfToken = ""
+
+def acceptedSolutions = [
+  "Two Sum": "function twoSum(nums, target) { const seen = new Map(); for (let i = 0; i < nums.length; i++) { const need = target - nums[i]; if (seen.has(need)) return [seen.get(need), i]; seen.set(nums[i], i); } return []; }",
+  "Valid Parentheses": "function isValid(s) { const st = []; const pairs = {')':'(', ']':'[', '}':'{'}; for (const c of s) { if ('([{'.includes(c)) st.push(c); else if (st.pop() !== pairs[c]) return false; } return st.length === 0; }",
+  "Merge Two Sorted Arrays": "function mergeSorted(a, b) { const out = []; let i = 0, j = 0; while (i < a.length || j < b.length) { if (j >= b.length || (i < a.length && a[i] <= b[j])) out.push(a[i++]); else out.push(b[j++]); } return out; }",
+  "Maximum Subarray": "function maxSubArray(nums) { let best = nums[0], cur = nums[0]; for (let i = 1; i < nums.length; i++) { cur = Math.max(nums[i], cur + nums[i]); best = Math.max(best, cur); } return best; }",
+  "Climbing Stairs": "function climbStairs(n) { let a = 1, b = 1; for (let i = 0; i < n; i++) [a, b] = [b, a + b]; return a; }",
+  "Binary Search": "function search(nums, target) { let l = 0, r = nums.length - 1; while (l <= r) { const m = (l + r) >> 1; if (nums[m] === target) return m; if (nums[m] < target) l = m + 1; else r = m - 1; } return -1; }",
+  "Rotate Array": "function rotate(nums, k) { k %= nums.length; return nums.slice(-k).concat(nums.slice(0, -k)); }",
+  "Palindrome Number": "function isPalindrome(x) { const s = String(x); return s === s.split('').reverse().join(''); }",
+  "Reverse String": "function reverseString(s) { return s.split('').reverse().join(''); }",
+  "First Unique Character": "function firstUniqChar(s) { const counts = {}; for (const c of s) counts[c] = (counts[c] || 0) + 1; for (let i = 0; i < s.length; i++) if (counts[s[i]] === 1) return i; return -1; }",
+  "Contains Duplicate": "function containsDuplicate(nums) { return new Set(nums).size !== nums.length; }",
+  "Move Zeroes": "function moveZeroes(nums) { const nz = nums.filter(n => n !== 0); return nz.concat(Array(nums.length - nz.length).fill(0)); }",
+  "Best Time to Buy and Sell Stock": "function maxProfit(prices) { let min = Infinity, best = 0; for (const p of prices) { min = Math.min(min, p); best = Math.max(best, p - min); } return best; }",
+  "Single Number": "function singleNumber(nums) { return nums.reduce((a, b) => a ^ b, 0); }",
+  "Majority Element": "function majorityElement(nums) { let cand, count = 0; for (const n of nums) { if (count === 0) cand = n; count += n === cand ? 1 : -1; } return cand; }",
+  "Fizz Buzz": "function fizzBuzz(n) { return Array.from({ length: n }, (_, i) => { const x = i + 1; return x % 15 === 0 ? 'FizzBuzz' : x % 3 === 0 ? 'Fizz' : x % 5 === 0 ? 'Buzz' : String(x); }); }",
+  "Missing Number": "function missingNumber(nums) { return nums.length * (nums.length + 1) / 2 - nums.reduce((a, b) => a + b, 0); }",
+  "Plus One": "function plusOne(digits) { const out = digits.slice(); for (let i = out.length - 1; i >= 0; i--) { if (out[i] < 9) { out[i]++; return out; } out[i] = 0; } out.unshift(1); return out; }",
+  "Group Anagrams": "function groupAnagrams(strs) { const m = new Map(); for (const s of strs) { const k = s.split('').sort().join(''); if (!m.has(k)) m.set(k, []); m.get(k).push(s); } return [...m.values()]; }",
+  "Product of Array Except Self": "function productExceptSelf(nums) { const out = Array(nums.length).fill(1); let p = 1; for (let i = 0; i < nums.length; i++) { out[i] = p; p *= nums[i]; } p = 1; for (let i = nums.length - 1; i >= 0; i--) { out[i] *= p; p *= nums[i]; } return out; }"
+]
+
+def addCookieHeaders = { HttpURLConnection conn ->
+  if (!cookieJar.isEmpty()) {
+    conn.setRequestProperty("Cookie", cookieJar.collect { k, v -> "${k}=${v}" }.join("; "))
+  }
+}
+
+def captureCookies = { HttpURLConnection conn ->
+  conn.getHeaderFields().findAll { k, v -> k != null && k.equalsIgnoreCase("Set-Cookie") }.each { _, values ->
+    values.each { raw ->
+      def first = raw.split(";", 2)[0]
+      def idx = first.indexOf("=")
+      if (idx > 0) cookieJar[first.substring(0, idx)] = first.substring(idx + 1)
+    }
+  }
+}
+
+def request = { String label, String method, String path, Object payload = null, Map extraHeaders = [:] ->
+  def child = new org.apache.jmeter.samplers.SampleResult()
+  child.sampleStart()
+  String body = ""
+  int code = 0
+  try {
+    def conn = new URL(baseUrl + path).openConnection() as HttpURLConnection
+    conn.setRequestMethod(method)
+    conn.setConnectTimeout(10000)
+    conn.setReadTimeout(30000)
+    conn.setInstanceFollowRedirects(false)
+    conn.setRequestProperty("Cache-Control", "no-cache")
+    extraHeaders.each { k, v -> if (v != null && v.toString()) conn.setRequestProperty(k.toString(), v.toString()) }
+    addCookieHeaders(conn)
+    if (payload != null) {
+      byte[] bytes = JsonOutput.toJson(payload).getBytes("UTF-8")
+      conn.setDoOutput(true)
+      conn.setRequestProperty("Content-Type", "application/json")
+      conn.outputStream.withCloseable { it.write(bytes) }
+    }
+    code = conn.responseCode
+    captureCookies(conn)
+    def stream = code >= 400 ? conn.errorStream : conn.inputStream
+    body = stream == null ? "" : stream.getText("UTF-8")
+    child.setSuccessful(code >= 200 && code < 300)
+    child.setResponseCode(String.valueOf(code))
+    child.setResponseMessage(conn.responseMessage ?: "")
+    child.setResponseData(body, "UTF-8")
+    return body ? slurper.parseText(body) : [:]
+  } catch (Throwable t) {
+    child.setSuccessful(false)
+    child.setResponseCode(code ? String.valueOf(code) : "EXCEPTION")
+    child.setResponseMessage(t.message ?: t.class.name)
+    child.setResponseData(body ?: t.toString(), "UTF-8")
+    throw t
+  } finally {
+    child.sampleEnd()
+    child.setSampleLabel(label)
+    prev.addSubResult(child)
+  }
+}
+
+def runId = UUID.randomUUID().toString()
+def userNumber = String.format("%03d", random.nextInt(99) + 1)
+def email = "seeduser${userNumber}@example.com"
+def problemPage = random.nextInt(40) + 1
+def shouldTryAccepted = random.nextDouble() < 0.72
+def profileNames = ["Alex Kim", "Minh Tran", "Jordan Lee", "Taylor Nguyen", "Sam Patel", "Avery Chen"]
+def tags = ["array", "hash-table", "dynamic-programming", "string", "graph", "binary-search"]
+
+try {
+  def login = request("01 login", "POST", "/v1/auth/login", [email: email, password: password])
+  accessToken = login.accessToken ?: ""
+  csrfToken = login.csrfToken ?: cookieJar["_csrf"] ?: ""
+
+  def profile = request("02 profile", "GET", "/v1/users/profile", null, [Authorization: "Bearer ${accessToken}"])
+  def userId = profile._id ?: ""
+  if (userId) {
+    def name = profileNames[random.nextInt(profileNames.size())] + " " + runId.substring(0, 6)
+    def avatar = "https://api.dicebear.com/9.x/initials/svg?seed=" + URLEncoder.encode(name, "UTF-8")
+    request("03 update profile", "PATCH", "/v1/users/${userId}", [name: name, avatar: avatar], [Authorization: "Bearer ${accessToken}", "x-csrf-token": csrfToken])
+  }
+
+  def problemList = request("04 browse problem", "GET", "/v1/problems?limit=1&page=${problemPage}", null, [Authorization: "Bearer ${accessToken}"])
+  def problem = problemList.data && problemList.data.size() > 0 ? problemList.data[0] : null
+  if (!problem?._id) throw new IllegalStateException("No seeded problem returned for page ${problemPage}")
+
+  request("05 problem detail", "GET", "/v1/problems/${problem._id}", null, [Authorization: "Bearer ${accessToken}"])
+  request("06 function declaration", "GET", "/v1/problems/${problem._id}/functions?language=${language}")
+
+  def fallback = (problem.title ?: "solution").split(/\s+/)[0].replaceAll("[^A-Za-z0-9_]", "") ?: "solution"
+  def code = shouldTryAccepted && acceptedSolutions[problem.title] ? acceptedSolutions[problem.title] : "function ${fallback}() { return null; }"
+  def submission = request("07 submit solution", "POST", "/v1/submissions", [problemId: problem._id, language: language, code: code], [Authorization: "Bearer ${accessToken}", "x-csrf-token": csrfToken])
+
+  request("08 submission history", "GET", "/v1/submissions?problemId=${problem._id}&language=${language}&limit=5&page=1", null, [Authorization: "Bearer ${accessToken}"])
+
+  if (submission.status == "ACCEPTED") {
+    def title = "Seed run ${runId.substring(0, 8)}: ${tags[random.nextInt(tags.size())]} solution notes"
+    def content = "Generated JMeter solution note for ${problem.title} in run ${runId}."
+    request("09 publish solution discussion", "POST", "/v1/discussions", [
+      title: title,
+      content: content,
+      tags: ["solution", language, problem.difficulty ?: "seeded"],
+      solution: [problem: problem._id, language: language]
+    ], [Authorization: "Bearer ${accessToken}", "x-csrf-token": csrfToken])
+    request("10 list problem solutions", "GET", "/v1/problems/${problem._id}/solutions?language=${language}&limit=5&page=1")
+  }
+
+  request("11 leaderboard", "GET", "/v1/problems/${problem._id}/leaderboards?language=${language}&limit=10", null, [Authorization: "Bearer ${accessToken}"])
+  request("12 add todo", "POST", "/v1/users/todos", [problems: [problem._id]], [Authorization: "Bearer ${accessToken}", "x-csrf-token": csrfToken])
+  request("13 daily problems", "GET", "/v1/problems/dailies?month=6&year=2026")
+  request("14 logout", "GET", "/v1/auth/logout")
+
+  prev.setSuccessful(true)
+  prev.setResponseCode("200")
+  prev.setResponseMessage("Journey completed for ${email}")
+} catch (Throwable t) {
+  prev.setSuccessful(false)
+  prev.setResponseCode("500")
+  prev.setResponseMessage(t.message ?: t.class.name)
+  throw t
+}
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
