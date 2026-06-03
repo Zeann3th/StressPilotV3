@@ -40,6 +40,8 @@ import java.util.regex.Pattern;
 public class RunServiceImpl implements RunService {
     private static final Pattern ACTIVE_THREADS_PATTERN =
             Pattern.compile("__stresspilot_active_threads=(\\d+)");
+    private static final Pattern ACTIVE_THREADS_JSON_PATTERN =
+            Pattern.compile("\"__stresspilot_active_threads\"\\s*:\\s*(\\d+)");
 
 
     private final RunStore runStore;
@@ -226,6 +228,10 @@ public class RunServiceImpl implements RunService {
     private Integer extractActiveThreads(String request) {
         if (request == null) {
             return null;
+        }
+        Matcher jsonMatcher = ACTIVE_THREADS_JSON_PATTERN.matcher(request);
+        if (jsonMatcher.find()) {
+            return Integer.valueOf(jsonMatcher.group(1));
         }
         Matcher matcher = ACTIVE_THREADS_PATTERN.matcher(request);
         return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;

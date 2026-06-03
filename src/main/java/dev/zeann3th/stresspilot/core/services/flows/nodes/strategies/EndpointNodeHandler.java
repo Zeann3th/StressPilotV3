@@ -93,6 +93,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         }
 
         String requestText = formatRequest(endpoint, context.getVariables());
+        String reportRequestText = formatReportRequest(endpoint, context);
 
         String responseText = result.getRawResponse();
         if (responseText == null || responseText.isBlank()) {
@@ -108,7 +109,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     .success(result.isSuccess())
                     .responseTime(result.getResponseTimeMs())
                     .correlationId(context.getCorrelationId())
-                    .request(requestText)
+                    .request(reportRequestText)
                     .response(responseText)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -119,7 +120,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     requestLogService.queueLog(log);
                 }
             } else {
-                context.recordDryRunRequestLog(toDryRunLog(log, endpoint));
+                context.recordDryRunRequestLog(toDryRunLog(log, endpoint, requestText));
             }
         }
 
@@ -138,6 +139,16 @@ public class EndpointNodeHandler implements FlowNodeHandler {
     }
 
     private String formatRequest(EndpointEntity endpoint, Map<String, Object> variables) {
+        return DataUtils.parseObjToJson(requestMap(endpoint, variables));
+    }
+
+    private String formatReportRequest(EndpointEntity endpoint, FlowExecutionContext context) {
+        Map<String, Object> request = requestMap(endpoint, context.getVariables());
+        request.put("variables_snapshot", reportVariablesSnapshot(context));
+        return DataUtils.parseObjToJson(request);
+    }
+
+    private Map<String, Object> requestMap(EndpointEntity endpoint, Map<String, Object> variables) {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("endpointId", endpoint.getId());
         request.put("endpointName", endpoint.getName());
@@ -162,7 +173,13 @@ public class EndpointNodeHandler implements FlowNodeHandler {
             request.put("body", interpolate(endpoint.getBody(), variables));
         }
 
-        return DataUtils.parseObjToJson(request);
+        return request;
+    }
+
+    private Map<String, Object> reportVariablesSnapshot(FlowExecutionContext context) {
+        Map<String, Object> snapshot = new LinkedHashMap<>(context.getVariables());
+        snapshot.put("__stresspilot_active_threads", context.getActiveThreadCount().get());
+        return snapshot;
     }
 
     private String interpolateUrl(String raw, Map<String, Object> variables) {
@@ -189,7 +206,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         return value;
     }
 
-    private RequestLog toDryRunLog(RequestLogEntity log, EndpointEntity endpoint) {
+    private RequestLog toDryRunLog(RequestLogEntity log, EndpointEntity endpoint, String requestText) {
         return RequestLog.builder()
                 .endpointId(endpoint.getId())
                 .endpointName(endpoint.getName())
@@ -197,7 +214,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                 .success(log.getSuccess())
                 .responseTime(log.getResponseTime())
                 .correlationId(log.getCorrelationId())
-                .request(log.getRequest())
+                .request(requestText)
                 .response(log.getResponse())
                 .createdAt(log.getCreatedAt())
                 .build();

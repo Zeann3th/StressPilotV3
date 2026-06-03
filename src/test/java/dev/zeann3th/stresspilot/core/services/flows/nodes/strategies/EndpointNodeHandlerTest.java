@@ -14,6 +14,7 @@ import dev.zeann3th.stresspilot.core.services.executors.context.ExecutionContext
 import dev.zeann3th.stresspilot.core.services.flows.FlowExecutionContext;
 import dev.zeann3th.stresspilot.core.services.flows.strategies.distributed.DistributedEventPublisher;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -51,6 +53,27 @@ class EndpointNodeHandlerTest {
         verify(fixture.distributedEventPublisher, never()).publishRequestLog(any());
         assertThat(fixture.context.getRequestCount()).isEqualTo(1);
         assertThat(fixture.context.getFailureCount()).isZero();
+    }
+
+    @Test
+    void persistedRequestLogKeepsReportMetadataWithoutChangingDryRunRequestShape() {
+        HandlerFixture fixture = fixtureFor(EndpointType.HTTP.name());
+        fixture.step.getEndpoint().setUrl("https://api.example.test/users/{{userId}}");
+        fixture.context.getVariables().put("userId", 42);
+        fixture.context.getVariables().put("token", "abc123");
+        fixture.context.getActiveThreadCount().set(3);
+
+        fixture.handler.handle(fixture.step, Map.of(), fixture.context);
+
+        ArgumentCaptor<dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity> captor =
+                forClass(dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity.class);
+        verify(fixture.requestLogService).queueLog(captor.capture());
+        assertThat(captor.getValue().getRequest())
+                .contains("https://api.example.test/users/42")
+                .contains("variables_snapshot")
+                .contains("__stresspilot_active_threads")
+                .contains(":3")
+                .contains("abc123");
     }
 
     @Test
