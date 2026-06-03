@@ -15,7 +15,8 @@ import java.util.Map;
 public class RunFlowCommand {
     private Long environmentId;
     private int threads;
-    private int totalDuration;
+    private Integer totalDuration;
+    private Integer loopCount;
     private int rampUpDuration;
     private Map<String, Object> variables;
     private List<Map<String, Object>> credentials;

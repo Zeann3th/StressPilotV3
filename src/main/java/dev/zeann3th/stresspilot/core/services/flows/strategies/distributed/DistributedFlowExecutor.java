@@ -66,8 +66,9 @@ public class DistributedFlowExecutor extends FlowExecutor {
         AtomicBoolean stopSignal = activeRunRegistry.registerRun(runId);
 
         int threads = Math.max(1, cmd.getThreads());
-        long totalMs = (long) cmd.getTotalDuration() * 1000;
-        long deadline = System.currentTimeMillis() + totalMs;
+        long deadline = cmd.getTotalDuration() != null
+                ? System.currentTimeMillis() + (long) cmd.getTotalDuration() * 1000
+                : Long.MAX_VALUE;
         baseContext.setStopSignal(stopSignal);
         baseContext.setDeadline(deadline);
 
@@ -94,7 +95,8 @@ public class DistributedFlowExecutor extends FlowExecutor {
             }
 
             waitForDeadlineOrStop(stopSignal, deadline);
-            return stopSignal.get() && System.currentTimeMillis() < deadline
+            boolean durationMet = cmd.getTotalDuration() != null && System.currentTimeMillis() >= deadline;
+            return stopSignal.get() && !durationMet
                     ? RunStatus.ABORTED.name()
                     : RunStatus.COMPLETED.name();
         } finally {

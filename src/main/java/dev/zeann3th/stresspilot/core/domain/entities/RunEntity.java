@@ -32,8 +32,11 @@ public class RunEntity {
     @Column(name = "threads", nullable = false)
     private Integer threads;
 
-    @Column(name = "duration", nullable = false)
+    @Column(name = "duration")
     private Integer duration;
+
+    @Column(name = "loop_count")
+    private Integer loopCount;
 
     @Column(name = "ramp_up_duration", nullable = false)
     private Integer rampUpDuration;

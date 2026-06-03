@@ -137,4 +137,40 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value("ER0004"));
     }
+
+    @Test
+    void runFlowRejectsMissingStopConditions() throws Exception {
+        ProjectFixture project = createProject("Flow Stop Condition Target");
+        long endpointId = createHttpEndpoint(project.id(), "Stop Condition Endpoint");
+        long flowId = createFlow(project.id(), "Stop Condition Flow");
+        configureLinearFlow(flowId, endpointId);
+
+        MockMultipartFile runRequest = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                """
+                        {"threads":1,"totalDuration":null,"loopCount":null,"rampUpDuration":0}
+                        """.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/v1/flows/{flowId}/execute", flowId).file(runRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value("ER0001"));
+    }
+
+    @Test
+    void runFlowAcceptsLoopOnlyStopCondition() throws Exception {
+        ProjectFixture project = createProject("Flow Loop Only Target");
+        long endpointId = createHttpEndpoint(project.id(), "Loop Only Endpoint");
+        long flowId = createFlow(project.id(), "Loop Only Flow");
+        configureLinearFlow(flowId, endpointId);
+
+        MockMultipartFile runRequest = new MockMultipartFile(
+                "request", "", MediaType.APPLICATION_JSON_VALUE,
+                """
+                        {"threads":1,"totalDuration":null,"loopCount":1,"rampUpDuration":0}
+                        """.getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/v1/flows/{flowId}/execute", flowId).file(runRequest))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data").isString());
+    }
 }

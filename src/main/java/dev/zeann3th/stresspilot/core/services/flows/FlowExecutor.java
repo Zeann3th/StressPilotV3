@@ -52,8 +52,9 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 cmd.getTotalDuration(), cmd.getRampUpDuration());
 
         int threads = Math.clamp(cmd.getThreads(), 1, maxThreads());
-        long totalMs = (long) cmd.getTotalDuration() * 1000;
-        long deadline = System.currentTimeMillis() + totalMs;
+        long deadline = cmd.getTotalDuration() != null
+                ? System.currentTimeMillis() + (long) cmd.getTotalDuration() * 1000
+                : Long.MAX_VALUE;
 
         baseContext.setStopSignal(stopSignal);
         baseContext.setDeadline(deadline);
@@ -67,7 +68,7 @@ public abstract class FlowExecutor implements ExtensionPoint {
             activeRunRegistry.deregisterRun(runId);
         }
 
-        boolean durationMet = System.currentTimeMillis() >= deadline;
+        boolean durationMet = cmd.getTotalDuration() != null && System.currentTimeMillis() >= deadline;
         return (stopSignal.get() && !durationMet)
                 ? RunStatus.ABORTED.name()
                 : RunStatus.COMPLETED.name();

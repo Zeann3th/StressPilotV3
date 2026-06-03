@@ -10,6 +10,7 @@ public class RunResponseDTO {
     private String status;
     private Integer threads;
     private Integer duration;
+    private Integer loopCount;
     private Integer rampUpDuration;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;

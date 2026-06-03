@@ -65,7 +65,13 @@ public class FlowExecutionContext {
     public boolean shouldStop() {
         return (stopSignal != null && stopSignal.get())
                 || System.currentTimeMillis() >= deadline
+                || reachedLoopLimit()
                 || Thread.currentThread().isInterrupted();
+    }
+
+    private boolean reachedLoopLimit() {
+        Integer loopCount = command != null ? command.getLoopCount() : null;
+        return loopCount != null && iterationCount.get() >= loopCount;
     }
 
     public void incrementIteration() {

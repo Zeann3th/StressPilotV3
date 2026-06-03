@@ -180,6 +180,9 @@ public class RunServiceImpl implements RunService {
         if (!Objects.equals(run1.getDuration(), run2.getDuration())) {
             mismatches.add("duration %s vs %s".formatted(run1.getDuration(), run2.getDuration()));
         }
+        if (!Objects.equals(run1.getLoopCount(), run2.getLoopCount())) {
+            mismatches.add("loop_count %s vs %s".formatted(run1.getLoopCount(), run2.getLoopCount()));
+        }
         if (!Objects.equals(run1.getRampUpDuration(), run2.getRampUpDuration())) {
             mismatches.add("ramp_up_duration %s vs %s".formatted(run1.getRampUpDuration(), run2.getRampUpDuration()));
         }

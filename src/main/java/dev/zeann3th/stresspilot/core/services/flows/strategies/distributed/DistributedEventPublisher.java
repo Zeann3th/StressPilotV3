@@ -115,7 +115,8 @@ public class DistributedEventPublisher {
             Long flowId,
             String targetNodeId,
             int assignedThreads,
-            int totalDuration,
+            Integer totalDuration,
+            Integer loopCount,
             int rampUpDuration,
             long deadline,
             String flowType,
@@ -124,6 +125,25 @@ public class DistributedEventPublisher {
             List<Map<String, Object>> credentials,
             Map<String, Object> baseEnvironment,
             List<FlowStepPayload> steps) {
+        public WorkloadPayload(
+                String marker,
+                String runId,
+                Long flowId,
+                String targetNodeId,
+                int assignedThreads,
+                Integer totalDuration,
+                int rampUpDuration,
+                long deadline,
+                String flowType,
+                LocalDateTime runStartedAt,
+                Map<String, Object> variables,
+                List<Map<String, Object>> credentials,
+                Map<String, Object> baseEnvironment,
+                List<FlowStepPayload> steps) {
+            this(marker, runId, flowId, targetNodeId, assignedThreads, totalDuration, null,
+                    rampUpDuration, deadline, flowType, runStartedAt, variables, credentials, baseEnvironment, steps);
+        }
+
         public static WorkloadPayload from(FlowExecutionContext context, String targetNodeId, int assignedThreads) {
             return new WorkloadPayload(
                     "DISTRIBUTED_WORKLOAD",
@@ -132,6 +152,7 @@ public class DistributedEventPublisher {
                     targetNodeId,
                     assignedThreads,
                     context.getCommand().getTotalDuration(),
+                    context.getCommand().getLoopCount(),
                     context.getCommand().getRampUpDuration(),
                     context.getDeadline(),
                     context.getFlowType(),

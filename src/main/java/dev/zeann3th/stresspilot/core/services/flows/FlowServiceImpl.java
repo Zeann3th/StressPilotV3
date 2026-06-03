@@ -150,6 +150,19 @@ public class FlowServiceImpl implements FlowService {
     @Override
     @Transactional
     public String runFlow(Long flowId, RunFlowCommand runFlowCommand) {
+        if (runFlowCommand.getTotalDuration() == null && runFlowCommand.getLoopCount() == null) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001,
+                    Map.of(Constants.REASON, "totalDuration or loopCount must be set"));
+        }
+        if (runFlowCommand.getTotalDuration() != null && runFlowCommand.getTotalDuration() < 1) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001,
+                    Map.of(Constants.REASON, "totalDuration must be at least 1 when set"));
+        }
+        if (runFlowCommand.getLoopCount() != null && runFlowCommand.getLoopCount() < 1) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0001,
+                    Map.of(Constants.REASON, "loopCount must be at least 1 when set"));
+        }
+
         FlowEntity flow = flowStore.findById(flowId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0003));
 
@@ -190,6 +203,7 @@ public class FlowServiceImpl implements FlowService {
                 .status(RunStatus.RUNNING.name())
                 .threads(runFlowCommand.getThreads())
                 .duration(runFlowCommand.getTotalDuration())
+                .loopCount(runFlowCommand.getLoopCount())
                 .rampUpDuration(runFlowCommand.getRampUpDuration())
                 .startedAt(LocalDateTime.now())
                 .build());
