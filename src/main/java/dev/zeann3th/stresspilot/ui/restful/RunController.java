@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.ui.restful;
 
+import dev.zeann3th.stresspilot.core.domain.commands.run.RunAnalysisDump;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
@@ -38,6 +39,12 @@ public class RunController {
     public RunResponseDTO getRunDetail(@PathVariable String runId) {
         RunEntity resp = runService.getRunDetail(runId);
         return runMapper.toResponse(resp);
+    }
+
+    @GetMapping("/{runId}/analysis-dump")
+    @Operation(summary = "Get AI-readable full run dump", description = "Returns run metadata, calculated report metrics, and every request/response log as JSON text data.")
+    public RunAnalysisDump getRunAnalysisDump(@PathVariable String runId) {
+        return runService.getRunAnalysisDump(runId);
     }
 
     @GetMapping("/last")

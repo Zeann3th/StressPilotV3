@@ -1,6 +1,8 @@
 package dev.zeann3th.stresspilot.core.services.runs;
 
 import dev.zeann3th.stresspilot.core.domain.commands.run.RequestLog;
+import dev.zeann3th.stresspilot.core.domain.commands.run.RunAnalysisDump;
+import dev.zeann3th.stresspilot.core.domain.commands.run.RunAnalysisMetadata;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
@@ -66,6 +68,22 @@ public class RunServiceImpl implements RunService {
     @Override
     public RunEntity getLastRun(Long flowId) {
         return runStore.findLastRunByFlowId(flowId).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RunAnalysisDump getRunAnalysisDump(String runId) {
+        RunEntity run = getRunDetail(runId);
+        RunReport report = requestLogStore.calculateRunReport(runId, run);
+        List<RequestLog> logs = new ArrayList<>();
+        requestLogStore.streamLogsByRunId(runId, entity -> logs.add(mapToDto(entity)));
+
+        return RunAnalysisDump.builder()
+                .run(mapRunMetadata(run))
+                .report(report)
+                .logCount(logs.size())
+                .logs(logs)
+                .build();
     }
 
     @Override
@@ -211,6 +229,20 @@ public class RunServiceImpl implements RunService {
         }
     }
 
+    private RunAnalysisMetadata mapRunMetadata(RunEntity run) {
+        return RunAnalysisMetadata.builder()
+                .id(run.getId())
+                .flowId(run.getFlowId())
+                .status(run.getStatus())
+                .threads(run.getThreads())
+                .duration(run.getDuration())
+                .loopCount(run.getLoopCount())
+                .rampUpDuration(run.getRampUpDuration())
+                .startedAt(run.getStartedAt())
+                .completedAt(run.getCompletedAt())
+                .build();
+    }
+
     private RequestLog mapToDto(RequestLogEntity requestLogEntity) {
         Long id = requestLogEntity.getEndpointId();
         String name = (requestLogEntity.getEndpoint() != null) ? requestLogEntity.getEndpoint().getName() : null;
@@ -220,6 +252,7 @@ public class RunServiceImpl implements RunService {
                 .endpointId(id)
                 .endpointName(name)
                 .statusCode(requestLogEntity.getStatusCode())
+                .success(requestLogEntity.getSuccess())
                 .responseTime(requestLogEntity.getResponseTime())
                 .correlationId(requestLogEntity.getCorrelationId())
                 .activeThreads(extractActiveThreads(requestLogEntity.getRequest()))
