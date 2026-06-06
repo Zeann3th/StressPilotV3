@@ -260,12 +260,18 @@ public class FlowProcessor {
         if (obj == null || spec == null || spec.isBlank()) {
             return null;
         }
+        String normalizedSpec = spec.startsWith(".") ? spec.substring(1) : spec;
+        Object direct = resolvePath(obj, normalizedSpec);
+        if (direct != null) {
+            return direct;
+        }
+
         List<Map.Entry<String, Object>> flat = new ArrayList<>();
         DataUtils.flattenObject(obj, "", flat);
 
-        return spec.contains(".")
-                ? firstExactOrSuffix(flat, spec)
-                : firstLastSegment(flat, spec);
+        return normalizedSpec.contains(".")
+                ? firstExactOrSuffix(flat, normalizedSpec)
+                : firstLastSegment(flat, normalizedSpec);
     }
 
     private static Object firstExactOrSuffix(List<Map.Entry<String, Object>> flat, String spec) {

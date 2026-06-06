@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,5 +71,32 @@ class FlowProcessorControlTest {
                 Map.of("question_id", 101L, "chosen_choice_id", 1001L)));
         assertThat(variables).containsEntry("answers_json",
                 "[{\"question_id\":101,\"chosen_choice_id\":1001}]");
+    }
+
+    @Test
+    void processExtractsDollarPathContainerValues() {
+        Map<String, Object> variables = new HashMap<>();
+        Map<String, Object> response = Map.of(
+                "data", Map.of(
+                        "submission_id", 902,
+                        "questions", List.of(
+                                Map.of("id", 17),
+                                Map.of("id", 11))));
+
+        processor.process("""
+                {
+                  "extract": {
+                    "submission_id": "$data.submission_id",
+                    "questions": "$data.questions"
+                  }
+                }
+                """, variables, response, "test", 0);
+
+        assertThat(variables)
+                .containsEntry("submission_id", 902)
+                .containsKey("questions");
+        assertThat(variables.get("questions")).isEqualTo(List.of(
+                Map.of("id", 17),
+                Map.of("id", 11)));
     }
 }
