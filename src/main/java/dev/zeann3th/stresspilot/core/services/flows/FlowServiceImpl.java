@@ -118,9 +118,6 @@ public class FlowServiceImpl implements FlowService {
 
         List<FlowStepEntity> preview = stepsFromCommands(flow, stepCmds);
         validateStartStep(preview);
-        Map<String, String> idMap = preview.stream()
-                .collect(Collectors.toMap(FlowStepEntity::getId, FlowStepEntity::getId));
-        detectInfiniteLoop(preview, idMap);
 
         flowStepStore.deleteAllByFlowId(flowId);
         flowStepStore.saveAll(preview);
@@ -255,12 +252,18 @@ public class FlowServiceImpl implements FlowService {
                 .build();
         context.setCorrelationId(correlationId);
 
-        flowProcessor.process(selected.getPreProcessor(), context.getVariables(),
-                null, "dry-run pre-processor", 0);
-        NodeHandlerResult result = nodeHandlerFactory.getHandler(selected.getType().toUpperCase())
-                .handle(selected, stepMap, context);
-        flowProcessor.process(selected.getPostProcessor(), context.getVariables(),
-                result.outputData(), "dry-run post-processor", 0);
+        NodeHandlerResult result;
+        if (flowProcessor.shouldRun(selected.getPreProcessor(), context.getVariables(), 0)) {
+            flowProcessor.process(selected.getPreProcessor(), context.getVariables(),
+                    null, "dry-run pre-processor", 0);
+            result = nodeHandlerFactory.getHandler(selected.getType().toUpperCase())
+                    .handle(selected, stepMap, context);
+            flowProcessor.process(selected.getPostProcessor(), context.getVariables(),
+                    result.outputData(), "dry-run post-processor", 0);
+        } else {
+            String next = selected.getNextIfTrue() != null ? selected.getNextIfTrue() : selected.getNextIfFalse();
+            result = NodeHandlerResult.of(next);
+        }
 
         return DryRunStepResult.builder()
                 .stepId(selected.getId())
@@ -338,69 +341,6 @@ public class FlowServiceImpl implements FlowService {
         if (count > 1)
             throw CommandExceptionBuilder.exception(ErrorCode.ER0020,
                     Map.of(Constants.REASON, "Flow must have exactly one START node (found " + count + ")"));
-    }
-
-    private static void detectInfiniteLoop(List<FlowStepEntity> steps, Map<String, String> stepIdMap) {
-        Map<String, List<String>> graph = new HashMap<>();
-        Set<String> terminals = new HashSet<>();
-
-        Set<String> allowedTerminalTypes = Set.of(
-                FlowStepType.ENDPOINT.name(),
-                FlowStepType.SUBFLOW.name()
-        );
-
-        for (FlowStepEntity step : steps) {
-            String id = stepIdMap.get(step.getId());
-            List<String> nexts = new ArrayList<>();
-            if (step.getNextIfTrue() != null)
-                nexts.add(stepIdMap.get(step.getNextIfTrue()));
-            if (step.getNextIfFalse() != null)
-                nexts.add(stepIdMap.get(step.getNextIfFalse()));
-            graph.put(id, nexts);
-
-            if (nexts.isEmpty()) {
-                if (!allowedTerminalTypes.contains(step.getType().toUpperCase())) {
-                    throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
-                            Map.of(Constants.REASON, "Step " + id + " of type " + step.getType() + " cannot be a terminal node"));
-                }
-                terminals.add(id);
-            }
-        }
-
-        if (terminals.isEmpty())
-            throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
-                    Map.of(Constants.REASON, "No terminal node found — flow would be infinite"));
-
-        Map<String, Boolean> memo = new HashMap<>();
-        for (String node : graph.keySet()) {
-            if (!canReachEndpoint(node, graph, terminals, new HashSet<>(), memo))
-                throw CommandExceptionBuilder.exception(ErrorCode.ER0004,
-                        Map.of(Constants.REASON, "Infinite cycle — node " + node + " cannot reach a terminal"));
-        }
-    }
-
-    private static boolean canReachEndpoint(String node, Map<String, List<String>> graph,
-            Set<String> terminals, Set<String> visiting,
-            Map<String, Boolean> memo) {
-        if (memo.containsKey(node))
-            return memo.get(node);
-        if (terminals.contains(node)) {
-            memo.put(node, true);
-            return true;
-        }
-        if (visiting.contains(node))
-            return false;
-        visiting.add(node);
-        for (String next : graph.getOrDefault(node, List.of())) {
-            if (next != null && canReachEndpoint(next, graph, terminals, visiting, memo)) {
-                memo.put(node, true);
-                visiting.remove(node);
-                return true;
-            }
-        }
-        visiting.remove(node);
-        memo.put(node, false);
-        return false;
     }
 
     private static void sortSteps(List<FlowStepEntity> steps) {

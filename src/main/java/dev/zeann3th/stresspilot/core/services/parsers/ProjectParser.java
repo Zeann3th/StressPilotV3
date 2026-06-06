@@ -5,6 +5,7 @@ import dev.zeann3th.stresspilot.core.domain.constants.Constants;
 import dev.zeann3th.stresspilot.core.domain.enums.ErrorCode;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandException;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
+import dev.zeann3th.stresspilot.core.services.flows.FlowProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.DumperOptions;
@@ -20,9 +21,15 @@ public class ProjectParser {
     private static final String ROOT_KEY = Constants.APP_NAME;
     private static final String EXTRACT = "extract";
     private static final String INJECT = "inject";
+    private static final String SET = "set";
+    private static final String INCREMENT = "increment";
+    private static final String APPEND = "append";
+    private static final String SERIALIZE_JSON = "serialize_json";
+    private static final String CLEAR = "clear";
     private static final String DELAY = "delay";
     private static final String DESCRIPTION = "description";
     private static final String VALUE = "value";
+    private static final String DEFAULT_ENVIRONMENT_NAME = "Environment";
 
     public ImportProjectCommand unmarshal(String spec) {
         Map<String, Object> root = parseRoot(spec);
@@ -45,7 +52,7 @@ public class ProjectParser {
                 vars.add(buildEnvVar(variable));
             }
             environments.add(new ImportProjectCommand.Environment(
-                    getString(env, "name", "Environment"),
+                    getString(env, "name", DEFAULT_ENVIRONMENT_NAME),
                     getBoolean(env, "active", false),
                     vars
             ));
@@ -208,8 +215,15 @@ public class ProjectParser {
     }
 
     private ImportProjectCommand.Step buildStep(Map<String, Object> stepNode) {
-        Map<String, Object> preProcess = buildProcessor(getMap(stepNode, "pre_process"));
-        Map<String, Object> postProcess = buildProcessor(getMap(stepNode, "post_process"));
+        Map<String, Object> preProcess = new LinkedHashMap<>(buildProcessor(getMap(stepNode, "pre_process")));
+        Map<String, Object> postProcess = new LinkedHashMap<>(buildProcessor(getMap(stepNode, "post_process")));
+        putIfNotNull(preProcess, FlowProcessor.RUN_IF, stepNode.get(FlowProcessor.RUN_IF));
+        putIfNotNull(preProcess, FlowProcessor.SKIP_IF, stepNode.get(FlowProcessor.SKIP_IF));
+
+        Map<String, Object> loop = buildLoopConfig(stepNode);
+        if (!loop.isEmpty()) {
+            preProcess.put("loop", loop);
+        }
 
         return ImportProjectCommand.Step.builder()
                 .name(getString(stepNode, "name"))
@@ -231,6 +245,14 @@ public class ProjectParser {
         Map<String, Object> processor = new LinkedHashMap<>();
         collectNameValueList(processNode, INJECT, processor);
         collectNameValueList(processNode, EXTRACT, processor);
+        collectProcessorMap(processNode, SET, processor);
+        collectProcessorMap(processNode, INCREMENT, processor);
+        collectProcessorMap(processNode, APPEND, processor);
+        collectProcessorMap(processNode, SERIALIZE_JSON, processor);
+        putIfNotNull(processor, CLEAR, processNode.get(CLEAR));
+        putIfNotNull(processor, FlowProcessor.RUN_IF, processNode.get(FlowProcessor.RUN_IF));
+        putIfNotNull(processor, FlowProcessor.SKIP_IF, processNode.get(FlowProcessor.SKIP_IF));
+        putIfNotNull(processor, "loop", processNode.get("loop"));
 
         Object delay = processNode.get(DELAY);
         if (delay != null) {
@@ -238,6 +260,37 @@ public class ProjectParser {
         }
 
         return processor;
+    }
+
+    private Map<String, Object> buildLoopConfig(Map<String, Object> stepNode) {
+        Map<String, Object> loop = new LinkedHashMap<>();
+        for (String key : List.of("source", "item", "index", "body", "count")) {
+            putIfNotNull(loop, key, stepNode.get(key));
+        }
+        return loop;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void collectProcessorMap(Map<String, Object> source, String key, Map<String, Object> target) {
+        Object obj = source.get(key);
+        if (obj instanceof Map<?, ?> map && !map.isEmpty()) {
+            target.put(key, new LinkedHashMap<>((Map<String, Object>) map));
+            return;
+        }
+
+        List<Map<String, Object>> items = getList(source, key);
+        if (items.isEmpty()) return;
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map<String, Object> item : items) {
+            String name = getString(item, "name");
+            if (name != null) {
+                result.put(name, item.get(VALUE));
+            }
+        }
+        if (!result.isEmpty()) {
+            target.put(key, result);
+        }
     }
 
     private void collectNameValueList(Map<String, Object> source, String key, Map<String, Object> target) {
@@ -313,6 +366,14 @@ public class ProjectParser {
         Map<String, Object> map = new LinkedHashMap<>();
         expandToNameValueList(processor, INJECT, map);
         expandToNameValueList(processor, EXTRACT, map);
+        putIfNotEmpty(map, SET, processor.get(SET));
+        putIfNotEmpty(map, INCREMENT, processor.get(INCREMENT));
+        putIfNotEmpty(map, APPEND, processor.get(APPEND));
+        putIfNotEmpty(map, SERIALIZE_JSON, processor.get(SERIALIZE_JSON));
+        putIfNotNull(map, CLEAR, processor.get(CLEAR));
+        putIfNotNull(map, FlowProcessor.RUN_IF, processor.get(FlowProcessor.RUN_IF));
+        putIfNotNull(map, FlowProcessor.SKIP_IF, processor.get(FlowProcessor.SKIP_IF));
+        putIfNotEmpty(map, "loop", processor.get("loop"));
 
         Object delay = processor.get(DELAY);
         if (delay != null) {
@@ -341,6 +402,12 @@ public class ProjectParser {
 
     protected void putIfNotEmpty(Map<String, Object> map, String key, Map<String, Object> value) {
         if (value != null && !value.isEmpty()) {
+            map.put(key, value);
+        }
+    }
+
+    protected void putIfNotEmpty(Map<String, Object> map, String key, Object value) {
+        if (value instanceof Map<?, ?> valueMap && !valueMap.isEmpty()) {
             map.put(key, value);
         }
     }

@@ -55,9 +55,6 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
                 .findFirst()
                 .orElse(null);
 
-        int jumpCount = 0;
-        final int MAX_JUMPS = 10000;
-
         FlowNodeHandlerFactory nodeHandlerFactory = nodeHandlerFactoryProvider.getObject();
         FlowProcessor flowProcessor = flowProcessorProvider.getObject();
 
@@ -66,12 +63,13 @@ public class SubFlowNodeHandler implements FlowNodeHandler {
                 break;
             }
 
-            if (jumpCount++ > MAX_JUMPS) {
-                log.warn("Sub-flow {} exceeded max jumps!", subFlowId);
-                break;
-            }
-
             String type = current.getType().toUpperCase();
+
+            if (!flowProcessor.shouldRun(current.getPreProcessor(), context.getVariables(), context.getThreadId())) {
+                current = current.getNextIfTrue() != null ? subStepMap.get(current.getNextIfTrue())
+                        : (current.getNextIfFalse() != null ? subStepMap.get(current.getNextIfFalse()) : null);
+                continue;
+            }
 
             // Pre-process
             flowProcessor.process(current.getPreProcessor(), context.getVariables(),

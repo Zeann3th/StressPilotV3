@@ -33,6 +33,8 @@ import java.util.*;
 @SuppressWarnings({ "java:S3776", "java:S6541" })
 public class ProjectServiceImpl implements ProjectService {
 
+    private static final String DEFAULT_ENVIRONMENT_NAME = "Environment";
+
     private final ProjectStore projectStore;
     private final EnvironmentStore environmentStore;
     private final EnvironmentVariableStore envVarStore;
@@ -97,7 +99,7 @@ public class ProjectServiceImpl implements ProjectService {
     public EnvironmentEntity createProjectEnvironment(Long projectId, String name) {
         ProjectEntity project = projectStore.findById(projectId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
-        String environmentName = name == null || name.isBlank() ? "Environment" : name.trim();
+        String environmentName = name == null || name.isBlank() ? DEFAULT_ENVIRONMENT_NAME : name.trim();
         return environmentStore.save(EnvironmentEntity.builder()
                 .name(environmentName)
                 .project(project)
@@ -191,10 +193,10 @@ public class ProjectServiceImpl implements ProjectService {
             EnvironmentEntity env = i == 0
                     ? defaultEnv
                     : environmentStore.save(EnvironmentEntity.builder()
-                    .name(envCommand.getName() == null ? "Environment" : envCommand.getName())
+                    .name(envCommand.getName() == null ? DEFAULT_ENVIRONMENT_NAME : envCommand.getName())
                     .project(project)
                     .build());
-            env.setName(envCommand.getName() == null ? "Environment" : envCommand.getName());
+            env.setName(envCommand.getName() == null ? DEFAULT_ENVIRONMENT_NAME : envCommand.getName());
             env.setProject(project);
             environmentStore.save(env);
             persistEnvironment(envCommand.getVariables(), env);
@@ -314,12 +316,14 @@ public class ProjectServiceImpl implements ProjectService {
                         condition = String.valueOf(flowNameToId.get(condition));
                     }
 
+                    Map<String, Object> preProcess = remapLoopBody(s.getPreProcess(), stepNameToUuid);
+
                     stepEntities.add(FlowStepEntity.builder()
                             .id(uuid)
                             .flow(flow)
                             .type(s.getType())
                             .endpoint(endpointRef)
-                            .preProcessor(writeMap(s.getPreProcess()))
+                            .preProcessor(writeMap(preProcess))
                             .postProcessor(writeMap(s.getPostProcess()))
                             .nextIfTrue(nextIfTrue)
                             .nextIfFalse(nextIfFalse)
@@ -334,6 +338,28 @@ public class ProjectServiceImpl implements ProjectService {
                 flowStore.deleteById(flow.getId());
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> remapLoopBody(Map<String, Object> preProcess, Map<String, String> stepNameToUuid) {
+        if (preProcess == null || preProcess.isEmpty()) {
+            return preProcess;
+        }
+
+        Map<String, Object> remapped = new LinkedHashMap<>(preProcess);
+        Object loopObj = remapped.get("loop");
+        if (!(loopObj instanceof Map<?, ?> loopMap)) {
+            return remapped;
+        }
+
+        Map<String, Object> loop = new LinkedHashMap<>((Map<String, Object>) loopMap);
+        Object body = loop.get("body");
+        if (body != null) {
+            String bodyId = body.toString();
+            loop.put("body", stepNameToUuid.getOrDefault(bodyId, bodyId));
+        }
+        remapped.put("loop", loop);
+        return remapped;
     }
 
     private ImportProjectCommand buildExportCommand(Long projectId) {

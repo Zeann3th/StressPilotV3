@@ -140,18 +140,16 @@ public abstract class FlowExecutor implements ExtensionPoint {
             FlowExecutionContext ctx) {
         ctx.setCorrelationId(String.valueOf(snowflakeId.nextId()));
         FlowStepEntity current = startStep;
-        int jumpCount = 0;
-        final int MAX_JUMPS = 10000;
 
         while (current != null) {
             if (ctx.shouldStop()) break;
 
-            if (jumpCount++ > MAX_JUMPS) {
-                log.warn("Iteration exceeded max jumps ({}) at step {} — breaking iteration", MAX_JUMPS, current.getId());
-                break;
-            }
-
             String type = current.getType().toUpperCase();
+
+            if (!flowProcessor.shouldRun(current.getPreProcessor(), ctx.getVariables(), ctx.getThreadId())) {
+                current = firstExistingNext(stepMap, current.getNextIfTrue(), current.getNextIfFalse());
+                continue;
+            }
 
             // Pre-process
             flowProcessor.process(current.getPreProcessor(), ctx.getVariables(),
@@ -172,6 +170,14 @@ public abstract class FlowExecutor implements ExtensionPoint {
                 .filter(s -> FlowStepType.START.name().equalsIgnoreCase(s.getType()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private FlowStepEntity firstExistingNext(Map<String, FlowStepEntity> stepMap, String first, String second) {
+        FlowStepEntity next = first != null ? stepMap.get(first) : null;
+        if (next != null || second == null) {
+            return next;
+        }
+        return stepMap.get(second);
     }
 
     public void initInfra(ActiveRunRegistry arr, FlowNodeHandlerFactory nhf) {

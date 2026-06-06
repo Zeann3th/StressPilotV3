@@ -4,5 +4,6 @@ public enum FlowStepType {
     START,
     ENDPOINT,
     BRANCH,
+    LOOP,
     SUBFLOW
 }

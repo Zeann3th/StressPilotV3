@@ -59,7 +59,7 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
     }
 
     @Test
-    void configureFlowRejectsMissingStartDuplicateStartAndBadTerminalNode() throws Exception {
+    void configureFlowRejectsMissingAndDuplicateStartButAllowsTerminalStart() throws Exception {
         ProjectFixture project = createProject("Flow Invalid Target");
         long endpointId = createHttpEndpoint(project.id(), "Invalid Flow Endpoint");
         long flowId = createFlow(project.id(), "Invalid Flow");
@@ -88,13 +88,13 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 [{"id":"start","type":"START"}]
-                                """))
+                """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.errorCode").value("ER0004"));
+                .andExpect(jsonPath("$.data[0].id").value("start"));
     }
 
     @Test
-    void configureFlowRejectsInfiniteCyclesAndUnknownEndpointReferences() throws Exception {
+    void configureFlowAllowsCyclesAndRejectsUnknownEndpointReferences() throws Exception {
         ProjectFixture project = createProject("Flow Cycle Target");
         long endpointId = createHttpEndpoint(project.id(), "Cycle Endpoint");
         long flowId = createFlow(project.id(), "Cycle Flow");
@@ -107,9 +107,11 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
                                   {"id":"branch","type":"BRANCH","nextIfTrue":"start","condition":"true"},
                                   {"id":"call","type":"ENDPOINT","endpointId":%d}
                                 ]
-                                """.formatted(endpointId)))
+                """.formatted(endpointId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.errorCode").value("ER0004"));
+                .andExpect(jsonPath("$.data[0].id").value("start"))
+                .andExpect(jsonPath("$.data[1].id").value("call"))
+                .andExpect(jsonPath("$.data[2].id").value("branch"));
 
         mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", flowId)
                         .contentType(MediaType.APPLICATION_JSON)
