@@ -120,19 +120,27 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
                 boolean requested = flushRequested.getAndSet(false);
                 boolean shutdown = !running.get() && !buffer.isEmpty();
 
-                if ((full || timeout || requested || shutdown) && !buffer.isEmpty()) {
-                    flushing.set(true);
-                    List<RequestLogEntity> batch = new ArrayList<>(buffer);
-                    persistBatch(batch);
-                    pendingEntries.addAndGet(-batch.size());
-                    buffer.clear();
-                    lastFlush = System.currentTimeMillis();
-                    flushing.set(false);
-                    signalFlushDone();
+                if (full || timeout || requested || shutdown) {
+                    if (buffer.isEmpty()) {
+                        lastFlush = now;
+                        if (requested) {
+                            signalFlushDone();
+                        }
+                    } else {
+                        flushing.set(true);
+                        List<RequestLogEntity> batch = new ArrayList<>(buffer);
+                        persistBatch(batch);
+                        pendingEntries.addAndGet(-batch.size());
+                        buffer.clear();
+                        lastFlush = System.currentTimeMillis();
+                        flushing.set(false);
+                        signalFlushDone();
+                    }
                 }
 
-                if (!running.get() && queue.isEmpty() && buffer.isEmpty())
+                if (!running.get() && queue.isEmpty() && buffer.isEmpty()) {
                     break;
+                }
 
             } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
