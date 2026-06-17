@@ -227,6 +227,13 @@ public class ExcelGenerator {
         return text.length() > 32767 ? text.substring(0, 32767) : text;
     }
 
+    public void writeCustomSheets(
+            List<dev.zeann3th.stresspilot.core.domain.entities.CustomReportSheetEntity> sheets,
+            dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext ctx,
+            dev.zeann3th.stresspilot.core.utils.report.ReportElementRendererFactory factory) {
+        dev.zeann3th.stresspilot.core.utils.report.CustomSheetBuilder.buildAll(workbook, sheets, ctx, factory);
+    }
+
     public void export(HttpServletResponse response) throws IOException {
         log.info("Finalizing Excel layout and exporting...");
 

@@ -12,9 +12,14 @@ import dev.zeann3th.stresspilot.core.domain.enums.RunExportType;
 import dev.zeann3th.stresspilot.core.domain.enums.RunStatus;
 import dev.zeann3th.stresspilot.core.domain.events.InterruptRunEvent;
 import dev.zeann3th.stresspilot.core.domain.exception.CommandExceptionBuilder;
+import dev.zeann3th.stresspilot.core.domain.entities.CustomReportSheetEntity;
+import dev.zeann3th.stresspilot.core.ports.store.CustomReportSheetStore;
 import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import dev.zeann3th.stresspilot.core.ports.store.RunStore;
 import dev.zeann3th.stresspilot.core.utils.ExcelGenerator;
+import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
+import dev.zeann3th.stresspilot.core.utils.report.ReportElementRendererFactory;
+import dev.zeann3th.stresspilot.core.utils.report.ReportTimeBucket;
 import dev.zeann3th.stresspilot.core.utils.HtmlReportGenerator;
 import dev.zeann3th.stresspilot.core.utils.RunComparisonExcelGenerator;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,9 +35,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +57,8 @@ public class RunServiceImpl implements RunService {
     private final RunStore runStore;
     private final RequestLogStore requestLogStore;
     private final ApplicationEventPublisher eventPublisher;
+    private final CustomReportSheetStore customReportSheetStore;
+    private final ReportElementRendererFactory reportElementRendererFactory;
 
     @Override
     public List<RunEntity> getRunHistory(Long flowId) {
@@ -121,14 +130,61 @@ public class RunServiceImpl implements RunService {
                 "attachment; filename=\"" + rawFileName + "\"; filename*=UTF-8''" + encodedFileName);
 
         ExcelGenerator excel = new ExcelGenerator();
-
         excel.writeSummarySheets(report);
-
         excel.startDetailedSheet();
 
-        requestLogStore.streamLogsByRunId(runId, entity -> excel.appendDetailRow(mapToDto(entity)));
+        List<RequestLog> allLogs = new ArrayList<>();
+        requestLogStore.streamLogsByRunId(runId, entity -> {
+            RequestLog dto = mapToDto(entity);
+            excel.appendDetailRow(dto);
+            allLogs.add(dto);
+        });
+
+        // custom sheets
+        List<CustomReportSheetEntity> customSheets = customReportSheetStore.findAll();
+        if (!customSheets.isEmpty()) {
+            List<ReportTimeBucket> timeBuckets = buildTimeBuckets(allLogs);
+            ElementRenderContext renderCtx = ElementRenderContext.builder()
+                    .report(report)
+                    .logs(allLogs)
+                    .timeBuckets(timeBuckets)
+                    .build();
+            excel.writeCustomSheets(customSheets, renderCtx, reportElementRendererFactory);
+        }
 
         excel.export(response);
+    }
+
+    private List<ReportTimeBucket> buildTimeBuckets(List<RequestLog> logs) {
+        if (logs.isEmpty()) return List.of();
+        TreeMap<java.time.LocalDateTime, BucketAccumulator> buckets = new TreeMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm:ss");
+        for (RequestLog log : logs) {
+            java.time.LocalDateTime ts = log.getCreatedAt() != null
+                    ? log.getCreatedAt().withNano(0) : java.time.LocalDateTime.now().withNano(0);
+            BucketAccumulator acc = buckets.computeIfAbsent(ts, ignored -> new BucketAccumulator());
+            if (log.getResponseTime() != null) acc.responseTimes.add(log.getResponseTime().doubleValue());
+            if (log.getActiveThreads() != null) acc.activeThreads = Math.max(acc.activeThreads, log.getActiveThreads());
+            if (log.getResponse() != null) acc.bytes += log.getResponse().getBytes(StandardCharsets.UTF_8).length;
+        }
+        List<ReportTimeBucket> result = new ArrayList<>();
+        for (var entry : buckets.entrySet()) {
+            BucketAccumulator acc = entry.getValue();
+            int count = acc.responseTimes.size();
+            double avg = count == 0 ? 0 : acc.responseTimes.stream().mapToDouble(d -> d).average().orElse(0);
+            Collections.sort(acc.responseTimes);
+            double p90 = count == 0 ? 0 : acc.responseTimes.get(Math.min((int)(count * 0.9), count - 1));
+            double p95 = count == 0 ? 0 : acc.responseTimes.get(Math.min((int)(count * 0.95), count - 1));
+            result.add(new ReportTimeBucket(entry.getKey().format(fmt), avg, count, p90, p95,
+                    acc.activeThreads, acc.bytes));
+        }
+        return result;
+    }
+
+    private static class BucketAccumulator {
+        List<Double> responseTimes = new ArrayList<>();
+        int activeThreads;
+        long bytes;
     }
 
     private void exportHtml(String runId, HttpServletResponse response, RunReport report, String now) throws Exception {
