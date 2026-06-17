@@ -65,7 +65,7 @@ class RunServiceImplTest {
         FakeRunStore runStore = new FakeRunStore(run);
         FakeRequestLogStore requestLogStore = new FakeRequestLogStore(report, logs);
         RunServiceImpl service = new RunServiceImpl(runStore, requestLogStore, event -> {
-        });
+        }, null, null);
 
         RunAnalysisDump dump = service.getRunAnalysisDump("run-1");
 
@@ -101,7 +101,7 @@ class RunServiceImplTest {
     }
 
     private Integer extract(String request) throws Exception {
-        RunServiceImpl service = new RunServiceImpl(null, null, null);
+        RunServiceImpl service = new RunServiceImpl(null, null, null, null, null);
         Method method = RunServiceImpl.class.getDeclaredMethod("extractActiveThreads", String.class);
         method.setAccessible(true);
         return (Integer) method.invoke(service, request);
