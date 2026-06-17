@@ -6,7 +6,6 @@ import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
 import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
 import dev.zeann3th.stresspilot.core.utils.report.ReportElementRenderer;
 import dev.zeann3th.stresspilot.core.utils.report.ReportTimeBucket;
-import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
@@ -21,11 +20,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class LineChartElementRenderer implements ReportElementRenderer {
 
     private static final int CHART_ROWS = 20;
-    private final ObjectMapper objectMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final ExpressionParser spelParser = new SpelExpressionParser();
 
     @Override

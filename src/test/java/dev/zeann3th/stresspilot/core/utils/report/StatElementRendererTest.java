@@ -1,6 +1,5 @@
 package dev.zeann3th.stresspilot.core.utils.report;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.CustomReportElementEntity;
 import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
@@ -15,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class StatElementRendererTest {
 
-    private final StatElementRenderer renderer = new StatElementRenderer(new ObjectMapper());
+    private final StatElementRenderer renderer = new StatElementRenderer();
 
     @Test
     void supports_STAT() {

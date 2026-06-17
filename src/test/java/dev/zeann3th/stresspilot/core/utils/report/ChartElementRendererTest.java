@@ -1,6 +1,5 @@
 package dev.zeann3th.stresspilot.core.utils.report;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.commands.run.EndpointStats;
 import dev.zeann3th.stresspilot.core.domain.commands.run.RunReport;
 import dev.zeann3th.stresspilot.core.domain.entities.CustomReportElementEntity;
@@ -18,10 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChartElementRendererTest {
 
-    private final ObjectMapper om = new ObjectMapper();
-    private final LineChartElementRenderer lineRenderer = new LineChartElementRenderer(om);
-    private final BarChartElementRenderer barRenderer = new BarChartElementRenderer(om);
-    private final PieChartElementRenderer pieRenderer = new PieChartElementRenderer(om);
+    private final LineChartElementRenderer lineRenderer = new LineChartElementRenderer();
+    private final BarChartElementRenderer barRenderer = new BarChartElementRenderer();
+    private final PieChartElementRenderer pieRenderer = new PieChartElementRenderer();
 
     @Test
     void lineRenderer_supports_LINE() {

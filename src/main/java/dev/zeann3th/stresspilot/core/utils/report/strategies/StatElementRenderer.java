@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
 import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
 import dev.zeann3th.stresspilot.core.utils.report.ReportElementRenderer;
-import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.springframework.expression.ExpressionParser;
@@ -14,10 +13,9 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class StatElementRenderer implements ReportElementRenderer {
 
-    private final ObjectMapper objectMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final ExpressionParser spelParser = new SpelExpressionParser();
 
     @Override
