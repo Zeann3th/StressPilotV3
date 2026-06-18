@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -66,8 +67,7 @@ public class CustomReportServiceImpl implements CustomReportService {
         sheet.getElements().add(element);
         CustomReportSheetEntity saved = sheetStore.save(sheet);
         return saved.getElements().stream()
-                .filter(e -> e.getName().equals(name) && e.getDisplayOrder() == displayOrder)
-                .findFirst()
+                .max(Comparator.comparingLong(CustomReportElementEntity::getId))
                 .orElseThrow();
     }
 
@@ -93,7 +93,10 @@ public class CustomReportServiceImpl implements CustomReportService {
     public void deleteElement(Long sheetId, Long elementId) {
         CustomReportSheetEntity sheet = sheetStore.findById(sheetId)
                 .orElseThrow(() -> CommandExceptionBuilder.exception(ErrorCode.ER0002));
-        sheet.getElements().removeIf(e -> e.getId().equals(elementId));
+        boolean removed = sheet.getElements().removeIf(e -> e.getId().equals(elementId));
+        if (!removed) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0002);
+        }
         sheetStore.save(sheet);
     }
 }

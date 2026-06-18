@@ -9,6 +9,7 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.report.CustomReportSheetRequestD
 import dev.zeann3th.stresspilot.ui.restful.dtos.report.CustomReportSheetResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.exception.ResponseWrapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -31,14 +32,14 @@ public class CustomReportController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CustomReportSheetResponseDTO createSheet(@RequestBody CustomReportSheetRequestDTO req) {
+    public CustomReportSheetResponseDTO createSheet(@Valid @RequestBody CustomReportSheetRequestDTO req) {
         return toSheetResponse(customReportService.createSheet(
                 req.getName(), req.getDisplayOrder() != null ? req.getDisplayOrder() : 0));
     }
 
     @PatchMapping("/{id}")
     public CustomReportSheetResponseDTO updateSheet(@PathVariable Long id,
-                                                     @RequestBody CustomReportSheetRequestDTO req) {
+                                                     @Valid @RequestBody CustomReportSheetRequestDTO req) {
         return toSheetResponse(customReportService.updateSheet(id, req.getName(), req.getDisplayOrder()));
     }
 
@@ -51,7 +52,7 @@ public class CustomReportController {
     @PostMapping("/{id}/elements")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomReportElementResponseDTO createElement(@PathVariable Long id,
-                                                         @RequestBody CustomReportElementRequestDTO req) {
+                                                         @Valid @RequestBody CustomReportElementRequestDTO req) {
         return toElementResponse(customReportService.createElement(
                 id, req.getName(), req.getType(), req.getConfig(),
                 req.getDisplayOrder() != null ? req.getDisplayOrder() : 0));
@@ -60,7 +61,7 @@ public class CustomReportController {
     @PatchMapping("/{id}/elements/{eid}")
     public CustomReportElementResponseDTO updateElement(@PathVariable Long id,
                                                          @PathVariable Long eid,
-                                                         @RequestBody CustomReportElementRequestDTO req) {
+                                                         @Valid @RequestBody CustomReportElementRequestDTO req) {
         return toElementResponse(customReportService.updateElement(
                 id, eid, req.getName(), req.getType(), req.getConfig(), req.getDisplayOrder()));
     }

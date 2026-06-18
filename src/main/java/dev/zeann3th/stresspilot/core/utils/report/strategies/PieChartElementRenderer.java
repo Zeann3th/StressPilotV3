@@ -5,15 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
 import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
 import dev.zeann3th.stresspilot.core.utils.report.ReportElementRenderer;
+import dev.zeann3th.stresspilot.core.utils.report.SafeSpelContextFactory;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFChart;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -41,10 +42,8 @@ public class PieChartElementRenderer implements ReportElementRenderer {
         headerRow.createCell(1).setCellValue("Value");
 
         // Build SpEL context with report, logs, stats variables
-        StandardEvaluationContext spelCtx = new StandardEvaluationContext();
-        spelCtx.setVariable("report", ctx.getReport());
-        spelCtx.setVariable("logs", ctx.getLogs());
-        spelCtx.setVariable("stats", ctx.getEndpointStats());
+        EvaluationContext spelCtx = SafeSpelContextFactory.create(
+                ctx.getReport(), ctx.getLogs(), ctx.getEndpointStats());
 
         // Data rows — one per slice
         for (int i = 0; i < slices.size(); i++) {

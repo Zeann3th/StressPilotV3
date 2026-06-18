@@ -5,11 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
 import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
 import dev.zeann3th.stresspilot.core.utils.report.ReportElementRenderer;
+import dev.zeann3th.stresspilot.core.utils.report.SafeSpelContextFactory;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,6 +18,18 @@ public class StatElementRenderer implements ReportElementRenderer {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final ExpressionParser spelParser = new SpelExpressionParser();
+    private final java.util.WeakHashMap<org.apache.poi.ss.usermodel.Workbook, CellStyle> boldStyleCache =
+            new java.util.WeakHashMap<>();
+
+    private CellStyle getBoldStyle(SXSSFSheet sheet) {
+        return boldStyleCache.computeIfAbsent(sheet.getWorkbook(), wb -> {
+            CellStyle style = wb.createCellStyle();
+            Font font = wb.createFont();
+            font.setBold(true);
+            style.setFont(font);
+            return style;
+        });
+    }
 
     @Override
     public ReportElementType supports() {
@@ -31,10 +44,8 @@ public class StatElementRenderer implements ReportElementRenderer {
                 : ctx.getElement().getName();
         String unit = config.has("unit") ? config.path("unit").asText() : "";
 
-        StandardEvaluationContext spelCtx = new StandardEvaluationContext();
-        spelCtx.setVariable("report", ctx.getReport());
-        spelCtx.setVariable("logs", ctx.getLogs());
-        spelCtx.setVariable("stats", ctx.getEndpointStats());
+        EvaluationContext spelCtx = SafeSpelContextFactory.create(
+                ctx.getReport(), ctx.getLogs(), ctx.getEndpointStats());
 
         Object rawValue = spelParser.parseExpression(expression).getValue(spelCtx);
         double value = rawValue instanceof Number n ? n.doubleValue() : 0.0;
@@ -43,11 +54,7 @@ public class StatElementRenderer implements ReportElementRenderer {
         Row labelRow = sheet.createRow(startRow);
         Cell labelCell = labelRow.createCell(0);
         labelCell.setCellValue(label + (unit.isEmpty() ? "" : " (" + unit + ")"));
-        CellStyle bold = sheet.getWorkbook().createCellStyle();
-        Font font = sheet.getWorkbook().createFont();
-        font.setBold(true);
-        bold.setFont(font);
-        labelCell.setCellStyle(bold);
+        labelCell.setCellStyle(getBoldStyle(sheet));
 
         // Row 1: value
         Row valueRow = sheet.createRow(startRow + 1);

@@ -133,16 +133,16 @@ public class RunServiceImpl implements RunService {
         excel.writeSummarySheets(report);
         excel.startDetailedSheet();
 
-        List<RequestLog> allLogs = new ArrayList<>();
+        // custom sheets
+        List<CustomReportSheetEntity> customSheets = customReportSheetStore.findAll();
+        List<RequestLog> allLogs = customSheets.isEmpty() ? null : new ArrayList<>();
         requestLogStore.streamLogsByRunId(runId, entity -> {
             RequestLog dto = mapToDto(entity);
             excel.appendDetailRow(dto);
-            allLogs.add(dto);
+            if (allLogs != null) allLogs.add(dto);
         });
 
-        // custom sheets
-        List<CustomReportSheetEntity> customSheets = customReportSheetStore.findAll();
-        if (!customSheets.isEmpty()) {
+        if (!customSheets.isEmpty() && allLogs != null) {
             List<ReportTimeBucket> timeBuckets = buildTimeBuckets(allLogs);
             ElementRenderContext renderCtx = ElementRenderContext.builder()
                     .report(report)
@@ -173,8 +173,8 @@ public class RunServiceImpl implements RunService {
             int count = acc.responseTimes.size();
             double avg = count == 0 ? 0 : acc.responseTimes.stream().mapToDouble(d -> d).average().orElse(0);
             Collections.sort(acc.responseTimes);
-            double p90 = count == 0 ? 0 : acc.responseTimes.get(Math.min((int)(count * 0.9), count - 1));
-            double p95 = count == 0 ? 0 : acc.responseTimes.get(Math.min((int)(count * 0.95), count - 1));
+            double p90 = count == 0 ? 0 : acc.responseTimes.get((int) Math.ceil(count * 0.9) - 1);
+            double p95 = count == 0 ? 0 : acc.responseTimes.get((int) Math.ceil(count * 0.95) - 1);
             result.add(new ReportTimeBucket(entry.getKey().format(fmt), avg, count, p90, p95,
                     acc.activeThreads, acc.bytes));
         }

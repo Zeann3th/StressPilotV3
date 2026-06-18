@@ -6,15 +6,16 @@ import dev.zeann3th.stresspilot.core.domain.enums.ReportElementType;
 import dev.zeann3th.stresspilot.core.utils.report.ElementRenderContext;
 import dev.zeann3th.stresspilot.core.utils.report.ReportElementRenderer;
 import dev.zeann3th.stresspilot.core.utils.report.ReportTimeBucket;
+import dev.zeann3th.stresspilot.core.utils.report.SafeSpelContextFactory;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFChart;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -56,8 +57,7 @@ public class LineChartElementRenderer implements ReportElementRenderer {
             row.createCell(0).setCellValue(timeLabels[b]);
             for (int s = 0; s < seriesCount; s++) {
                 String expr = seriesArr.get(s).path("expression").asText();
-                StandardEvaluationContext spelCtx = new StandardEvaluationContext();
-                spelCtx.setVariable("bucket", buckets.get(b));
+                EvaluationContext spelCtx = SafeSpelContextFactory.createForBucket(buckets.get(b));
                 Object val = spelParser.parseExpression(expr).getValue(spelCtx);
                 double dVal = val instanceof Number n ? n.doubleValue() : 0.0;
                 row.createCell(s + 1).setCellValue(dVal);
