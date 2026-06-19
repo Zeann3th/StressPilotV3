@@ -14,7 +14,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+import dev.zeann3th.stresspilot.StresspilotApplication;
+
+@SpringBootTest(classes = StresspilotApplication.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 abstract class AbstractApiIntegrationTest {

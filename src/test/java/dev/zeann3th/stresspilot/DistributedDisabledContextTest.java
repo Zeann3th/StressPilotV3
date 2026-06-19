@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties = {
+@SpringBootTest(classes = StresspilotApplication.class, properties = {
         "application.distributed.enabled=false",
         "management.health.redis.enabled=false",
         "spring.autoconfigure.exclude=org.springframework.ai.mcp.server.autoconfigure.McpWebMvcServerAutoConfiguration,"
