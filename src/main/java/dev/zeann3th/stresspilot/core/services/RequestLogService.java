@@ -1,5 +1,6 @@
 package dev.zeann3th.stresspilot.core.services;
 
+import dev.zeann3th.stresspilot.core.domain.config.RequestLogSamplingProperties;
 import dev.zeann3th.stresspilot.core.domain.entities.RequestLogEntity;
 import dev.zeann3th.stresspilot.core.ports.message.RequestMessagePort;
 import lombok.RequiredArgsConstructor;

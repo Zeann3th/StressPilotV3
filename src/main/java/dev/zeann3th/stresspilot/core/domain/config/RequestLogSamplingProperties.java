@@ -1,4 +1,4 @@
-package dev.zeann3th.stresspilot.core.services;
+package dev.zeann3th.stresspilot.core.domain.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
