@@ -69,13 +69,14 @@ public class FileDatasourceConfig {
                 }
             }
 
-            Flyway.configure()
+            Flyway flyway = Flyway.configure()
                     .dataSource(dataSource)
                     .locations("classpath:db/sqlite/migrations")
                     .baselineOnMigrate(dbExists)
                     .baselineVersion("1")
-                    .load()
-                    .migrate();
+                    .load();
+            flyway.repair();
+            flyway.migrate();
 
             log.info("Data source configured at: {}", dbPath);
             return dataSource;
