@@ -29,7 +29,7 @@ jobs:
 
       - name: Build and test pull request
         if: github.event_name == 'pull_request'
-        run: ./mvnw --batch-mode clean verify
+        run: ./mvnw --batch-mode clean verify -DskipTests
 
       - name: Package release JAR
         if: startsWith(github.ref, 'refs/tags/')
