@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>dev.zeann3th</groupId>
 	<artifactId>stresspilot</artifactId>
-	<version>3.0.4</version>
+	<version>3.0.5</version>
 	<name>stresspilot</name>
 	<description>Load testing software</description>
 	<url/>
