@@ -266,11 +266,30 @@ public class RunServiceImpl implements RunService {
         if (request == null) {
             return null;
         }
-        Matcher jsonMatcher = ACTIVE_THREADS_JSON_PATTERN.matcher(request);
-        if (jsonMatcher.find()) {
-            return Integer.valueOf(jsonMatcher.group(1));
+        int idx = request.indexOf("__stresspilot_active_threads");
+        if (idx == -1) {
+            return null;
         }
-        Matcher matcher = ACTIVE_THREADS_PATTERN.matcher(request);
-        return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
+        int start = idx + "__stresspilot_active_threads".length();
+        int len = request.length();
+        while (start < len) {
+            char c = request.charAt(start);
+            if (Character.isDigit(c)) {
+                break;
+            }
+            start++;
+        }
+        if (start >= len) {
+            return null;
+        }
+        int end = start;
+        while (end < len && Character.isDigit(request.charAt(end))) {
+            end++;
+        }
+        try {
+            return Integer.valueOf(request.substring(start, end));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
