@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -18,6 +20,10 @@ public interface OltpRequestLogRepository extends JpaRepository<RequestLogEntity
     @QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "1000"))
     @Query("SELECT l FROM RequestLogEntity l LEFT JOIN FETCH l.endpoint WHERE l.run.id = :runId")
     Stream<RequestLogEntity> streamAllByRunId(@Param("runId") String runId);
+
+    @QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "1000"))
+    @Query("SELECT l FROM RequestLogEntity l LEFT JOIN FETCH l.endpoint WHERE l.run.id = :runId")
+    Slice<RequestLogEntity> findSliceByRunId(@Param("runId") String runId, Pageable pageable);
 
     @Query("SELECT l.responseTime FROM RequestLogEntity l WHERE l.run.id = :runId AND l.responseTime IS NOT NULL")
     List<Long> findResponseTimesByRunId(@Param("runId") String runId);

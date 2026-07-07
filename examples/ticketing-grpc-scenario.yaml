@@ -1,0 +1,220 @@
+stresspilot:
+  project:
+    name: Movie Ticketing gRPC Load Test
+    description: Load test scenario for the Go Monolith movie ticketing system using gRPC.
+  environments:
+    - name: Local Host
+      active: true
+      variables:
+        - name: grpcUrl
+          value: localhost:50051
+        - name: stubPath
+          value: D:/Workspace/Projects/movie-ticketing/grpc-stub
+  endpoints:
+    - id: init_run
+      name: Initialize user parameters
+      type: JS
+      body: |
+        const runId = "@{uuid}@";
+        // Pick a random user number between 1 and 500
+        const userNumber = 1 + Math.floor(Math.random() * 500);
+        const userEmail = "user" + userNumber + "@example.com";
+        const password = "password";
+        
+        setVar("runId", runId);
+        setVar("userEmail", userEmail);
+        setVar("userId", userNumber);
+        setVar("password", password);
+        return {
+          success: true,
+          runId,
+          userEmail,
+          userId: userNumber
+        };
+
+    - id: login
+      name: User Login via gRPC
+      type: GRPC
+      url: "{{ grpcUrl }}"
+      grpc_service_name: "ticketing.TicketingService"
+      grpc_method_name: "Login"
+      grpc_stub_path: "D:/Workspace/Projects/movie-ticketing/grpc-stub"
+      body: |
+        {
+          "email": "{{ userEmail }}",
+          "password": "{{ password }}"
+        }
+      success_condition: "statusCode == 200"
+
+    - id: get_schedules
+      name: Get Movie Schedules via gRPC
+      type: GRPC
+      url: "{{ grpcUrl }}"
+      grpc_service_name: "ticketing.TicketingService"
+      grpc_method_name: "GetSchedules"
+      grpc_stub_path: "D:/Workspace/Projects/movie-ticketing/grpc-stub"
+      body: |
+        {}
+      success_condition: "statusCode == 200"
+
+    - id: pick_schedule
+      name: Pick random schedule
+      type: JS
+      body: |
+        const list = env.get("schedulesList");
+        if (!list) {
+          return { success: false, error: "No schedules found in environment" };
+        }
+        const size = list.length !== undefined ? list.length : list.size();
+        if (size === 0) {
+          setVar("hasSchedule", false);
+          return { success: true, hasSchedule: false };
+        }
+        const getElem = (idx) => list.get !== undefined ? list.get(idx) : list[idx];
+        
+        const randomIndex = Math.floor(Math.random() * size);
+        const schedule = getElem(randomIndex);
+        const scheduleId = schedule.id !== undefined ? schedule.id : schedule.get("id");
+        
+        setVar("pickedScheduleId", scheduleId);
+        setVar("hasSchedule", true);
+        return { success: true, pickedScheduleId: scheduleId, hasSchedule: true };
+
+    - id: get_seats
+      name: Get Seats for Schedule via gRPC
+      type: GRPC
+      url: "{{ grpcUrl }}"
+      grpc_service_name: "ticketing.TicketingService"
+      grpc_method_name: "GetSeats"
+      grpc_stub_path: "D:/Workspace/Projects/movie-ticketing/grpc-stub"
+      body: |
+        {
+          "schedule_id": {{ pickedScheduleId }}
+        }
+      success_condition: "statusCode == 200"
+
+    - id: pick_seat
+      name: Pick unoccupied random seat
+      type: JS
+      body: |
+        const list = env.get("seatsList");
+        if (!list) {
+          return { success: false, error: "No seats found in environment" };
+        }
+        const size = list.length !== undefined ? list.length : list.size();
+        const getElem = (idx) => list.get !== undefined ? list.get(idx) : list[idx];
+        
+        const availableSeats = [];
+        for (let i = 0; i < size; i++) {
+          const seat = getElem(i);
+          const isOccupied = seat.occupied !== undefined ? seat.occupied : seat.get("occupied");
+          if (!isOccupied) {
+            const seatId = seat.id !== undefined ? seat.id : seat.get("id");
+            availableSeats.push(seatId);
+          }
+        }
+        
+        if (availableSeats.length === 0) {
+          setVar("hasSeat", false);
+          return { success: true, hasSeat: false };
+        }
+        
+        const randomIndex = Math.floor(Math.random() * availableSeats.length);
+        const seatId = availableSeats[randomIndex];
+        
+        setVar("pickedSeatId", seatId);
+        setVar("hasSeat", true);
+        return { success: true, pickedSeatId: seatId, hasSeat: true };
+
+    - id: book_ticket
+      name: Book Ticket via gRPC
+      type: GRPC
+      url: "{{ grpcUrl }}"
+      grpc_service_name: "ticketing.TicketingService"
+      grpc_method_name: "BookTicket"
+      grpc_stub_path: "D:/Workspace/Projects/movie-ticketing/grpc-stub"
+      body: |
+        {
+          "user_id": {{ userId }},
+          "schedule_id": {{ pickedScheduleId }},
+          "seat_id": {{ pickedSeatId }}
+        }
+      success_condition: "statusCode == 200"
+
+    - id: terminate_run
+      name: Terminate Flow Run
+      type: JS
+      body: |
+        return { success: true };
+
+  flows:
+    - name: gRPC Random Seat Booking Flow
+      description: Signs in via gRPC, retrieves schedules, picks a random schedule, retrieves seats, filters unoccupied seats, and books one via gRPC.
+      type: DEFAULT
+      steps:
+        - name: start
+          type: START
+          next_if_true: init
+          
+        - name: init
+          type: ENDPOINT
+          endpoint: init_run
+          next_if_true: sign_in
+          
+        - name: sign_in
+          type: ENDPOINT
+          endpoint: login
+          post_process:
+            extract:
+              - name: accessToken
+                value: token
+          next_if_true: retrieve_schedules
+          
+        - name: retrieve_schedules
+          type: ENDPOINT
+          endpoint: get_schedules
+          post_process:
+            extract:
+              - name: schedulesList
+                value: schedules
+          next_if_true: pick_random_schedule
+          
+        - name: pick_random_schedule
+          type: ENDPOINT
+          endpoint: pick_schedule
+          next_if_true: check_schedule
+          
+        - name: check_schedule
+          type: BRANCH
+          condition: "hasSchedule == true"
+          next_if_true: retrieve_seats
+          next_if_false: end_flow
+          
+        - name: retrieve_seats
+          type: ENDPOINT
+          endpoint: get_seats
+          post_process:
+            extract:
+              - name: seatsList
+                value: seats
+          next_if_true: pick_random_seat
+          
+        - name: pick_random_seat
+          type: ENDPOINT
+          endpoint: pick_seat
+          next_if_true: check_seat
+          
+        - name: check_seat
+          type: BRANCH
+          condition: "hasSeat == true"
+          next_if_true: perform_booking
+          next_if_false: end_flow
+          
+        - name: perform_booking
+          type: ENDPOINT
+          endpoint: book_ticket
+          next_if_true: end_flow
+          
+        - name: end_flow
+          type: ENDPOINT
+          endpoint: terminate_run

@@ -103,15 +103,15 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 [
-                                  {"id":"start","type":"START","nextIfTrue":"branch"},
-                                  {"id":"branch","type":"BRANCH","nextIfTrue":"start","condition":"true"},
-                                  {"id":"call","type":"ENDPOINT","endpointId":%d}
+                                  {"id":"cycle-start","type":"START","nextIfTrue":"cycle-branch"},
+                                  {"id":"cycle-branch","type":"BRANCH","nextIfTrue":"cycle-start","condition":"true"},
+                                  {"id":"cycle-call","type":"ENDPOINT","endpointId":%d}
                                 ]
                 """.formatted(endpointId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value("start"))
-                .andExpect(jsonPath("$.data[1].id").value("call"))
-                .andExpect(jsonPath("$.data[2].id").value("branch"));
+                .andExpect(jsonPath("$.data[0].id").value("cycle-start"))
+                .andExpect(jsonPath("$.data[1].id").value("cycle-branch"))
+                .andExpect(jsonPath("$.data[2].id").value("cycle-call"));
 
         mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", flowId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -123,6 +123,73 @@ class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.errorCode").value("ER0005"));
+    }
+
+    @Test
+    void configureFlowRejectsStepIdsOwnedByAnotherFlowAndKeepsOriginalFlowIntact() throws Exception {
+        ProjectFixture project = createProject("Flow Duplicate Step Target");
+        long endpointId = createHttpEndpoint(project.id(), "Duplicate Step Endpoint");
+        long sourceFlowId = createFlow(project.id(), "Source Flow");
+        long targetFlowId = createFlow(project.id(), "Target Flow");
+
+        mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", sourceFlowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [
+                                  {"id":"copied-start","type":"START","nextIfTrue":"copied-call"},
+                                  {"id":"copied-call","type":"ENDPOINT","endpointId":%d}
+                                ]
+                                """.formatted(endpointId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+
+        mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", targetFlowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [
+                                  {"id":"copied-start","type":"START","nextIfTrue":"copied-call"},
+                                  {"id":"copied-call","type":"ENDPOINT","endpointId":%d}
+                                ]
+                                """.formatted(endpointId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.errorCode").value("ER0020"));
+
+        mockMvc.perform(get("/api/v1/flows/{flowId}", sourceFlowId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.steps.length()").value(2))
+                .andExpect(jsonPath("$.data.steps[0].id").value("copied-start"))
+                .andExpect(jsonPath("$.data.steps[1].id").value("copied-call"));
+    }
+
+    @Test
+    void configureFlowAllowsSavingExistingStepIdsForTheSameFlow() throws Exception {
+        ProjectFixture project = createProject("Flow Same Step Target");
+        long endpointId = createHttpEndpoint(project.id(), "Same Step Endpoint");
+        long flowId = createFlow(project.id(), "Same Flow");
+
+        mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", flowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [
+                                  {"id":"same-start","type":"START","nextIfTrue":"same-call"},
+                                  {"id":"same-call","type":"ENDPOINT","endpointId":%d}
+                                ]
+                                """.formatted(endpointId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+
+        mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", flowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [
+                                  {"id":"same-start","type":"START","nextIfTrue":"same-call"},
+                                  {"id":"same-call","type":"ENDPOINT","endpointId":%d,
+                                   "preProcessor":{"token":"{{ authToken }}"}}
+                                ]
+                                """.formatted(endpointId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[1].preProcessor").value("{\"token\":\"{{ authToken }}\"}"));
     }
 
     @Test

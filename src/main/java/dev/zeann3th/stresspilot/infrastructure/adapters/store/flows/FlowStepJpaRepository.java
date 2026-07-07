@@ -1,6 +1,7 @@
 package dev.zeann3th.stresspilot.infrastructure.adapters.store.flows;
 
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
+import dev.zeann3th.stresspilot.core.domain.projections.FlowStepOwnerProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,9 @@ import java.util.List;
 
 @Repository
 public interface FlowStepJpaRepository extends JpaRepository<FlowStepEntity, String> {
+    @Query("SELECT s.id AS id, s.flow.id AS flowId FROM FlowStepEntity s WHERE s.id IN :ids")
+    List<FlowStepOwnerProjection> findStepOwnersByIdIn(@Param("ids") List<String> ids);
+
     @Query("SELECT s FROM FlowStepEntity s WHERE s.flow.id = :flowId")
     List<FlowStepEntity> findAllByFlowId(@Param("flowId") Long flowId);
 
@@ -20,4 +24,5 @@ public interface FlowStepJpaRepository extends JpaRepository<FlowStepEntity, Str
     @Modifying
     @Query("DELETE FROM FlowStepEntity s WHERE s.flow.id = :flowId")
     void deleteAllByFlowId(@Param("flowId") Long flowId);
+
 }

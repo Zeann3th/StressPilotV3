@@ -11,7 +11,6 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration
-      - org.springframework.ai.mcp.server.autoconfigure.McpWebMvcServerAutoConfiguration
   application:
     name: stresspilot
   data:
@@ -21,12 +20,13 @@ spring:
   ai:
     mcp:
       server:
-        enabled: false
-        transport: SSE
-        sse:
-          path: /mcp/sse
-        message:
-          path: /mcp/message
+        enabled: true
+        stdio: false
+        protocol: STREAMABLE
+        annotation-scanner:
+          enabled: true
+        streamable-http:
+          mcp-endpoint: /mcp
   servlet:
     multipart:
       max-file-size: 20MB

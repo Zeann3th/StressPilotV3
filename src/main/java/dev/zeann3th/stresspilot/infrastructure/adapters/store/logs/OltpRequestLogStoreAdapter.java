@@ -8,8 +8,11 @@ import dev.zeann3th.stresspilot.core.ports.store.RequestLogStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -26,6 +29,15 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
 
     private final OltpRequestLogRepository repository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private int pageSize = 2000;
+
+    void setPageSize(int pageSize) {
+        this.pageSize = pageSize;
+    }
+
     @Override
     public RequestLogEntity save(RequestLogEntity entity) { return repository.save(entity); }
 
@@ -35,9 +47,22 @@ public class OltpRequestLogStoreAdapter implements RequestLogStore {
     }
 
     @Override
-    @Transactional(readOnly = true) public void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer) {
-        try (Stream<RequestLogEntity> stream = repository.streamAllByRunId(runId)) {
-            stream.forEach(consumer);
+    @Transactional(readOnly = true)
+    public void streamLogsByRunId(String runId, Consumer<RequestLogEntity> consumer) {
+        int page = 0;
+        boolean hasNext = true;
+        while (hasNext) {
+            org.springframework.data.domain.Slice<RequestLogEntity> slice = repository.findSliceByRunId(
+                    runId,
+                    PageRequest.of(page, pageSize, Sort.by("id").ascending())
+            );
+            List<RequestLogEntity> content = slice.getContent();
+            for (RequestLogEntity entity : content) {
+                consumer.accept(entity);
+            }
+            entityManager.clear();
+            hasNext = slice.hasNext();
+            page++;
         }
     }
 
