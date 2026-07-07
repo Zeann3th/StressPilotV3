@@ -23,6 +23,9 @@ public class Constants {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/ws/**",
+            "/mcp",
+            "/mcp/**",
+            "/sse",
             "/mcp/sse",
             "/mcp/message"
     );

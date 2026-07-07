@@ -118,6 +118,7 @@ public class FlowServiceImpl implements FlowService {
 
         List<FlowStepEntity> preview = stepsFromCommands(flow, stepCmds);
         validateStartStep(preview);
+        validateStepIdsBelongToFlow(flowId, preview);
 
         flowStepStore.deleteAllByFlowId(flowId);
         flowStepStore.saveAll(preview);
@@ -329,6 +330,25 @@ public class FlowServiceImpl implements FlowService {
             result.add(step);
         }
         return result;
+    }
+
+    private void validateStepIdsBelongToFlow(Long flowId, List<FlowStepEntity> steps) {
+        Set<String> seen = new HashSet<>();
+        for (FlowStepEntity step : steps) {
+            if (!seen.add(step.getId())) {
+                throw CommandExceptionBuilder.exception(ErrorCode.ER0020,
+                        Map.of(Constants.REASON, "Duplicate flow step id in request: " + step.getId()));
+            }
+        }
+
+        flowStepStore.findFlowIdsByStepIds(new ArrayList<>(seen)).entrySet().stream()
+                .filter(existing -> !Objects.equals(existing.getValue(), flowId))
+                .findFirst()
+                .ifPresent(existing -> {
+                    throw CommandExceptionBuilder.exception(ErrorCode.ER0020,
+                            Map.of(Constants.REASON,
+                                    "Flow step id already belongs to another flow: " + existing.getKey()));
+                });
     }
 
     private static void validateStartStep(List<FlowStepEntity> steps) {

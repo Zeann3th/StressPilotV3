@@ -1,12 +1,15 @@
 package dev.zeann3th.stresspilot.infrastructure.adapters.store.flows;
 
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
+import dev.zeann3th.stresspilot.core.domain.projections.FlowStepOwnerProjection;
 import dev.zeann3th.stresspilot.core.ports.store.FlowStepStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +29,14 @@ public class FlowStepStoreAdapter implements FlowStepStore {
     @Override
     public Optional<FlowStepEntity> findById(String id) {
         return flowStepJpaRepository.findById(id);
+    }
+
+    @Override
+    public Map<String, Long> findFlowIdsByStepIds(List<String> ids) {
+        return flowStepJpaRepository.findStepOwnersByIdIn(ids).stream()
+                .collect(Collectors.toMap(
+                        FlowStepOwnerProjection::getId,
+                        FlowStepOwnerProjection::getFlowId));
     }
 
     @Override

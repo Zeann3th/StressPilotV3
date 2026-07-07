@@ -76,12 +76,12 @@ abstract class AbstractApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 [
-                                  {"id":"start","type":"START","nextIfTrue":"call"},
-                                  {"id":"call","type":"ENDPOINT","endpointId":%d,
+                                  {"id":"start-%d","type":"START","nextIfTrue":"call-%d"},
+                                  {"id":"call-%d","type":"ENDPOINT","endpointId":%d,
                                    "preProcessor":{"token":"{{ authToken }}"},
                                    "postProcessor":{"capture":"$.id"}}
                                 ]
-                                """.formatted(endpointId)))
+                                """.formatted(flowId, flowId, flowId, endpointId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2));
     }

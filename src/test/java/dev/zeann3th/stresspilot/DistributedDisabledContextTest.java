@@ -15,8 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "application.distributed.enabled=false",
         "management.health.redis.enabled=false",
-        "spring.autoconfigure.exclude=org.springframework.ai.mcp.server.autoconfigure.McpWebMvcServerAutoConfiguration,"
-                + "org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration"
+        "spring.ai.mcp.server.enabled=false",
+        "spring.autoconfigure.exclude=org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration"
 })
 @ActiveProfiles("test")
 class DistributedDisabledContextTest {

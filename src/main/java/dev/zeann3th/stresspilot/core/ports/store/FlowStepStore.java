@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.core.ports.store;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowStepEntity;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface FlowStepStore {
@@ -11,6 +12,8 @@ public interface FlowStepStore {
     List<FlowStepEntity> saveAll(Iterable<FlowStepEntity> entities);
 
     Optional<FlowStepEntity> findById(String id);
+
+    Map<String, Long> findFlowIdsByStepIds(List<String> ids);
 
     List<FlowStepEntity> findAllByFlowId(Long flowId);
 
