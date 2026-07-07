@@ -42,9 +42,8 @@ class McpStreamableIntegrationTest {
                 .build()) {
             client.initialize();
 
-            List<String> toolNames = client.listTools().tools().stream()
-                    .map(McpSchema.Tool::name)
-                    .toList();
+            List<McpSchema.Tool> tools = client.listTools().tools();
+            List<String> toolNames = tools.stream().map(McpSchema.Tool::name).toList();
 
             assertThat(toolNames)
                     .contains(
@@ -68,11 +67,18 @@ class McpStreamableIntegrationTest {
                             "listAllFunctions")
                     .doesNotContain("getRunAnalysisDump");
 
+            assertThat(tools.stream()
+                    .filter(tool -> "listProjects".equals(tool.name()))
+                    .findFirst()
+                    .orElseThrow()
+                    .outputSchema())
+                    .isNotNull();
+
             McpSchema.CallToolResult result = client.callTool(
                     new McpSchema.CallToolRequest("listProjects", Map.of("name", "")));
 
             assertThat(result.isError()).isNotEqualTo(Boolean.TRUE);
-            assertThat(result.content()).isNotEmpty();
+            assertThat(result.structuredContent()).isNotNull();
 
             McpSchema.CallToolResult endpointsResult = client.callTool(
                     new McpSchema.CallToolRequest("listEndpoints", Map.of("projectId", 1, "name", "")));
