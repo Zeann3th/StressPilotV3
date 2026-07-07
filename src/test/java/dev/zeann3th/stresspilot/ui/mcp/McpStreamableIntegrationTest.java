@@ -47,13 +47,40 @@ class McpStreamableIntegrationTest {
                     .toList();
 
             assertThat(toolNames)
-                    .contains("listProjects", "listFlows", "getRunAnalysisDump");
+                    .contains(
+                            "listProjects",
+                            "getProject",
+                            "listProjectEnvironments",
+                            "listEndpoints",
+                            "getEndpoint",
+                            "updateEndpoint",
+                            "listFlows",
+                            "getFlowDetail",
+                            "updateFlow",
+                            "dryRunStep",
+                            "getAllRuns",
+                            "getRunDetail",
+                            "getLastRun",
+                            "listConfigs",
+                            "getConfigValue",
+                            "getConfigsByKeys",
+                            "listFunctions",
+                            "listAllFunctions")
+                    .doesNotContain("getRunAnalysisDump");
 
             McpSchema.CallToolResult result = client.callTool(
                     new McpSchema.CallToolRequest("listProjects", Map.of("name", "")));
 
             assertThat(result.isError()).isNotEqualTo(Boolean.TRUE);
             assertThat(result.content()).isNotEmpty();
+
+            McpSchema.CallToolResult endpointsResult = client.callTool(
+                    new McpSchema.CallToolRequest("listEndpoints", Map.of("projectId", 1, "name", "")));
+            assertThat(endpointsResult.isError()).isNotEqualTo(Boolean.TRUE);
+
+            McpSchema.CallToolResult flowsResult = client.callTool(
+                    new McpSchema.CallToolRequest("listFlows", Map.of("projectId", 1, "name", "")));
+            assertThat(flowsResult.isError()).isNotEqualTo(Boolean.TRUE);
         }
     }
 }

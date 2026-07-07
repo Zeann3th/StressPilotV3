@@ -1,6 +1,8 @@
 package dev.zeann3th.stresspilot.ui.mcp;
 
 import dev.zeann3th.stresspilot.core.domain.commands.flow.CreateFlowCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepCommand;
+import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepResult;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
@@ -40,6 +42,13 @@ public class FlowMcpTools {
         return flowService.createFlow(cmd);
     }
 
+    @McpTool(description = "Update an existing flow. Patch fields match flow JSON properties, for example { \"name\": \"Checkout Flow\", \"type\": \"DEFAULT\" }")
+    public FlowEntity updateFlow(
+            @McpToolParam(description = "Flow ID") Long flowId,
+            @McpToolParam(description = "Flow patch data") Map<String, Object> patch) {
+        return flowService.updateFlow(flowId, patch);
+    }
+
     @McpTool(description = "Delete a test flow")
     public void deleteFlow(
             @McpToolParam(description = "Flow ID") Long flowId) {
@@ -59,5 +68,12 @@ public class FlowMcpTools {
             @McpToolParam(description = "Flow ID") Long flowId,
             @McpToolParam(description = "Run parameters") RunFlowCommand cmd) {
         return flowService.runFlow(flowId, cmd);
+    }
+
+    @McpTool(description = "Dry-run a single flow step without persisting request logs")
+    public DryRunStepResult dryRunStep(
+            @McpToolParam(description = "Flow ID") Long flowId,
+            @McpToolParam(description = "Dry-run step command") DryRunStepCommand cmd) {
+        return flowService.dryRunStep(flowId, cmd);
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -18,6 +19,18 @@ public class ConfigMcpTools {
     @McpTool(description = "List all application configurations")
     public Map<String, String> listConfigs() {
         return configService.getAllConfigs();
+    }
+
+    @McpTool(description = "Get a configuration value by key")
+    public String getConfigValue(
+            @McpToolParam(description = "Configuration key") String key) {
+        return configService.getValue(key).orElse(null);
+    }
+
+    @McpTool(description = "Get multiple configuration values by key")
+    public Map<String, String> getConfigsByKeys(
+            @McpToolParam(description = "Configuration keys") List<String> keys) {
+        return configService.getConfigsByKeys(keys);
     }
 
     @McpTool(description = "Update a specific configuration value")

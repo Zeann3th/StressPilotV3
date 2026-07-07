@@ -1,6 +1,5 @@
 package dev.zeann3th.stresspilot.ui.mcp;
 
-import dev.zeann3th.stresspilot.core.domain.commands.run.RunAnalysisDump;
 import dev.zeann3th.stresspilot.core.domain.entities.RunEntity;
 import dev.zeann3th.stresspilot.core.services.runs.RunService;
 import lombok.RequiredArgsConstructor;
@@ -26,12 +25,6 @@ public class RunMcpTools {
     public RunEntity getRunDetail(
             @McpToolParam(description = "Run ID") String runId) {
         return runService.getRunDetail(runId);
-    }
-
-    @McpTool(description = "Get an AI-readable full run dump with run metadata, calculated report metrics, and every request/response log for analysis")
-    public RunAnalysisDump getRunAnalysisDump(
-            @McpToolParam(description = "Run ID") String runId) {
-        return runService.getRunAnalysisDump(runId);
     }
 
     @McpTool(description = "Get the latest run for a flow")

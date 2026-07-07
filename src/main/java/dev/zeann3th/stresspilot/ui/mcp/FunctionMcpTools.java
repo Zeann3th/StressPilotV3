@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 public class FunctionMcpTools {
@@ -21,6 +23,11 @@ public class FunctionMcpTools {
     public Page<FunctionEntity> listFunctions(
             @McpToolParam(description = "Optional name filter") String name) {
         return functionService.getListFunction(name, PageRequest.of(0, 100));
+    }
+
+    @McpTool(description = "List all custom functions/processors without pagination")
+    public List<FunctionEntity> listAllFunctions() {
+        return functionService.getAllFunctions();
     }
 
     @McpTool(description = "Get detailed information about a function")

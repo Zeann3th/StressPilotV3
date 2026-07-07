@@ -42,6 +42,13 @@ public class EndpointMcpTools {
         return endpointService.createEndpoint(cmd);
     }
 
+    @McpTool(description = "Update an existing endpoint. Patch fields match endpoint JSON properties, for example { \"name\": \"Get Users\", \"url\": \"http://localhost:8080/users\" }")
+    public EndpointEntity updateEndpoint(
+            @McpToolParam(description = "Endpoint ID") Long endpointId,
+            @McpToolParam(description = "Endpoint patch data") Map<String, Object> patch) {
+        return endpointService.updateEndpoint(endpointId, patch);
+    }
+
     @McpTool(description = "Delete an endpoint")
     public void deleteEndpoint(
             @McpToolParam(description = "Endpoint ID") Long id) {
