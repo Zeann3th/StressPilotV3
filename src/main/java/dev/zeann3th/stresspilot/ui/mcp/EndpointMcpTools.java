@@ -4,8 +4,9 @@ import dev.zeann3th.stresspilot.core.domain.commands.endpoint.CreateEndpointComm
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteAdhocEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.endpoint.ExecuteEndpointResponse;
-import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import dev.zeann3th.stresspilot.core.services.endpoints.EndpointService;
+import dev.zeann3th.stresspilot.ui.restful.dtos.endpoint.EndpointResponseDTO;
+import dev.zeann3th.stresspilot.ui.restful.mappers.EndpointMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
@@ -20,33 +21,35 @@ import java.util.Map;
 public class EndpointMcpTools {
 
     private final EndpointService endpointService;
+    private final EndpointMapper endpointMapper;
 
-    @McpTool(description = "List endpoints with optional project and name filter")
-    public Page<EndpointEntity> listEndpoints(
+    @McpTool(description = "List endpoints with optional project and name filter", generateOutputSchema = true)
+    public Page<EndpointResponseDTO> listEndpoints(
             @McpToolParam(description = "Optional project ID filter") Long projectId,
             @McpToolParam(description = "Optional endpoint name filter") String name) {
-        return endpointService.getAllEndpoints(projectId, name, PageRequest.of(0, 100));
+        return endpointService.getAllEndpoints(projectId, name, PageRequest.of(0, 100))
+                .map(endpointMapper::toResponse);
     }
 
-    @McpTool(description = "Get detailed information about an endpoint")
-    public EndpointEntity getEndpoint(
+    @McpTool(description = "Get detailed information about an endpoint", generateOutputSchema = true)
+    public EndpointResponseDTO getEndpoint(
             @McpToolParam(description = "Endpoint ID") Long id) {
-        return endpointService.getEndpointById(id);
+        return endpointMapper.toResponse(endpointService.getEndpointById(id));
     }
 
     @McpTool(description = "Create a new endpoint. Example JSON for CreateEndpointCommand: " +
             "{ \"projectId\": 1, \"name\": \"Get User\", \"type\": \"HTTP\", \"url\": \"http://api/users\", " +
-            "\"httpMethod\": \"GET\", \"httpHeaders\": { \"Accept\": \"application/json\" } }")
-    public EndpointEntity createEndpoint(
+            "\"httpMethod\": \"GET\", \"httpHeaders\": { \"Accept\": \"application/json\" } }", generateOutputSchema = true)
+    public EndpointResponseDTO createEndpoint(
             @McpToolParam(description = "Creation command") CreateEndpointCommand cmd) {
-        return endpointService.createEndpoint(cmd);
+        return endpointMapper.toResponse(endpointService.createEndpoint(cmd));
     }
 
-    @McpTool(description = "Update an existing endpoint. Patch fields match endpoint JSON properties, for example { \"name\": \"Get Users\", \"url\": \"http://localhost:8080/users\" }")
-    public EndpointEntity updateEndpoint(
+    @McpTool(description = "Update an existing endpoint. Patch fields match endpoint JSON properties, for example { \"name\": \"Get Users\", \"url\": \"http://localhost:8080/users\" }", generateOutputSchema = true)
+    public EndpointResponseDTO updateEndpoint(
             @McpToolParam(description = "Endpoint ID") Long endpointId,
             @McpToolParam(description = "Endpoint patch data") Map<String, Object> patch) {
-        return endpointService.updateEndpoint(endpointId, patch);
+        return endpointMapper.toResponse(endpointService.updateEndpoint(endpointId, patch));
     }
 
     @McpTool(description = "Delete an endpoint")
@@ -56,7 +59,7 @@ public class EndpointMcpTools {
     }
 
     @McpTool(description = "Execute a specific endpoint. Example JSON for ExecuteEndpointCommand: " +
-            "{ \"url\": \"http://custom-url\", \"variables\": { \"id\": 123 }, \"httpMethod\": \"POST\" }")
+            "{ \"url\": \"http://custom-url\", \"variables\": { \"id\": 123 }, \"httpMethod\": \"POST\" }", generateOutputSchema = true)
     public ExecuteEndpointResponse executeEndpoint(
             @McpToolParam(description = "Endpoint ID") Long endpointId,
             @McpToolParam(description = "Execution parameters") ExecuteEndpointCommand cmd) {
@@ -64,7 +67,7 @@ public class EndpointMcpTools {
     }
 
     @McpTool(description = "Execute an ad-hoc endpoint (not saved). Example JSON for ExecuteAdhocEndpointCommand: " +
-            "{ \"url\": \"http://temp-url\", \"type\": \"HTTP\", \"httpMethod\": \"GET\" }")
+            "{ \"url\": \"http://temp-url\", \"type\": \"HTTP\", \"httpMethod\": \"GET\" }", generateOutputSchema = true)
     public ExecuteEndpointResponse executeAdhocEndpoint(
             @McpToolParam(description = "Project ID") Long projectId,
             @McpToolParam(description = "Execution parameters") ExecuteAdhocEndpointCommand cmd) {

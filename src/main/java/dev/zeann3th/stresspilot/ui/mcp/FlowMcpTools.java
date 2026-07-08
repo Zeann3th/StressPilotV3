@@ -5,8 +5,9 @@ import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepResult;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
-import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
 import dev.zeann3th.stresspilot.core.services.flows.FlowService;
+import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowResponseDTO;
+import dev.zeann3th.stresspilot.ui.restful.mappers.FlowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
@@ -22,31 +23,33 @@ import java.util.Map;
 public class FlowMcpTools {
 
     private final FlowService flowService;
+    private final FlowMapper flowMapper;
 
-    @McpTool(description = "List test flows with optional project and name filter")
-    public Page<FlowEntity> listFlows(
+    @McpTool(description = "List test flows with optional project and name filter", generateOutputSchema = true)
+    public Page<FlowResponseDTO> listFlows(
             @McpToolParam(description = "Optional project ID filter") Long projectId,
             @McpToolParam(description = "Optional flow name filter") String name) {
-        return flowService.getListFlow(projectId, name, PageRequest.of(0, 100));
+        return flowService.getListFlow(projectId, name, PageRequest.of(0, 100))
+                .map(flowMapper::toResponse);
     }
 
-    @McpTool(description = "Get detailed information about a test flow")
-    public FlowEntity getFlowDetail(
+    @McpTool(description = "Get detailed information about a test flow", generateOutputSchema = true)
+    public FlowResponseDTO getFlowDetail(
             @McpToolParam(description = "Flow ID") Long flowId) {
-        return flowService.getFlowDetail(flowId);
+        return flowMapper.toResponse(flowService.getFlowDetail(flowId));
     }
 
-    @McpTool(description = "Create a new test flow. Example JSON: { \"projectId\": 1, \"name\": \"User Login Flow\", \"type\": \"DEFAULT\" }")
-    public FlowEntity createFlow(
+    @McpTool(description = "Create a new test flow. Example JSON: { \"projectId\": 1, \"name\": \"User Login Flow\", \"type\": \"DEFAULT\" }", generateOutputSchema = true)
+    public FlowResponseDTO createFlow(
             @McpToolParam(description = "Creation command") CreateFlowCommand cmd) {
-        return flowService.createFlow(cmd);
+        return flowMapper.toResponse(flowService.createFlow(cmd));
     }
 
-    @McpTool(description = "Update an existing flow. Patch fields match flow JSON properties, for example { \"name\": \"Checkout Flow\", \"type\": \"DEFAULT\" }")
-    public FlowEntity updateFlow(
+    @McpTool(description = "Update an existing flow. Patch fields match flow JSON properties, for example { \"name\": \"Checkout Flow\", \"type\": \"DEFAULT\" }", generateOutputSchema = true)
+    public FlowResponseDTO updateFlow(
             @McpToolParam(description = "Flow ID") Long flowId,
             @McpToolParam(description = "Flow patch data") Map<String, Object> patch) {
-        return flowService.updateFlow(flowId, patch);
+        return flowMapper.toResponse(flowService.updateFlow(flowId, patch));
     }
 
     @McpTool(description = "Delete a test flow")
@@ -70,7 +73,7 @@ public class FlowMcpTools {
         return flowService.runFlow(flowId, cmd);
     }
 
-    @McpTool(description = "Dry-run a single flow step without persisting request logs")
+    @McpTool(description = "Dry-run a single flow step without persisting request logs", generateOutputSchema = true)
     public DryRunStepResult dryRunStep(
             @McpToolParam(description = "Flow ID") Long flowId,
             @McpToolParam(description = "Dry-run step command") DryRunStepCommand cmd) {

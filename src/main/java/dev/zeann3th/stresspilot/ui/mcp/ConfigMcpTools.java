@@ -16,7 +16,7 @@ public class ConfigMcpTools {
 
     private final ConfigService configService;
 
-    @McpTool(description = "List all application configurations")
+    @McpTool(description = "List all application configurations", generateOutputSchema = true)
     public Map<String, String> listConfigs() {
         return configService.getAllConfigs();
     }
@@ -27,7 +27,7 @@ public class ConfigMcpTools {
         return configService.getValue(key).orElse(null);
     }
 
-    @McpTool(description = "Get multiple configuration values by key")
+    @McpTool(description = "Get multiple configuration values by key", generateOutputSchema = true)
     public Map<String, String> getConfigsByKeys(
             @McpToolParam(description = "Configuration keys") List<String> keys) {
         return configService.getConfigsByKeys(keys);
