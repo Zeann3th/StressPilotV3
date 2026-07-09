@@ -86,8 +86,7 @@ public class FlowProcessor {
 
         String delay = DataUtils.replaceVariables(String.valueOf(delayObj), variables);
         long base = Long.parseLong(delay);
-        long jitter = 500L + RANDOM.nextInt(501);
-        Thread.sleep(base + jitter);
+        Thread.sleep(base);
     }
 
     private void applyClear(Map<String, Object> proc, Map<String, Object> variables) {
