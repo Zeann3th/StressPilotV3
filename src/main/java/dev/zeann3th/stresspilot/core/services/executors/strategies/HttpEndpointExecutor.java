@@ -53,7 +53,7 @@ public class HttpEndpointExecutor implements EndpointExecutor {
 
             Request request = buildRequest(endpoint, environment);
 
-            log.info("HTTP request after interpolation: {}", request);
+            log.debug("HTTP request after interpolation: {}", request);
 
             long startTime = System.currentTimeMillis();
             try (Response response = client.newCall(request).execute()) {
