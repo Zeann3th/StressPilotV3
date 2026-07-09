@@ -35,7 +35,7 @@ public class DefaultFlowExecutor extends FlowExecutor {
         FlowStepEntity startStep = findStartNode(stepMap);
         if (startStep == null) return;
 
-        log.info("Run {} thread {} started", ctx.getRunId(), ctx.getThreadId());
+        log.debug("Run {} thread {} started", ctx.getRunId(), ctx.getThreadId());
 
         while (!ctx.shouldStop()) {
             try {
@@ -46,7 +46,7 @@ public class DefaultFlowExecutor extends FlowExecutor {
             }
         }
 
-        log.info("Run {} thread {} finished: {} iterations", ctx.getRunId(), ctx.getThreadId(), ctx.getIterationCount());
+        log.debug("Run {} thread {} finished: {} iterations", ctx.getRunId(), ctx.getThreadId(), ctx.getIterationCount());
         ctx.getExecutionContext().clear();
     }
 
