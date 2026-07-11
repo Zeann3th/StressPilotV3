@@ -33,6 +33,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -94,10 +95,21 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
     public ExecuteEndpointResponse execute(EndpointEntity endpoint,
             Map<String, Object> environment,
             ExecutionContext context) {
+        Map<String, Object> requestDetails = null;
         try {
             String target = interpolate(endpoint.getUrl(), environment);
             String bodyJson = interpolate(endpoint.getBody(), environment);
             Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
+
+            // Build requestDetails map
+            requestDetails = new LinkedHashMap<>();
+            requestDetails.put("endpointId", endpoint.getId());
+            requestDetails.put("endpointName", endpoint.getName());
+            requestDetails.put("type", endpoint.getType());
+            requestDetails.put("target", target);
+            requestDetails.put("service", endpoint.getGrpcServiceName());
+            requestDetails.put("method", endpoint.getGrpcMethodName());
+            requestDetails.put("body", bodyJson);
 
             Descriptors.MethodDescriptor methodProto = getDescriptor(endpoint);
             DynamicMessage requestMsg = buildRequest(methodProto, bodyJson);
@@ -116,6 +128,7 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
                     .responseTimeMs(elapsed)
                     .data(data)
                     .rawResponse(responseJson)
+                    .requestDetails(requestDetails)
                     .build();
 
         } catch (Exception e) {
@@ -127,6 +140,7 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
                     .responseTimeMs(0)
                     .data(Map.of("error", String.valueOf(e.getMessage())))
                     .rawResponse(e.toString())
+                    .requestDetails(requestDetails)
                     .build();
         }
     }

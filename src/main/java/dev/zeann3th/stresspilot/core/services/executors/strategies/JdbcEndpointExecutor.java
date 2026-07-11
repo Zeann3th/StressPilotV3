@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +44,14 @@ public class JdbcEndpointExecutor implements EndpointExecutor {
 
         String query = parseString(endpoint.getBody(), environment);
 
+        // Build requestDetails map
+        Map<String, Object> requestDetails = new LinkedHashMap<>();
+        requestDetails.put("endpointId", endpoint.getId());
+        requestDetails.put("endpointName", endpoint.getName());
+        requestDetails.put("type", endpoint.getType());
+        requestDetails.put("url", url);
+        requestDetails.put("query", query);
+
         try {
             HikariDataSource dataSource = getDataSource(url, user, password);
 
@@ -67,6 +76,7 @@ public class JdbcEndpointExecutor implements EndpointExecutor {
                         .responseTimeMs(System.currentTimeMillis() - startTime)
                         .data(resultData)
                         .rawResponse(DataUtils.parseObjToString(resultData))
+                        .requestDetails(requestDetails)
                         .build();
             }
 
@@ -79,6 +89,7 @@ public class JdbcEndpointExecutor implements EndpointExecutor {
                     .responseTimeMs(System.currentTimeMillis() - startTime)
                     .data(Map.of("errorCode", e.getErrorCode(), "sqlState", e.getSQLState()))
                     .rawResponse(e.getMessage())
+                    .requestDetails(requestDetails)
                     .build();
         } catch (Exception e) {
             log.error("Unexpected error executing JDBC request", e);
@@ -87,6 +98,7 @@ public class JdbcEndpointExecutor implements EndpointExecutor {
                     .success(false)
                     .message("Error: " + e.getMessage())
                     .responseTimeMs(System.currentTimeMillis() - startTime)
+                    .requestDetails(requestDetails)
                     .build();
         }
     }

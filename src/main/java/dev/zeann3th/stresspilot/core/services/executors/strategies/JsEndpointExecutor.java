@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -104,6 +105,16 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String script = endpointEntity.getBody() != null ? endpointEntity.getBody() : "";
         script = DataUtils.replaceVariables(script, environment);
         script = MockDataUtils.interpolate(script);
+
+        String url = endpointEntity.getUrl() != null ? DataUtils.replaceVariables(MockDataUtils.interpolate(endpointEntity.getUrl()), environment) : null;
+
+        Map<String, Object> requestDetails = new LinkedHashMap<>();
+        requestDetails.put("endpointId", endpointEntity.getId());
+        requestDetails.put("endpointName", endpointEntity.getName());
+        requestDetails.put("type", endpointEntity.getType());
+        requestDetails.put("url", url);
+        requestDetails.put("body", script);
+
         if (udfDirty.get()) {
             loadUserDefinedFunctions();
         }
@@ -194,6 +205,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .data(unwrappedData)
                     .rawResponse(rawResponse)
                     .message(isSuccess ? "JS Execution Successful" : "JS Execution returned false/failed status")
+                    .requestDetails(requestDetails)
                     .build();
 
         } catch (Exception e) {
@@ -202,6 +214,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .success(false)
                     .responseTimeMs(System.currentTimeMillis() - startTime)
                     .message("JS Execution Error: " + e.getMessage())
+                    .requestDetails(requestDetails)
                     .build();
         }
     }
