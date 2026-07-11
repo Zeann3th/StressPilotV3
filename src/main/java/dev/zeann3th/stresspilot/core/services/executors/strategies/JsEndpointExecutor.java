@@ -106,7 +106,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
         script = DataUtils.replaceVariables(script, environment);
         script = MockDataUtils.interpolate(script);
 
-        String url = endpointEntity.getUrl() != null ? DataUtils.replaceVariables(MockDataUtils.interpolate(endpointEntity.getUrl()), environment) : null;
+        String url = endpointEntity.getUrl() != null ? MockDataUtils.interpolate(DataUtils.replaceVariables(endpointEntity.getUrl(), environment)) : null;
 
         Map<String, Object> requestDetails = new LinkedHashMap<>();
         requestDetails.put("endpointId", endpointEntity.getId());
