@@ -3,6 +3,7 @@ package dev.zeann3th.stresspilot.core.services.executors.context;
 import okhttp3.Cookie;
 import okhttp3.CookieJar;
 import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -13,6 +14,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HttpExecutionContext implements CookieJar {
     private final Map<String, List<Cookie>> cookieStore = new ConcurrentHashMap<>();
+    private OkHttpClient httpClient;
+
+    public OkHttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    public void setHttpClient(OkHttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     @Override
     public void saveFromResponse(@NotNull HttpUrl url, @NotNull List<Cookie> cookies) {

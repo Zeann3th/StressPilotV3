@@ -47,9 +47,13 @@ public class HttpEndpointExecutor implements EndpointExecutor {
         try {
             HttpExecutionContext httpContext = context.getState(HttpExecutionContext.class, HttpExecutionContext::new);
 
-            OkHttpClient client = baseClient.newBuilder()
-                    .cookieJar(httpContext)
-                    .build();
+            OkHttpClient client = httpContext.getHttpClient();
+            if (client == null) {
+                client = baseClient.newBuilder()
+                        .cookieJar(httpContext)
+                        .build();
+                httpContext.setHttpClient(client);
+            }
 
             Request request = buildRequest(endpoint, environment);
 

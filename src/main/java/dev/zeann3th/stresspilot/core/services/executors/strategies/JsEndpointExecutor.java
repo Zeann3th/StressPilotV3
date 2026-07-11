@@ -39,6 +39,8 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
     private final AtomicBoolean udfDirty = new AtomicBoolean(true);
 
+    private final Map<String, Boolean> requiresWrappingCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         engine = Engine.newBuilder("js")
@@ -110,11 +112,22 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String functionName = jsState.getFunctionName();
         List<Object> functionArgs = jsState.getFunctionArgs();
 
-        try (Context context = Context.newBuilder("js")
-                .engine(engine)
-                .allowHostAccess(HostAccess.ALL)
-                .allowHostClassLookup(_ -> true)
-                .build()) {
+        try {
+            if (udfDirty.get()) {
+                loadUserDefinedFunctions();
+                jsState.close();
+            }
+
+            Context context = jsState.getGraalContext();
+            boolean isNewContext = (context == null);
+            if (isNewContext) {
+                context = Context.newBuilder("js")
+                        .engine(engine)
+                        .allowHostAccess(HostAccess.ALL)
+                        .allowHostClassLookup(_ -> true)
+                        .build();
+                jsState.setGraalContext(context);
+            }
 
             Value bindings = context.getBindings("js");
 
@@ -128,7 +141,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                 return null;
             });
 
-            if (udfSource != null) {
+            if (isNewContext && udfSource != null) {
                 context.eval(udfSource);
             }
 
@@ -194,12 +207,19 @@ public class JsEndpointExecutor implements EndpointExecutor {
     }
 
     private Value evalEndpointScript(Context context, String script) {
+        if (Boolean.TRUE.equals(requiresWrappingCache.get(script))) {
+            return context.eval("js", "(function(){\n" + script + "\n})()");
+        }
+
         try {
-            return context.eval("js", script);
+            Value res = context.eval("js", script);
+            requiresWrappingCache.putIfAbsent(script, Boolean.FALSE);
+            return res;
         } catch (PolyglotException e) {
             if (!isIllegalTopLevelReturn(e)) {
                 throw e;
             }
+            requiresWrappingCache.put(script, Boolean.TRUE);
             return context.eval("js", "(function(){\n" + script + "\n})()");
         }
     }
