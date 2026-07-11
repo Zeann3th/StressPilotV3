@@ -60,7 +60,7 @@ public class HttpEndpointExecutor implements EndpointExecutor {
             // Perform the interpolation of URL, headers, parameters, and body EXACTLY ONCE at the start
             String url = endpoint.getUrl() != null ? parseUrl(endpoint.getUrl(), environment) : null;
             Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
-            String parameters = endpoint.getHttpParameters() != null ? DataUtils.replaceVariables(MockDataUtils.interpolate(endpoint.getHttpParameters()), environment) : null;
+            String parameters = endpoint.getHttpParameters() != null ? MockDataUtils.interpolate(DataUtils.replaceVariables(endpoint.getHttpParameters(), environment)) : null;
             
             String requestBodyStr = null;
             if (DataUtils.hasText(endpoint.getBody())) {

@@ -150,16 +150,6 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         return new NodeHandlerResult(nextId, result.getData());
     }
 
-    private String formatRequest(EndpointEntity endpoint, Map<String, Object> variables) {
-        return DataUtils.parseObjToJson(requestMap(endpoint, variables));
-    }
-
-    private String formatReportRequest(EndpointEntity endpoint, FlowExecutionContext context) {
-        Map<String, Object> request = requestMap(endpoint, context.getVariables());
-        request.put("variables_snapshot", reportVariablesSnapshot(context));
-        return DataUtils.parseObjToJson(request);
-    }
-
     private Map<String, Object> requestMap(EndpointEntity endpoint, Map<String, Object> variables) {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("endpointId", endpoint.getId());
