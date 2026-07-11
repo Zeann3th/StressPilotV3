@@ -57,29 +57,11 @@ public class HttpEndpointExecutor implements EndpointExecutor {
                 httpContext.setHttpClient(client);
             }
 
-            Request request = buildRequest(endpoint, environment);
-
-            log.debug("HTTP request after interpolation: {}", request);
-
-            // Populate the request details map using the exact interpolated properties used for the call
-            requestDetails = new LinkedHashMap<>();
-            requestDetails.put("endpointId", endpoint.getId());
-            requestDetails.put("endpointName", endpoint.getName());
-            requestDetails.put("type", endpoint.getType());
-            requestDetails.put("method", request.method());
-            requestDetails.put("url", request.url().toString());
+            // Perform the interpolation of URL, headers, parameters, and body EXACTLY ONCE at the start
+            String url = endpoint.getUrl() != null ? parseUrl(endpoint.getUrl(), environment) : null;
+            Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
+            String parameters = endpoint.getHttpParameters() != null ? DataUtils.replaceVariables(MockDataUtils.interpolate(endpoint.getHttpParameters()), environment) : null;
             
-            // Extract request headers
-            Map<String, String> headersMap = new HashMap<>();
-            for (String name : request.headers().names()) {
-                headersMap.put(name, request.header(name));
-            }
-            requestDetails.put("headers", jsonMapper.writeValueAsString(headersMap));
-            
-            // Extract request parameters from the URL if any
-            requestDetails.put("parameters", endpoint.getHttpParameters() != null ? DataUtils.replaceVariables(MockDataUtils.interpolate(endpoint.getHttpParameters()), environment) : null);
-            
-            // Extract body string if it has text
             String requestBodyStr = null;
             if (DataUtils.hasText(endpoint.getBody())) {
                 requestBodyStr = endpoint.getBody();
@@ -90,6 +72,21 @@ public class HttpEndpointExecutor implements EndpointExecutor {
                     requestBodyStr = MockDataUtils.interpolate(requestBodyStr);
                 }
             }
+
+            // Build the OkHttp request using these pre-interpolated variables
+            Request request = buildRequest(endpoint, url, headers, requestBodyStr);
+
+            log.debug("HTTP request after interpolation: {}", request);
+
+            // Populate requestDetails using the exact same variables
+            requestDetails = new LinkedHashMap<>();
+            requestDetails.put("endpointId", endpoint.getId());
+            requestDetails.put("endpointName", endpoint.getName());
+            requestDetails.put("type", endpoint.getType());
+            requestDetails.put("method", request.method());
+            requestDetails.put("url", url);
+            requestDetails.put("headers", jsonMapper.writeValueAsString(headers));
+            requestDetails.put("parameters", parameters);
             requestDetails.put("body", requestBodyStr);
 
             long startTime = System.currentTimeMillis();
@@ -126,17 +123,13 @@ public class HttpEndpointExecutor implements EndpointExecutor {
         }
     }
 
-    private Request buildRequest(EndpointEntity endpoint, Map<String, Object> environment) {
-        String url = parseUrl(endpoint.getUrl(), environment);
-
-        Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
-
+    private Request buildRequest(EndpointEntity endpoint, String url, Map<String, String> headers, String requestBodyStr) {
         Request.Builder builder = new Request.Builder().url(url);
         headers.forEach(builder::addHeader);
 
         RequestBody requestBody = null;
-        if (DataUtils.hasText(endpoint.getBody())) {
-            requestBody = parseBody(endpoint.getBody(), headers, environment);
+        if (requestBodyStr != null) {
+            requestBody = createRequestBody(requestBodyStr, headers);
         }
 
         String method = endpoint.getHttpMethod().toUpperCase();
@@ -208,14 +201,7 @@ public class HttpEndpointExecutor implements EndpointExecutor {
         }
     }
 
-    private RequestBody parseBody(String rawBody, Map<String, String> headers, Map<String, Object> environment) {
-        String processedBody = rawBody;
-        if (processedBody.contains("{{")) {
-            processedBody = DataUtils.replaceVariables(processedBody, environment);
-        }
-        if (processedBody.contains("@{")) {
-            processedBody = MockDataUtils.interpolate(processedBody);
-        }
+    private RequestBody createRequestBody(String processedBody, Map<String, String> headers) {
         log.debug("Request body after processing: {}", processedBody);
 
         String contentType = headers.entrySet().stream()
