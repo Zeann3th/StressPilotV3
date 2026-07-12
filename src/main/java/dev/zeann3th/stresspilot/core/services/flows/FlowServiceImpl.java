@@ -69,6 +69,20 @@ public class FlowServiceImpl implements FlowService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<EndpointEntity> getFlowEndpoints(Long flowId) {
+        if (flowStore.findById(flowId).isEmpty()) {
+            throw CommandExceptionBuilder.exception(ErrorCode.ER0003);
+        }
+
+        return flowStepStore.findAllByFlowIdWithEndpoint(flowId).stream()
+                .map(FlowStepEntity::getEndpoint)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    @Override
     @Transactional
     public FlowEntity createFlow(CreateFlowCommand createFlowCommand) {
         ProjectEntity project = projectStore.findById(createFlowCommand.getProjectId())

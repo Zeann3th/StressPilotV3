@@ -17,6 +17,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FlowApiIntegrationTest extends AbstractApiIntegrationTest {
 
     @Test
+    void getFlowEndpointsReturnsDistinctEndpointNames() throws Exception {
+        ProjectFixture project = createProject("Flow Endpoint List Target");
+        long endpointId = createHttpEndpoint(project.id(), "User Login");
+        long flowId = createFlow(project.id(), "Endpoint List Flow");
+
+        mockMvc.perform(post("/api/v1/flows/{flowId}/configuration", flowId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                [
+                                  {"id":"list-start","type":"START","nextIfTrue":"list-login-a"},
+                                  {"id":"list-login-a","type":"ENDPOINT","endpointId":%d,"nextIfTrue":"list-login-b"},
+                                  {"id":"list-login-b","type":"ENDPOINT","endpointId":%d}
+                                ]
+                                """.formatted(endpointId, endpointId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/flows/{flowId}/endpoints", flowId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(endpointId))
+                .andExpect(jsonPath("$.data[0].name").value("User Login"));
+    }
+
+    @Test
     void createConfigureDetailPatchRunAndDeleteFlow() throws Exception {
         ProjectFixture project = createProject("Flow API Target");
         long endpointId = createHttpEndpoint(project.id(), "Flow Endpoint Target");

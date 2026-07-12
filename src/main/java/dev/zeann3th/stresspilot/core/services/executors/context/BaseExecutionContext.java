@@ -15,6 +15,14 @@ public class BaseExecutionContext implements ExecutionContext{
 
     @Override
     public void clear() {
+        states.values().forEach(state -> {
+            if (state instanceof AutoCloseable closeable) {
+                try {
+                    closeable.close();
+                } catch (Exception ignored) {
+                }
+            }
+        });
         states.clear();
     }
 }

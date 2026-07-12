@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.FileInputStream;
@@ -32,6 +33,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 @SuppressWarnings("java:S112")
 public class GrpcEndpointExecutor implements EndpointExecutor {
+
+    static final String SECURE_TRANSPORT_HEADER = "X-StressPilot-Secure";
 
     private final JsonMapper jsonMapper;
     private final ConfigService configService;
@@ -91,13 +95,25 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
     public ExecuteEndpointResponse execute(EndpointEntity endpoint,
             Map<String, Object> environment,
             ExecutionContext context) {
+        Map<String, Object> requestDetails = null;
         try {
             String target = interpolate(endpoint.getUrl(), environment);
             String bodyJson = interpolate(endpoint.getBody(), environment);
+            Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
+
+            // Build requestDetails map
+            requestDetails = new LinkedHashMap<>();
+            requestDetails.put("endpointId", endpoint.getId());
+            requestDetails.put("endpointName", endpoint.getName());
+            requestDetails.put("type", endpoint.getType());
+            requestDetails.put("target", target);
+            requestDetails.put("service", endpoint.getGrpcServiceName());
+            requestDetails.put("method", endpoint.getGrpcMethodName());
+            requestDetails.put("body", bodyJson);
 
             Descriptors.MethodDescriptor methodProto = getDescriptor(endpoint);
             DynamicMessage requestMsg = buildRequest(methodProto, bodyJson);
-            ManagedChannel channel = getChannel(target);
+            ManagedChannel channel = getChannel(target, usesSecureTransport(headers));
 
             long start = System.currentTimeMillis();
             MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethod = buildGrpcMethod(methodProto, endpoint);
@@ -112,6 +128,7 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
                     .responseTimeMs(elapsed)
                     .data(data)
                     .rawResponse(responseJson)
+                    .requestDetails(requestDetails)
                     .build();
 
         } catch (Exception e) {
@@ -123,6 +140,7 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
                     .responseTimeMs(0)
                     .data(Map.of("error", String.valueOf(e.getMessage())))
                     .rawResponse(e.toString())
+                    .requestDetails(requestDetails)
                     .build();
         }
     }
@@ -150,11 +168,58 @@ public class GrpcEndpointExecutor implements EndpointExecutor {
         });
     }
 
-    private ManagedChannel getChannel(String target) {
-        return channelCache.computeIfAbsent(target, t -> ManagedChannelBuilder.forTarget(t)
-                .usePlaintext()
-                .proxyDetector(proxyDetector)
-                .build());
+    private Map<String, String> parseHeaders(String headersJson, Map<String, Object> environment) {
+        if (headersJson == null || headersJson.isBlank()) {
+            return Map.of();
+        }
+
+        try {
+            Map<String, Object> rawHeaders = jsonMapper.readValue(headersJson, new TypeReference<>() {});
+            Map<String, String> processedHeaders = new java.util.HashMap<>();
+
+            rawHeaders.forEach((key, value) -> {
+                if (key == null || value == null) {
+                    return;
+                }
+
+                String processedValue = value.toString();
+                if (processedValue.contains("{{")) {
+                    processedValue = DataUtils.replaceVariables(processedValue, environment);
+                }
+                if (processedValue.contains("@{")) {
+                    processedValue = MockDataUtils.interpolate(processedValue);
+                }
+                processedHeaders.put(key, processedValue);
+            });
+
+            return processedHeaders;
+        } catch (Exception e) {
+            log.warn("Failed to parse gRPC headers: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    static boolean usesSecureTransport(Map<String, String> headers) {
+        return headers.entrySet().stream()
+                .filter(e -> SECURE_TRANSPORT_HEADER.equalsIgnoreCase(e.getKey()))
+                .map(Map.Entry::getValue)
+                .anyMatch(value -> "true".equalsIgnoreCase(value.trim()));
+    }
+
+    static String channelCacheKey(String target, boolean secureTransport) {
+        return (secureTransport ? "secure" : "plaintext") + "|" + target;
+    }
+
+    private ManagedChannel getChannel(String target, boolean secureTransport) {
+        return channelCache.computeIfAbsent(channelCacheKey(target, secureTransport), _ -> {
+            ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forTarget(target)
+                    .proxyDetector(proxyDetector);
+
+            if (secureTransport) {
+                return builder.useTransportSecurity().build();
+            }
+            return builder.usePlaintext().build();
+        });
     }
 
     private DynamicMessage buildRequest(Descriptors.MethodDescriptor method, String json) throws IOException {

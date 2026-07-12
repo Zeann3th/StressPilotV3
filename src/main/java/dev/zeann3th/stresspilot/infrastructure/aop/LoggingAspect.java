@@ -23,14 +23,18 @@ public class LoggingAspect {
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
 
-        log.info("==> [START] {}: args={}", methodName, safeJson(args));
+        if (log.isDebugEnabled()) {
+            log.debug("==> [START] {}: args={}", methodName, safeJson(args));
+        }
 
         long start = System.currentTimeMillis();
         try {
             Object result = joinPoint.proceed();
             long duration = System.currentTimeMillis() - start;
 
-            log.info("<== [END] {} ({}ms): response={}", methodName, duration, safeJson(result));
+            if (log.isDebugEnabled()) {
+                log.debug("<== [END] {} ({}ms): response={}", methodName, duration, safeJson(result));
+            }
             return result;
         } catch (Throwable e) {
             log.error("!!! [ERROR] {} : {}", methodName, e.getMessage());

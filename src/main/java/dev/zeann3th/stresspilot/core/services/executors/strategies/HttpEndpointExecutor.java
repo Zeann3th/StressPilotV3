@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -44,16 +45,49 @@ public class HttpEndpointExecutor implements EndpointExecutor {
 
     @Override
     public ExecuteEndpointResponse execute(EndpointEntity endpoint, Map<String, Object> environment, ExecutionContext context) {
+        Map<String, Object> requestDetails = null;
         try {
             HttpExecutionContext httpContext = context.getState(HttpExecutionContext.class, HttpExecutionContext::new);
 
-            OkHttpClient client = baseClient.newBuilder()
-                    .cookieJar(httpContext)
-                    .build();
+            OkHttpClient client = httpContext.getHttpClient();
+            if (client == null) {
+                client = baseClient.newBuilder()
+                        .cookieJar(httpContext)
+                        .build();
+                httpContext.setHttpClient(client);
+            }
 
-            Request request = buildRequest(endpoint, environment);
+            // Perform the interpolation of URL, headers, parameters, and body EXACTLY ONCE at the start
+            String url = endpoint.getUrl() != null ? parseUrl(endpoint.getUrl(), environment) : null;
+            Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
+            String parameters = endpoint.getHttpParameters() != null ? MockDataUtils.interpolate(DataUtils.replaceVariables(endpoint.getHttpParameters(), environment)) : null;
+            
+            String requestBodyStr = null;
+            if (DataUtils.hasText(endpoint.getBody())) {
+                requestBodyStr = endpoint.getBody();
+                if (requestBodyStr.contains("{{")) {
+                    requestBodyStr = DataUtils.replaceVariables(requestBodyStr, environment);
+                }
+                if (requestBodyStr.contains("@{")) {
+                    requestBodyStr = MockDataUtils.interpolate(requestBodyStr);
+                }
+            }
 
-            log.info("HTTP request after interpolation: {}", request);
+            // Build the OkHttp request using these pre-interpolated variables
+            Request request = buildRequest(endpoint, url, headers, requestBodyStr);
+
+            log.debug("HTTP request after interpolation: {}", request);
+
+            // Populate requestDetails using the exact same variables
+            requestDetails = new LinkedHashMap<>();
+            requestDetails.put("endpointId", endpoint.getId());
+            requestDetails.put("endpointName", endpoint.getName());
+            requestDetails.put("type", endpoint.getType());
+            requestDetails.put("method", request.method());
+            requestDetails.put("url", url);
+            requestDetails.put("headers", jsonMapper.writeValueAsString(headers));
+            requestDetails.put("parameters", parameters);
+            requestDetails.put("body", requestBodyStr);
 
             long startTime = System.currentTimeMillis();
             try (Response response = client.newCall(request).execute()) {
@@ -68,6 +102,7 @@ public class HttpEndpointExecutor implements EndpointExecutor {
                         .responseTimeMs(responseTimeMs)
                         .data(parseResponseData(rawResponse))
                         .rawResponse(rawResponse)
+                        .requestDetails(requestDetails)
                         .build();
             }
 
@@ -76,27 +111,25 @@ public class HttpEndpointExecutor implements EndpointExecutor {
             return ExecuteEndpointResponse.builder()
                     .success(false)
                     .message("IO Error: " + e.getMessage())
+                    .requestDetails(requestDetails)
                     .build();
         } catch (Exception e) {
             log.error("Unexpected error executing HTTP request", e);
             return ExecuteEndpointResponse.builder()
                     .success(false)
                     .message("Unexpected error: " + e.getMessage())
+                    .requestDetails(requestDetails)
                     .build();
         }
     }
 
-    private Request buildRequest(EndpointEntity endpoint, Map<String, Object> environment) {
-        String url = parseUrl(endpoint.getUrl(), environment);
-
-        Map<String, String> headers = parseHeaders(endpoint.getHttpHeaders(), environment);
-
+    private Request buildRequest(EndpointEntity endpoint, String url, Map<String, String> headers, String requestBodyStr) {
         Request.Builder builder = new Request.Builder().url(url);
         headers.forEach(builder::addHeader);
 
         RequestBody requestBody = null;
-        if (DataUtils.hasText(endpoint.getBody())) {
-            requestBody = parseBody(endpoint.getBody(), headers, environment);
+        if (requestBodyStr != null) {
+            requestBody = createRequestBody(requestBodyStr, headers);
         }
 
         String method = endpoint.getHttpMethod().toUpperCase();
@@ -168,14 +201,7 @@ public class HttpEndpointExecutor implements EndpointExecutor {
         }
     }
 
-    private RequestBody parseBody(String rawBody, Map<String, String> headers, Map<String, Object> environment) {
-        String processedBody = rawBody;
-        if (processedBody.contains("{{")) {
-            processedBody = DataUtils.replaceVariables(processedBody, environment);
-        }
-        if (processedBody.contains("@{")) {
-            processedBody = MockDataUtils.interpolate(processedBody);
-        }
+    private RequestBody createRequestBody(String processedBody, Map<String, String> headers) {
         log.debug("Request body after processing: {}", processedBody);
 
         String contentType = headers.entrySet().stream()

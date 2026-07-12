@@ -92,8 +92,19 @@ public class EndpointNodeHandler implements FlowNodeHandler {
             context.recordRequest(result.isSuccess());
         }
 
-        String requestText = formatRequest(endpoint, context.getVariables());
-        String reportRequestText = formatReportRequest(endpoint, context);
+        Map<String, Object> reqMap = result.getRequestDetails();
+        if (reqMap == null) {
+            reqMap = requestMap(endpoint, context.getVariables());
+        }
+
+        String reportRequestText = "";
+        if (context.isPersistRequestLogs()) {
+            Map<String, Object> reportMap = new LinkedHashMap<>(reqMap);
+            reportMap.put("variables_snapshot", reportVariablesSnapshot(context));
+            reportRequestText = DataUtils.parseObjToJson(reportMap);
+        }
+
+        String requestText = null;
 
         String responseText = result.getRawResponse();
         if (responseText == null || responseText.isBlank()) {
@@ -120,6 +131,7 @@ public class EndpointNodeHandler implements FlowNodeHandler {
                     requestLogService.queueLog(log);
                 }
             } else {
+                requestText = DataUtils.parseObjToJson(reqMap);
                 context.recordDryRunRequestLog(toDryRunLog(log, endpoint, requestText));
             }
         }
@@ -136,16 +148,6 @@ public class EndpointNodeHandler implements FlowNodeHandler {
         }
         
         return new NodeHandlerResult(nextId, result.getData());
-    }
-
-    private String formatRequest(EndpointEntity endpoint, Map<String, Object> variables) {
-        return DataUtils.parseObjToJson(requestMap(endpoint, variables));
-    }
-
-    private String formatReportRequest(EndpointEntity endpoint, FlowExecutionContext context) {
-        Map<String, Object> request = requestMap(endpoint, context.getVariables());
-        request.put("variables_snapshot", reportVariablesSnapshot(context));
-        return DataUtils.parseObjToJson(request);
     }
 
     private Map<String, Object> requestMap(EndpointEntity endpoint, Map<String, Object> variables) {

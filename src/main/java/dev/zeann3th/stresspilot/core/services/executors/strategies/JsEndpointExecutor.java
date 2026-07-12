@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +39,8 @@ public class JsEndpointExecutor implements EndpointExecutor {
     private Source udfSource;
 
     private final AtomicBoolean udfDirty = new AtomicBoolean(true);
+
+    private final Map<String, Boolean> requiresWrappingCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
@@ -102,6 +105,16 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String script = endpointEntity.getBody() != null ? endpointEntity.getBody() : "";
         script = DataUtils.replaceVariables(script, environment);
         script = MockDataUtils.interpolate(script);
+
+        String url = endpointEntity.getUrl() != null ? MockDataUtils.interpolate(DataUtils.replaceVariables(endpointEntity.getUrl(), environment)) : null;
+
+        Map<String, Object> requestDetails = new LinkedHashMap<>();
+        requestDetails.put("endpointId", endpointEntity.getId());
+        requestDetails.put("endpointName", endpointEntity.getName());
+        requestDetails.put("type", endpointEntity.getType());
+        requestDetails.put("url", url);
+        requestDetails.put("body", script);
+
         if (udfDirty.get()) {
             loadUserDefinedFunctions();
         }
@@ -110,11 +123,22 @@ public class JsEndpointExecutor implements EndpointExecutor {
         String functionName = jsState.getFunctionName();
         List<Object> functionArgs = jsState.getFunctionArgs();
 
-        try (Context context = Context.newBuilder("js")
-                .engine(engine)
-                .allowHostAccess(HostAccess.ALL)
-                .allowHostClassLookup(_ -> true)
-                .build()) {
+        try {
+            if (udfDirty.get()) {
+                loadUserDefinedFunctions();
+                jsState.close();
+            }
+
+            Context context = jsState.getGraalContext();
+            boolean isNewContext = (context == null);
+            if (isNewContext) {
+                context = Context.newBuilder("js")
+                        .engine(engine)
+                        .allowHostAccess(HostAccess.ALL)
+                        .allowHostClassLookup(_ -> true)
+                        .build();
+                jsState.setGraalContext(context);
+            }
 
             Value bindings = context.getBindings("js");
 
@@ -128,7 +152,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                 return null;
             });
 
-            if (udfSource != null) {
+            if (isNewContext && udfSource != null) {
                 context.eval(udfSource);
             }
 
@@ -181,6 +205,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .data(unwrappedData)
                     .rawResponse(rawResponse)
                     .message(isSuccess ? "JS Execution Successful" : "JS Execution returned false/failed status")
+                    .requestDetails(requestDetails)
                     .build();
 
         } catch (Exception e) {
@@ -189,17 +214,25 @@ public class JsEndpointExecutor implements EndpointExecutor {
                     .success(false)
                     .responseTimeMs(System.currentTimeMillis() - startTime)
                     .message("JS Execution Error: " + e.getMessage())
+                    .requestDetails(requestDetails)
                     .build();
         }
     }
 
     private Value evalEndpointScript(Context context, String script) {
+        if (Boolean.TRUE.equals(requiresWrappingCache.get(script))) {
+            return context.eval("js", "(function(){\n" + script + "\n})()");
+        }
+
         try {
-            return context.eval("js", script);
+            Value res = context.eval("js", script);
+            requiresWrappingCache.putIfAbsent(script, Boolean.FALSE);
+            return res;
         } catch (PolyglotException e) {
             if (!isIllegalTopLevelReturn(e)) {
                 throw e;
             }
+            requiresWrappingCache.put(script, Boolean.TRUE);
             return context.eval("js", "(function(){\n" + script + "\n})()");
         }
     }

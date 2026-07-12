@@ -14,14 +14,12 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class FlowProcessor {
 
-    private static final Random RANDOM = new Random();
     private static final SpelExpressionParser SPEL = new SpelExpressionParser();
     public static final String RUN_IF = "run_if";
     public static final String SKIP_IF = "skip_if";
@@ -86,8 +84,9 @@ public class FlowProcessor {
 
         String delay = DataUtils.replaceVariables(String.valueOf(delayObj), variables);
         long base = Long.parseLong(delay);
-        long jitter = 500L + RANDOM.nextInt(501);
-        Thread.sleep(base + jitter);
+        if (base > 0) {
+            Thread.sleep(base);
+        }
     }
 
     private void applyClear(Map<String, Object> proc, Map<String, Object> variables) {

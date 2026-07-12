@@ -6,6 +6,7 @@ import dev.zeann3th.stresspilot.core.domain.commands.flow.DryRunStepResult;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.FlowStepCommand;
 import dev.zeann3th.stresspilot.core.domain.commands.flow.RunFlowCommand;
 import dev.zeann3th.stresspilot.core.domain.entities.FlowEntity;
+import dev.zeann3th.stresspilot.core.domain.entities.EndpointEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -16,6 +17,8 @@ public interface FlowService {
     Page<FlowEntity> getListFlow(Long projectId, String name, Pageable pageable);
 
     FlowEntity getFlowDetail(Long flowId);
+
+    List<EndpointEntity> getFlowEndpoints(Long flowId);
 
     FlowEntity createFlow(CreateFlowCommand createFlowCommand);
 

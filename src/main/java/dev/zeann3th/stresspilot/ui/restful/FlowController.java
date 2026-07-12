@@ -8,6 +8,7 @@ import dev.zeann3th.stresspilot.ui.restful.dtos.flow.CreateFlowRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.DryRunStepRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.DryRunStepResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowResponseDTO;
+import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowEndpointResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowStepRequestDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.FlowStepResponseDTO;
 import dev.zeann3th.stresspilot.ui.restful.dtos.flow.RunFlowRequestDTO;
@@ -59,6 +60,13 @@ public class FlowController {
     public FlowResponseDTO getFlowDetail(@PathVariable Long flowId) {
         FlowEntity resp = flowService.getFlowDetail(flowId);
         return flowMapper.toResponse(resp);
+    }
+
+    @GetMapping("/{flowId}/endpoints")
+    public List<FlowEndpointResponseDTO> getFlowEndpoints(@PathVariable Long flowId) {
+        return flowService.getFlowEndpoints(flowId).stream()
+                .map(endpoint -> new FlowEndpointResponseDTO(endpoint.getId(), endpoint.getName()))
+                .toList();
     }
 
     @PostMapping

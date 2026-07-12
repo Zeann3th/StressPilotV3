@@ -67,11 +67,15 @@ public class DatabaseRequestMessagePort implements RequestMessagePort {
     }
 
     private boolean offer(RequestLogEntity entry) {
+        long timeoutMs = properties.getDatasource().getOfferTimeoutMs();
+        if (timeoutMs <= 0) {
+            return queue.offer(entry);
+        }
         if (queue.offer(entry)) {
             return true;
         }
         try {
-            return queue.offer(entry, properties.getDatasource().getOfferTimeoutMs(), TimeUnit.MILLISECONDS);
+            return queue.offer(entry, timeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return false;

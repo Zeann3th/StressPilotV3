@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -16,4 +17,6 @@ public class ExecuteEndpointResponse {
     private long responseTimeMs;
     private Object data;
     private String rawResponse;
+    private Map<String, Object> requestDetails;
 }
+
