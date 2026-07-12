@@ -42,6 +42,12 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
     private final Map<String, Boolean> requiresWrappingCache = new java.util.concurrent.ConcurrentHashMap<>();
 
+    private final Map<String, Source> sourceCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private Source getOrCreateSource(String code) {
+        return sourceCache.computeIfAbsent(code, c -> Source.newBuilder("js", c, "endpoint-script.js").buildLiteral());
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         engine = Engine.newBuilder("js")
@@ -159,7 +165,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
             Value result;
 
             if (functionName != null && !functionName.isBlank()) {
-                context.eval("js", script);
+                context.eval(getOrCreateSource(script));
 
                 Value fn = bindings.getMember(functionName);
                 if (fn == null || !fn.canExecute()) {
@@ -175,7 +181,7 @@ public class JsEndpointExecutor implements EndpointExecutor {
             String rawResponse;
             if (result != null && (result.isHostObject() || result.hasMembers())) {
                 try {
-                    Value stringify = context.eval("js", "JSON.stringify");
+                    Value stringify = context.eval(getOrCreateSource("JSON.stringify"));
                     rawResponse = stringify.execute(result).asString();
                 } catch (Exception _) {
                     rawResponse = result.toString();
@@ -221,11 +227,12 @@ public class JsEndpointExecutor implements EndpointExecutor {
 
     private Value evalEndpointScript(Context context, String script) {
         if (Boolean.TRUE.equals(requiresWrappingCache.get(script))) {
-            return context.eval("js", "(function(){\n" + script + "\n})()");
+            String wrapped = "(function(){\n" + script + "\n})()";
+            return context.eval(getOrCreateSource(wrapped));
         }
 
         try {
-            Value res = context.eval("js", script);
+            Value res = context.eval(getOrCreateSource(script));
             requiresWrappingCache.putIfAbsent(script, Boolean.FALSE);
             return res;
         } catch (PolyglotException e) {
@@ -233,7 +240,8 @@ public class JsEndpointExecutor implements EndpointExecutor {
                 throw e;
             }
             requiresWrappingCache.put(script, Boolean.TRUE);
-            return context.eval("js", "(function(){\n" + script + "\n})()");
+            String wrapped = "(function(){\n" + script + "\n})()";
+            return context.eval(getOrCreateSource(wrapped));
         }
     }
 

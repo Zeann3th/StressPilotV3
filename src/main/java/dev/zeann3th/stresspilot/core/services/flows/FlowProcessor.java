@@ -21,6 +21,7 @@ import java.util.Map;
 public class FlowProcessor {
 
     private static final SpelExpressionParser SPEL = new SpelExpressionParser();
+    private static final java.util.Map<String, org.springframework.expression.Expression> SPEL_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
     public static final String RUN_IF = "run_if";
     public static final String SKIP_IF = "skip_if";
     private final JsonMapper jsonMapper;
@@ -222,7 +223,8 @@ public class FlowProcessor {
         try {
             StandardEvaluationContext ctx = new StandardEvaluationContext(variables);
             ctx.addPropertyAccessor(new MapAccessor());
-            return Boolean.TRUE.equals(SPEL.parseExpression(condition).getValue(ctx, Boolean.class));
+            org.springframework.expression.Expression expr = SPEL_CACHE.computeIfAbsent(condition, SPEL::parseExpression);
+            return Boolean.TRUE.equals(expr.getValue(ctx, Boolean.class));
         } catch (Exception e) {
             log.error("Error evaluating condition '{}': {}", condition, e.getMessage());
             return false;
